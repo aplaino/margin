@@ -203,6 +203,35 @@ export function toolStatus(env: ToolEnv): { tool: Tool; found: boolean; connecte
 // when it quits; hooks pointing there would quietly stop working.
 const temporary = (env: ToolEnv) => env.self.some((p) => p.includes('/AppTranslocation/'));
 
+// A development run is bun plus a script; a built Margin is its one margind binary.
+const development = (env: ToolEnv) => env.self.length > 1;
+
+// Hooks run on every prompt, so they may only point at an installed Margin: margind inside a
+// .app in /Applications or ~/Applications, in a bundle nobody else can write to. Not a
+// temporary copy, a mounted disk image, or anywhere under /tmp.
+export function installed(env: ToolEnv) {
+  const binary = env.self[0] ?? '';
+  const match = binary.match(
+    /^(\/Applications|.+\/Applications)\/[^/]+\.app\/Contents\/MacOS\/margind$/,
+  );
+  if (env.self.length !== 1 || !match) return false;
+  if (match[1] !== '/Applications' && match[1] !== join(env.home, 'Applications')) return false;
+  const bundle = dirname(dirname(dirname(binary)));
+  try {
+    for (const path of [bundle, dirname(binary), binary]) {
+      const stat = statSync(path);
+      if (stat.mode & 0o022 || (stat.uid !== process.getuid?.() && stat.uid !== 0)) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Margin's own hook for this data folder (another Margin setup's hooks are not ours to move).
+const belongsHere = (env: ToolEnv, command: string | undefined) =>
+  !!command?.includes(MARKER) && command.includes(`MARGIN_HOME=${quote(env.dataHome)} `);
+
 function hooksCurrent(path: string, events: string[], command: string) {
   try {
     const hooks = readConfig(path).hooks ?? {};
@@ -217,7 +246,7 @@ function hooksCurrent(path: string, events: string[], command: string) {
 // After Margin moves (say, from Downloads into Applications), points its existing Claude Code
 // and Codex hooks at where it is now. Returns the tools it changed.
 export function repointTools(env: ToolEnv): Tool[] {
-  if (temporary(env)) return [];
+  if (!installed(env)) return [];
   const f = files(env);
   const changed: Tool[] = [];
   for (const [tool, path, events] of [
@@ -225,7 +254,14 @@ export function repointTools(env: ToolEnv): Tool[] {
     ['codex', f.codex, CODEX_EVENTS],
   ] as const) {
     const command = hookCommand(env, tool);
-    if (hooksInstalled(path, events) && !hooksCurrent(path, events, command)) {
+    let mine = false;
+    try {
+      const hooks = readConfig(path).hooks ?? {};
+      mine = Object.values(hooks).some((groups) =>
+        groups.some((g) => g.hooks?.some((h) => belongsHere(env, h.command))),
+      );
+    } catch {}
+    if (mine && hooksInstalled(path, events) && !hooksCurrent(path, events, command)) {
       setHooks(path, events, command);
       changed.push(tool);
     }
@@ -236,7 +272,7 @@ export function repointTools(env: ToolEnv): Tool[] {
 // Returns a note for the user when the tool needs a step of its own.
 export function connectTool(env: ToolEnv, tool: Tool): string | undefined {
   const f = files(env);
-  if (temporary(env)) {
+  if (temporary(env) || (!development(env) && !installed(env))) {
     throw new ToolError(
       'Move Margin to Applications first. It’s running from a temporary copy, and hooks would stop working when it quits.',
     );

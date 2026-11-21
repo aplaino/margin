@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { toEvent } from '../src/reporters/hook';
@@ -113,38 +121,58 @@ describe('connecting tools', () => {
 });
 
 describe('when Margin moves', () => {
-  test('a temporary copy from Downloads can’t connect tools', () => {
-    const temp = {
-      ...env,
-      self: ['/private/var/folders/x/T/AppTranslocation/ABC/d/Margin.app/Contents/MacOS/margind'],
-    };
-    expect(() => connectTool(temp, 'claude-code')).toThrow(ToolError);
-    expect(repointTools(temp)).toEqual([]);
+  // A fake Margin.app in the test home's Applications folder.
+  function app(name: string, mode = 0o755) {
+    const macos = join(env.home, 'Applications', `${name}.app`, 'Contents', 'MacOS');
+    mkdirSync(macos, { recursive: true });
+    writeFileSync(join(macos, 'margind'), '');
+    for (const path of [
+      join(env.home, 'Applications', `${name}.app`),
+      macos,
+      join(macos, 'margind'),
+    ]) {
+      chmodSync(path, mode);
+    }
+    return { ...env, self: [join(macos, 'margind')] };
+  }
+
+  test('a temporary copy, a disk image or a writable bundle can’t connect tools', () => {
+    for (const self of [
+      '/private/var/folders/x/T/AppTranslocation/ABC/d/Margin.app/Contents/MacOS/margind',
+      '/Volumes/Margin/Margin.app/Contents/MacOS/margind',
+      '/tmp/Margin.app/Contents/MacOS/margind',
+    ]) {
+      expect(() => connectTool({ ...env, self: [self] }, 'claude-code')).toThrow(ToolError);
+    }
+    expect(() => connectTool(app('Shared', 0o777), 'claude-code')).toThrow(ToolError);
   });
 
-  test('hooks left pointing at an old copy are re-pointed, and others’ hooks stay', () => {
+  test('hooks left pointing at an old install are re-pointed, and others’ hooks stay', () => {
     const theirs = { hooks: [{ type: 'command', command: '/usr/local/bin/other stop' }] };
     writeFileSync(claudeSettings(), JSON.stringify({ hooks: { Stop: [theirs] } }));
-    connectTool(
-      { ...env, self: ['/Users/me/Downloads/Margin.app/Contents/MacOS/margind'] },
-      'claude-code',
-    );
-    connectTool(
-      { ...env, self: ['/Users/me/Downloads/Margin.app/Contents/MacOS/margind'] },
-      'codex',
-    );
-    const moved = { ...env, self: ['/Applications/Margin.app/Contents/MacOS/margind'] };
+    const old = app('Old');
+    connectTool(old, 'claude-code');
+    connectTool(old, 'codex');
+    const moved = app('Margin');
 
     expect(repointTools(moved)).toEqual(['claude-code', 'codex']);
     const stop = read(claudeSettings()).hooks.Stop;
     expect(stop).toHaveLength(2);
     expect(stop[0]).toEqual(theirs);
-    expect(stop[1].hooks[0].command).toContain('/Applications/Margin.app');
+    expect(stop[1].hooks[0].command).toContain('Margin.app');
     expect(repointTools(moved)).toEqual([]);
   });
 
+  test('a copy that isn’t installed, or another setup’s hooks, are never re-pointed', () => {
+    connectTool(app('Old'), 'claude-code');
+    expect(
+      repointTools({ ...env, self: ['/Volumes/Margin/Margin.app/Contents/MacOS/margind'] }),
+    ).toEqual([]);
+    expect(repointTools({ ...app('Margin'), dataHome: join(root, 'someone-else') })).toEqual([]);
+  });
+
   test('tools that were never connected are left alone', () => {
-    expect(repointTools(env)).toEqual([]);
+    expect(repointTools(app('Margin'))).toEqual([]);
   });
 });
 
