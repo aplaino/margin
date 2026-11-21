@@ -1,0 +1,97 @@
+import { basename } from 'node:path';
+import {
+  type Handle,
+  Model,
+  type PublicActivity,
+  PublicPresence,
+  type Settings,
+  type Status,
+} from '@margin/protocol';
+import * as v from 'valibot';
+import type { RepoInfo } from './repo';
+import type { LocalSession } from './sessions';
+
+// What friends see: `full` goes to the handles in `close`, `basic` to everyone else.
+export type PresenceView = { full: PublicPresence; basic: PublicPresence; close: Handle[] };
+
+// Tool model names can carry suffixes like "[1m]"; keep the plain name or nothing.
+export function publicModel(model?: string) {
+  const cleaned = model?.replace(/\[[^\]]*\]$/, '').trim();
+  return cleaned && v.is(Model, cleaned) ? cleaned : undefined;
+}
+
+function repoOverride(settings: Settings, remote: string | null) {
+  if (!remote) return undefined;
+  const key = Object.keys(settings.repos).find((r) => r.toLowerCase() === remote.toLowerCase());
+  return key ? settings.repos[key] : undefined;
+}
+
+// The session as friends may see it, after the sharing settings. Undefined when nothing may be shown.
+export function shareable(
+  session: LocalSession,
+  repo: RepoInfo,
+  remote: string | null,
+  settings: Settings,
+): PublicActivity | undefined {
+  const override = repoOverride(settings, remote);
+  if (override === 'hidden') return undefined;
+  const activity: PublicActivity = {};
+  if (settings.share.tool) activity.tool = session.tool;
+  const model = publicModel(session.model);
+  if (settings.share.model && model) activity.model = model;
+  if (settings.share.repo) {
+    activity.project =
+      override !== 'private' && repo.visibility === 'public'
+        ? { visibility: 'public', repo: repo.repo }
+        : { visibility: 'private' };
+  }
+  if (settings.share.time) activity.since = Math.floor(session.startedAt / 60_000) * 60_000;
+  return Object.keys(activity).length ? activity : undefined;
+}
+
+export function buildView(input: {
+  status: Status;
+  activity?: PublicActivity;
+  tokens: number;
+  settings: Settings;
+  now?: number;
+}): PresenceView {
+  const { settings } = input;
+  const at = input.now ?? Date.now();
+  // Invisible looks exactly like being offline: no activity, no token count changes.
+  if (settings.invisible) {
+    const offline: PublicPresence = { status: 'offline', at };
+    return { full: offline, basic: offline, close: [] };
+  }
+  const tokens = settings.share.tokens ? { tokens: input.tokens } : {};
+  const full: PublicPresence = {
+    status: input.status,
+    ...(input.activity ? { activity: input.activity } : {}),
+    ...tokens,
+    at,
+  };
+  if (settings.audience === 'everyone') return { full, basic: full, close: [] };
+  return { full, basic: { status: input.status, ...tokens, at }, close: settings.closeFriends };
+}
+
+export class LeakError extends Error {}
+
+// Strings from this machine that must never appear in what's sent.
+export function localSecrets(sessions: LocalSession[]) {
+  return sessions
+    .flatMap((s) => [s.cwd, s.cwd && basename(s.cwd), s.sessionId])
+    .filter((s): s is string => !!s && s.length > 2);
+}
+
+// The last check before presence leaves the machine: exactly the public shape (nothing
+// extra), and no local path or session id inside the one free-text field, the model.
+// The public repo label is exempt: showing it is the point.
+export function assertPublic(presence: PublicPresence, secrets: string[]) {
+  const parsed = v.safeParse(PublicPresence, presence);
+  if (!parsed.success || !Bun.deepEquals(parsed.output, presence, true)) {
+    throw new LeakError('presence is not exactly the public shape');
+  }
+  const model = presence.activity?.model?.toLowerCase() ?? '';
+  const leaked = secrets.filter((s) => model.includes(s.toLowerCase()));
+  if (leaked.length) throw new LeakError(`model name contains local details: ${leaked.length}`);
+}
