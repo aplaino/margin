@@ -291,7 +291,9 @@ describe('two users, two daemons, one server', () => {
   test('a message sent while the friend is offline arrives after their daemon restarts', async () => {
     leo.app.close();
     await leo.daemon.stop();
-    await maya.app.until(friendIn('leo', (f) => f.presence.status === 'offline'));
+    const offline = await maya.app.until(friendIn('leo', (f) => f.presence.status === 'offline'));
+    // Leo's last known count stays visible while he's offline.
+    expect(friendOf(offline, 'leo')?.presence.tokens).toBe(0);
 
     const sent = (await maya.app.request({ op: 'send', to: 'leo', text: 'see you tomorrow' })) as {
       id: string;

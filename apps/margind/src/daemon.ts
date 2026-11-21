@@ -50,6 +50,7 @@ export type DaemonOptions = {
   tokenSources: TokenSources;
   // Development and tests: sign in through the server's dev login as this handle.
   devHandle?: string;
+  devName?: string;
   // The GitHub OAuth app's client id, fixed per build.
   githubClientId?: string;
   deviceLogin?: DeviceLogin;
@@ -123,7 +124,10 @@ export async function startDaemon(options: DaemonOptions) {
       const fresh = seen && now - seen.lastSeenAt < STALE_MS;
       const known = seen?.presence.tokens ?? lastTokens[f.handle];
       const presence: PublicPresence = fresh
-        ? seen.presence
+        ? {
+            ...seen.presence,
+            ...(seen.presence.status === 'offline' && known !== undefined ? { tokens: known } : {}),
+          }
         : {
             status: 'offline',
             at: seen?.presence.at ?? 0,
@@ -255,8 +259,15 @@ export async function startDaemon(options: DaemonOptions) {
   async function onPresence(from: string, presence: PublicPresence) {
     if (!store.friend(from)) return;
     friendPresence.set(from, { presence, lastSeenAt: Date.now() });
-    if (presence.tokens !== undefined)
-      store.setJson('friendTokens', { ...savedTokens(), [from]: presence.tokens });
+    // Going offline carries no count, so the last one is kept for the offline list. Online
+    // without one means they've chosen to hide it, so it's forgotten.
+    if (presence.status !== 'offline') {
+      const { [from]: _, ...others } = savedTokens();
+      store.setJson(
+        'friendTokens',
+        presence.tokens === undefined ? others : { ...others, [from]: presence.tokens },
+      );
+    }
     push({ type: 'roster', friends: roster() });
   }
 
@@ -377,7 +388,10 @@ export async function startDaemon(options: DaemonOptions) {
     const client = new Api(options.server);
     let session: v.InferOutput<typeof Session>;
     if (options.devHandle) {
-      session = await client.call(Session, 'POST', '/auth/dev', { handle: options.devHandle });
+      session = await client.call(Session, 'POST', '/auth/dev', {
+        handle: options.devHandle,
+        ...(options.devName ? { name: options.devName } : {}),
+      });
     } else {
       // The GitHub app Margin signs in through is fixed in the build, not taken from the
       // server, so a server can't route your sign-in through an app of its own.

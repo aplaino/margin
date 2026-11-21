@@ -14,3 +14,5 @@ Working rules for this project:
 - Friends only ever see what you'd post publicly; privacy is enforced locally, never trusted to the server.
 - Never drive the owner's screen (clicks, keystrokes into apps, screenshots, moving windows). Verify with logs, window metadata and test harnesses; ask the owner to look when visual confirmation is needed.
 - Hooks must print nothing on `SessionStart`/`UserPromptSubmit` (that output enters Claude's context).
+
+Running it locally: `bun run dev` starts the server (dev sign-in) on 127.0.0.1:8787, the owner's margind (real data folder and token count), simulated friends, and opens Margin.app. Server and simulated friends keep their data in `.dev/`. To start over, delete `.dev/` and `~/Library/Application Support/Margin` together (keeping one without the other makes sign-in fail: the server already has a different identity key for the account). `bun run app` only builds `apps/mac/build/Margin.app`.

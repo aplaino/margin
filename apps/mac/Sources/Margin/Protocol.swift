@@ -1,0 +1,161 @@
+import Foundation
+
+// Mirrors the local protocol in packages/protocol/src/local.ts (pushes from margind).
+
+struct Project: Codable, Equatable {
+  var visibility: String
+  var repo: String?
+}
+
+struct Activity: Codable, Equatable {
+  var tool: String?
+  var model: String?
+  var project: Project?
+  var since: Double?
+}
+
+struct Presence: Codable, Equatable {
+  var status: String
+  var activity: Activity?
+  var tokens: Double?
+  var at: Double
+}
+
+struct Friend: Codable, Equatable, Identifiable {
+  var handle: String
+  var name: String?
+  var presence: Presence
+  var lastSeenAt: Double
+  var unread: Int
+  var id: String { handle }
+  var displayName: String { name ?? handle }
+  var isOnline: Bool { presence.status != "offline" }
+}
+
+struct ChatMessage: Codable, Equatable, Identifiable {
+  var id: String
+  var peer: String
+  var direction: String
+  var text: String
+  var sentAt: Double
+  var state: String?
+  var incoming: Bool { direction == "in" }
+}
+
+struct Share: Codable, Equatable {
+  var tool: Bool
+  var model: Bool
+  var repo: Bool
+  var time: Bool
+  var tokens: Bool
+}
+
+struct PrivacySettings: Codable, Equatable {
+  var invisible: Bool
+  var share: Share
+  var repos: [String: String]
+  var audience: String
+  var closeFriends: [String]
+}
+
+struct ToolState: Codable, Equatable, Identifiable {
+  var tool: String
+  var found: Bool
+  var connected: Bool
+  var id: String { tool }
+}
+
+struct Requests: Codable, Equatable {
+  var incoming: [String]
+  var outgoing: [String]
+}
+
+struct SelfInfo: Codable, Equatable {
+  var handle: String?
+  var presence: Presence?
+  var tokens: Double
+  var connection: String
+  var protocol_: Int
+
+  enum CodingKeys: String, CodingKey {
+    case handle, presence, tokens, connection
+    case protocol_ = "protocol"
+  }
+}
+
+struct ResultData: Decodable {
+  var note: String?
+  var id: String?
+}
+
+enum Push {
+  case selfInfo(SelfInfo)
+  case loginCode(userCode: String, verificationUri: String)
+  case loginDone
+  case loginFailed(String)
+  case settings(PrivacySettings)
+  case tools([ToolState])
+  case roster([Friend])
+  case requests(Requests)
+  case message(ChatMessage)
+  case history(with: String, messages: [ChatMessage])
+  case result(op: String, ok: Bool, data: ResultData?, error: String?)
+  // Your account export, pretty-printed for saving to a file.
+  case export(Data)
+
+  private struct Envelope: Decodable {
+    var type: String
+    var state: String?
+    var userCode: String?
+    var verificationUri: String?
+    var error: String?
+    var op: String?
+    var ok: Bool?
+  }
+  private struct SettingsPayload: Decodable { var settings: PrivacySettings }
+  private struct ToolsPayload: Decodable { var tools: [ToolState] }
+  private struct RosterPayload: Decodable { var friends: [Friend] }
+  private struct RequestsPayload: Decodable { var requests: Requests }
+  private struct MessagePayload: Decodable { var message: ChatMessage }
+  private struct HistoryPayload: Decodable {
+    var with: String
+    var messages: [ChatMessage]
+  }
+  private struct ResultPayload: Decodable { var data: ResultData? }
+
+  static func decode(_ data: Data) -> Push? {
+    let decoder = JSONDecoder()
+    guard let envelope = try? decoder.decode(Envelope.self, from: data) else { return nil }
+    func payload<T: Decodable>(_ type: T.Type) -> T? { try? decoder.decode(T.self, from: data) }
+    switch envelope.type {
+    case "self":
+      return payload(SelfInfo.self).map(Push.selfInfo)
+    case "login":
+      switch envelope.state {
+      case "code":
+        guard let code = envelope.userCode, let uri = envelope.verificationUri else { return nil }
+        return .loginCode(userCode: code, verificationUri: uri)
+      case "done": return .loginDone
+      default: return .loginFailed(envelope.error ?? "Sign-in failed")
+      }
+    case "settings": return payload(SettingsPayload.self).map { .settings($0.settings) }
+    case "tools": return payload(ToolsPayload.self).map { .tools($0.tools) }
+    case "roster": return payload(RosterPayload.self).map { .roster($0.friends) }
+    case "requests": return payload(RequestsPayload.self).map { .requests($0.requests) }
+    case "message": return payload(MessagePayload.self).map { .message($0.message) }
+    case "history": return payload(HistoryPayload.self).map { .history(with: $0.with, messages: $0.messages) }
+    case "result":
+      if envelope.op == "account.export", envelope.ok == true,
+        let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+        let export = object["data"],
+        let pretty = try? JSONSerialization.data(withJSONObject: export, options: [.prettyPrinted, .sortedKeys])
+      {
+        return .export(pretty)
+      }
+      return .result(
+        op: envelope.op ?? "", ok: envelope.ok ?? false,
+        data: payload(ResultPayload.self)?.data, error: envelope.error)
+    default: return nil
+    }
+  }
+}

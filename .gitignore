@@ -3,3 +3,8 @@ node_modules/
 *.db-*
 .env*
 .DS_Store
+
+# Built app and local dev data
+apps/mac/.build/
+apps/mac/build/
+.dev/

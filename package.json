@@ -11,11 +11,16 @@
     "format": "biome check --write .",
     "typecheck": "tsc --noEmit -p .",
     "test": "bun test",
-    "check": "bun run lint && bun run typecheck && bun run test"
+    "check": "bun run lint && bun run typecheck && bun run test",
+    "dev": "bun scripts/dev.ts",
+    "app": "scripts/build-app.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",
     "@types/bun": "1.3.14",
     "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@margin/protocol": "workspace:*"
   }
 }

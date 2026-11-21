@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "margin",
+      "dependencies": {
+        "@margin/protocol": "workspace:*",
+      },
       "devDependencies": {
         "@biomejs/biome": "2.6.8",
         "@types/bun": "1.3.14",

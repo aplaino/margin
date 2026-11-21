@@ -64,7 +64,7 @@ Build the core against DESIGN.md and prove it **between two different users on t
 
 Kickoff decisions (2026-11-21):
 - **margind is a separate Bun process**; Margin.app is a thin Swift UI over a local socket.
-- **Second machine:** a macOS VM on this Mac with a second GitHub account, until a real second Mac is available.
+- **Second machine:** a friend of the owner's has offered their Mac for the two-machine tests (a macOS VM on this Mac is the fallback).
 - **Xcode** is installed by the owner in parallel; everything up to step 6 doesn't need it.
 
 Build order:
@@ -73,7 +73,7 @@ Build order:
 3. ✓ api: GitHub device sign-in, friends, key directory, presence fan-out, ciphertext queue; Postgres + SQLite.
 4. ✓ margind: encrypted store, Signal sessions, transport, tool hooks, token totals, redaction.
 5. ✓ Two-daemon end-to-end tests on one machine (`apps/margind/test/e2e.test.ts`).
-6. Margin.app: the drawer, built against the mockup.
+6. Margin.app: the drawer, built against the mockup (`apps/mac`, a Swift package; `bun run dev` runs it locally with simulated friends).
 7. Staging on Fly.io + Neon; run the matrix between this Mac and the VM; record in `docs/TESTING.md`.
 
 Scope: sign-in, friends, presence from each v1 tool, token totals, privacy settings, chat, the drawer (collapsed, expanded, chat, Add, Settings incl. System/Light/Dark + accent, first launch, connecting tools). The drawer reads every colour, font and size from one theme definition so full themes can follow.
