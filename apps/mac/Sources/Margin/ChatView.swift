@@ -63,6 +63,7 @@ struct ChatView: View {
         .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
         .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
         .onSubmit(send)
+        .onAppear { focused = true }
       if let error = model.results["send"], !error.ok {
         Text(error.message ?? "Couldn’t send").font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)

@@ -6,6 +6,12 @@ import SwiftUI
 // text field needs the keyboard, or when opened with the hotkey.
 final class DrawerPanel: NSPanel {
   var onEscape: (() -> Void)?
+  // Keys for moving around the drawer; true when handled.
+  var onKey: ((NSEvent) -> Bool)?
+
+  override func keyDown(with event: NSEvent) {
+    if onKey?(event) != true { super.keyDown(with: event) }
+  }
 
   init(content: NSView) {
     super.init(
@@ -33,6 +39,7 @@ final class DrawerPanel: NSPanel {
     guard flags.contains(.command), let key = event.charactersIgnoringModifiers?.lowercased() else {
       return super.performKeyEquivalent(with: event)
     }
+    if ["1", "2", "3"].contains(key), onKey?(event) == true { return true }
     let action: Selector? =
       switch (key, flags.contains(.shift)) {
       case ("c", false): #selector(NSText.copy(_:))
@@ -164,6 +171,7 @@ final class DrawerController {
     stripView.onDragEnd = { [weak self] in self?.dragEnded() }
     panelView.onHover = { [weak self] inside in self?.panelHover(inside) }
     panel.onEscape = { [weak self] in self?.escape() }
+    panel.onKey = { [weak self] event in self?.key(event) ?? false }
 
     hotKey = HotKey { [weak self] in self?.hotKeyPressed() }
     observePrefs()
@@ -342,6 +350,33 @@ final class DrawerController {
     model.expanded ? collapse() : expand(byHover: false, focus: true)
   }
 
+  // ↑/↓ through friends, Return to chat, Tab or ⌘1–3 between tabs. While you're typing in
+  // a field, keys stay with the field.
+  private func key(_ event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    if flags.contains(.command) {
+      guard let digit = event.charactersIgnoringModifiers.flatMap(Int.init), (1...3).contains(digit) else { return false }
+      model.showTab([.friends, .add, .settings][digit - 1])
+      return true
+    }
+    if panel.firstResponder is NSTextView { return false }
+    let onList = model.chatWith == nil && model.tab == .friends && !model.needsSetup
+    switch Int(event.keyCode) {
+    case kVK_UpArrow where onList:
+      model.moveSelection(-1)
+    case kVK_DownArrow where onList:
+      model.moveSelection(1)
+    case kVK_Return where onList, kVK_ANSI_KeypadEnter where onList:
+      guard let handle = model.selected else { return false }
+      model.openChat(handle)
+    case kVK_Tab where model.chatWith == nil && !model.needsSetup:
+      model.cycleTab(flags.contains(.shift) ? -1 : 1)
+    default:
+      return false
+    }
+    return true
+  }
+
   private func escape() {
     if model.chatWith != nil {
       model.chatWith = nil
@@ -390,6 +425,7 @@ final class DrawerController {
     if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
     clickMonitor = nil
     model.expanded = false
+    model.selected = nil
     model.updates.drawerClosed()
     let wasKey = panel.isKeyWindow
     let frame = panel.frame

@@ -33,6 +33,8 @@ final class AppModel {
   var expanded = false
   var tab: Tab = .friends
   var chatWith: String?
+  // The friend picked with ↑/↓, highlighted in the list.
+  var selected: String?
   var setupStep: SetupStep = .welcome
 
   // A release build running from Downloads runs from a temporary read-only copy
@@ -142,7 +144,26 @@ final class AppModel {
       UNNotificationRequest(identifier: message.id, content: content, trigger: nil))
   }
 
+  func moveSelection(_ delta: Int) {
+    let handles = (onlineFriends + offlineFriends).map(\.handle)
+    guard !handles.isEmpty else { return }
+    let current = selected.flatMap { handles.firstIndex(of: $0) } ?? (delta > 0 ? -1 : handles.count)
+    selected = handles[min(max(current + delta, 0), handles.count - 1)]
+  }
+
+  func showTab(_ next: Tab) {
+    chatWith = nil
+    tab = next
+  }
+
+  func cycleTab(_ delta: Int) {
+    let tabs: [Tab] = [.friends, .add, .settings]
+    let index = tabs.firstIndex(of: tab) ?? 0
+    showTab(tabs[(index + delta + tabs.count) % tabs.count])
+  }
+
   func openChat(_ handle: String) {
+    selected = handle
     chatWith = handle
     request("history", ["with": handle])
     request("read", ["handle": handle])

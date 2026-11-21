@@ -58,7 +58,7 @@ Each trigger is switchable in settings, and the hotkey can be changed.
 
 **Focus:** opening Margin doesn't take keyboard focus from your work. It takes focus only when you click a text field (chat, add friend) or open it with the hotkey. Esc returns focus to the app you were in.
 
-**Keyboard (when focused):** ↑/↓ move through friends, Enter opens a chat, Tab switches tabs, Esc goes back one level (chat → list → collapsed).
+**Keyboard (when the drawer has focus — opened with ⌥M, or once you click into it):** ↑/↓ move through friends (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Add and Settings, ⌘1/⌘2/⌘3 jump to them, Esc goes back one level (chat → list → collapsed). While typing in a field, keys stay with the field.
 
 ## 5. Expanded panel
 

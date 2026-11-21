@@ -6,6 +6,7 @@ struct FriendsView: View {
 
   var body: some View {
     TimelineView(.everyMinute) { context in
+      ScrollViewReader { proxy in
       ScrollView {
         VStack(alignment: .leading, spacing: 2) {
           if model.friends.isEmpty {
@@ -16,17 +17,21 @@ struct FriendsView: View {
                 .padding(.horizontal, 8).padding(.vertical, 10)
             }
             ForEach(model.onlineFriends) { friend in
-              FriendRow(friend: friend, now: context.date)
+              FriendRow(friend: friend, now: context.date).id(friend.handle)
             }
             if !model.offlineFriends.isEmpty {
               SectionLabel("Offline").padding(.horizontal, 8).padding(.top, 12).padding(.bottom, 4)
               ForEach(model.offlineFriends) { friend in
-                OfflineRow(friend: friend, now: context.date)
+                OfflineRow(friend: friend, now: context.date).id(friend.handle)
               }
             }
           }
         }
         .padding(8)
+      }
+      .onChange(of: model.selected) {
+        if let selected = model.selected { proxy.scrollTo(selected) }
+      }
       }
     }
   }
@@ -46,6 +51,7 @@ struct FriendRow: View {
   @Environment(AppModel.self) private var model
   @Environment(\.theme) private var theme
   @State private var hovering = false
+  private var selected: Bool { model.selected == friend.handle }
 
   var body: some View {
     Button {
@@ -76,7 +82,8 @@ struct FriendRow: View {
       }
       .padding(.horizontal, 8).padding(.vertical, 7)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(RoundedRectangle(cornerRadius: theme.rowRadius).fill(hovering ? theme.hover : .clear))
+      .background(RoundedRectangle(cornerRadius: theme.rowRadius).fill(hovering || selected ? theme.hover : .clear))
+      .overlay(RoundedRectangle(cornerRadius: theme.rowRadius).strokeBorder(selected ? theme.accent : .clear, lineWidth: 1.5))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -120,6 +127,9 @@ struct OfflineRow: View {
       .font(theme.font(12))
       .foregroundStyle(theme.secondary)
       .padding(.horizontal, 8).padding(.vertical, 4)
+      .background(
+        RoundedRectangle(cornerRadius: theme.rowRadius)
+          .strokeBorder(model.selected == friend.handle ? theme.accent : .clear, lineWidth: 1.5))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
