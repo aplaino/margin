@@ -1,9 +1,12 @@
 import {
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
+  type Stats,
   statSync,
   unlinkSync,
   writeFileSync,
@@ -216,17 +219,28 @@ export function installed(env: ToolEnv) {
   );
   if (env.self.length !== 1 || !match) return false;
   if (match[1] !== '/Applications' && match[1] !== join(env.home, 'Applications')) return false;
-  const bundle = dirname(dirname(dirname(binary)));
+  const macos = dirname(binary);
+  const contents = dirname(macos);
+  const bundle = dirname(contents);
   try {
-    for (const path of [bundle, dirname(binary), binary]) {
-      const stat = statSync(path);
-      if (stat.mode & 0o022 || (stat.uid !== process.getuid?.() && stat.uid !== 0)) return false;
-    }
-    return true;
+    // No symlinks anywhere on the way: the path checked is the path that runs.
+    if (realpathSync(binary) !== binary) return false;
+    // /Applications is root-owned but writable by admins on every Mac; that's the one exception.
+    const apps = lstatSync(match[1]);
+    if (apps.isSymbolicLink() || (match[1] === '/Applications' ? apps.uid !== 0 : !safe(apps)))
+      return false;
+    return [bundle, contents, macos, binary].every((path) => {
+      const stat = lstatSync(path);
+      return !stat.isSymbolicLink() && safe(stat);
+    });
   } catch {
     return false;
   }
 }
+
+// Owned by you or root, and writable by nobody else.
+const safe = (stat: Stats) =>
+  !(stat.mode & 0o022) && (stat.uid === process.getuid?.() || stat.uid === 0);
 
 // Margin's own hook for this data folder (another Margin setup's hooks are not ours to move).
 const belongsHere = (env: ToolEnv, command: string | undefined) =>

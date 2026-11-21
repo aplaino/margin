@@ -5,11 +5,13 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { toEvent } from '../src/reporters/hook';
 import {
   connectTool,
@@ -26,7 +28,8 @@ let env: ToolEnv;
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'margind-tools-'));
+  // The real path: macOS's temp folder is behind a symlink, which an install must not be.
+  root = realpathSync(mkdtempSync(join(tmpdir(), 'margind-tools-')));
   const home = join(root, 'home');
   env = {
     home,
@@ -145,6 +148,20 @@ describe('when Margin moves', () => {
       expect(() => connectTool({ ...env, self: [self] }, 'claude-code')).toThrow(ToolError);
     }
     expect(() => connectTool(app('Shared', 0o777), 'claude-code')).toThrow(ToolError);
+    // A writable Contents folder, or a symlink on the way, is enough to refuse.
+    const contents = app('Loose');
+    chmodSync(dirname(dirname(contents.self[0] ?? '')), 0o777);
+    expect(() => connectTool(contents, 'claude-code')).toThrow(ToolError);
+    const real = app('Real');
+    symlinkSync(
+      join(env.home, 'Applications', 'Real.app'),
+      join(env.home, 'Applications', 'Link.app'),
+    );
+    const linked = {
+      ...real,
+      self: [join(env.home, 'Applications', 'Link.app', 'Contents', 'MacOS', 'margind')],
+    };
+    expect(() => connectTool(linked, 'claude-code')).toThrow(ToolError);
   });
 
   test('hooks left pointing at an old install are re-pointed, and others’ hooks stay', () => {
