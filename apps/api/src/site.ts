@@ -24,7 +24,7 @@ export async function site(dir: string) {
     if (await source.exists()) pages.set(path, { body: await source.text(), type });
   }
   return (req: Request, url: URL): Response | null => {
-    if (req.method !== 'GET') return null;
+    if (req.method !== 'GET' && req.method !== 'HEAD') return null;
     const page = pages.get(url.pathname);
     return page
       ? new Response(page.body, { headers: { ...HEADERS, 'content-type': page.type } })

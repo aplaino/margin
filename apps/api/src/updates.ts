@@ -137,7 +137,7 @@ ${items}
   return async (req: Request, url: URL): Promise<Response | null> => {
     const path = url.pathname;
     if (req.method === 'POST' && path === '/updates/releases') return upload(req);
-    if (req.method !== 'GET') return null;
+    if (req.method !== 'GET' && req.method !== 'HEAD') return null;
     if (path === '/updates/appcast.xml') return appcast(url);
     if (path === '/download') {
       const [newest] = await latest(1);

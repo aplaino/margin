@@ -29,6 +29,10 @@ test('the page loads nothing from anywhere else', async () => {
   expect(html.match(/(src|href)="(https?:)?\/\//g)).toBeNull();
 });
 
+test('answers HEAD too, for link previews and uptime checks', async () => {
+  expect((await fetch(`${api.base}/`, { method: 'HEAD' })).status).toBe(200);
+});
+
 test('other paths still fall through to the API', async () => {
   expect((await fetch(`${api.base}/index.html`)).status).toBe(401);
 });
