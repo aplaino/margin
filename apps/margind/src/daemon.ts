@@ -90,6 +90,13 @@ export async function startDaemon(options: DaemonOptions) {
   }
 
   const store = new Store(paths.db, options.keys(`db:${paths.home}`));
+  // A build pointed at another server signs out of the old one (and forgets its friend
+  // list) rather than keep reaching for it.
+  const saved = store.account();
+  if (saved && saved.server !== options.server) {
+    store.setAccount(undefined);
+    for (const friend of store.friends()) store.removeFriend(friend.handle);
+  }
   const signal = new Signal(store);
   const sessions = new Sessions(options.isAlive);
   const classify = repoClassifier(options.fetchRepo);

@@ -123,3 +123,28 @@ describe('server errors', () => {
     expect((error as ApiError).message).toBe('nope[2J gotcha');
   });
 });
+
+describe('switching servers', () => {
+  test('a build pointed at another server starts signed out, without the old friends', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'margind-switch-'));
+    const where = paths(join(root, 'd'));
+    const keys = memoryKeys();
+    const options = {
+      paths: where,
+      keys,
+      tools: { home: root, dataHome: where.home, socket: where.socket, self: [] },
+      tokenSources: { claudeProjects: root, codexSessions: [], opencodeDb: join(root, 'none') },
+      idle: async () => 0,
+    };
+    const first = await startDaemon({ ...options, server: 'http://127.0.0.1:9' });
+    first.store.setAccount({ server: 'http://127.0.0.1:9', token: 't', handle: 'maya' });
+    first.store.upsertFriend('leo');
+    await first.stop();
+
+    const second = await startDaemon({ ...options, server: 'https://margin.example' });
+    expect(second.store.account()).toBeUndefined();
+    expect(second.store.friends()).toEqual([]);
+    await second.stop();
+    rmSync(root, { recursive: true, force: true });
+  });
+});

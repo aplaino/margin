@@ -1,0 +1,8 @@
+.git
+.dev
+**/node_modules
+apps/mac
+docs
+*.db
+*.db-*
+.env*
