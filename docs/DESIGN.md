@@ -10,8 +10,10 @@ Margin shows what your friends are building, from one fixed spot at the edge of 
 
 ## 2. Placement
 
-- **Edge:** right by default; left or right in settings.
-- **Vertical position:** top, centre or bottom in settings. Default **centre**, except when the Dock sits on the same edge: then default **top**, so hovering Margin never reveals the Dock. (The owner's Dock auto-hides on the right, vertically centred.)
+- **Moving it: drag the strip.** Drag along the edge to put it at any height; drag it across the screen and it switches to the other edge as the pointer crosses the middle, settling on the side you let go. A press that moves less than 3 px is a click. The cursor shows a closed hand while dragging, and hover-to-open waits until you let go.
+- **Edge:** right by default.
+- **Vertical position:** saved as a fraction of the screen height, so it holds across displays and resolutions. Until you move it: the middle, except when the Dock sits on the same edge, then near the top, so hovering Margin never reveals the Dock. (The owner's Dock auto-hides on the right, vertically centred.) Settings has **Reset position**.
+- **Opening:** the drawer opens downward from a strip in the top half of the screen and upward from one in the bottom half.
 - **Corners:** Margin stays at least 80 px from the top and bottom of the screen, clear of hot corners and the menu bar.
 - **Display:** the screen that contains the frontmost window (falling back to the one with the pointer). It moves to another display only when you switch work there, never while open.
 - **Full-screen apps and Spaces:** visible on every Space and over full-screen apps.
@@ -132,7 +134,8 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │ OPEN MARGIN WITH             │
 │ ☑ Hover   ☑ Click   ☑ ⌥M  ✎ │
 │ POSITION                     │
-│ Edge: Right ▾  Height: Top ▾ │
+│ Drag the strip to move it.   │
+│ Reset position               │
 │ THEME                        │
 │ ◉ System  ○ Light  ○ Dark    │
 │ Accent  ● ● ● ● ●            │
@@ -192,7 +195,7 @@ Claude Code, Codex, OpenCode and the shell (zsh/bash) report activity through ho
 | Setting | Default |
 |---|---|
 | Edge | Right |
-| Vertical position | Centre; Top if the Dock is on the same edge |
+| Vertical position | Middle; near the top if the Dock is on the same edge (until dragged) |
 | Open with hover / click / hotkey | On / On / On |
 | Hotkey | ⌥M |
 | Hover intent delay | 250 ms |

@@ -20,21 +20,13 @@ struct SettingsView: View {
         }
 
         SectionLabel("Position").padding(.top, 6)
-        HStack(spacing: 8) {
-          Picker("Edge", selection: $prefs.edge) {
-            Text("Right").tag("right")
-            Text("Left").tag("left")
-          }
-          Picker("Height", selection: $prefs.height) {
-            Text("Automatic").tag("auto")
-            Text("Top").tag("top")
-            Text("Centre").tag("centre")
-            Text("Bottom").tag("bottom")
-          }
-        }
-        .labelsHidden()
-        if prefs.height == "auto" && Prefs.dockEdge == prefs.edge {
-          Text("Top, because your Dock is on the \(prefs.edge).").font(.system(size: 10.5)).foregroundStyle(theme.tertiary)
+        Text("Drag the strip along either edge to move it, or across the screen to switch sides.")
+          .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
+        if prefs.position != nil || prefs.edge != "right" {
+          Button("Reset position") { prefs.resetPosition() }.buttonStyle(.link)
+        } else if Prefs.dockEdge == prefs.edge {
+          Text("Near the top for now, because your Dock is on the \(prefs.edge).")
+            .font(.system(size: 10.5)).foregroundStyle(theme.tertiary)
         }
 
         SectionLabel("Theme").padding(.top, 6)

@@ -3,7 +3,6 @@ import SwiftUI
 // The always-visible strip: a dot per online friend (● in a tool, ◐ idle), +N past 12, and
 // the unread count. A new message pulses it once.
 struct StripView: View {
-  var onTap: () -> Void
   @Environment(AppModel.self) private var model
   @Environment(\.theme) private var theme
   @State private var glow = false
@@ -36,8 +35,6 @@ struct StripView: View {
     .background(shape.fill(theme.background))
     .overlay(shape.strokeBorder(theme.border, lineWidth: 1))
     .shadow(color: theme.unread.opacity(glow ? 0.9 : 0), radius: glow ? 6 : 0)
-    .contentShape(Rectangle())
-    .onTapGesture(perform: onTap)
     .onChange(of: model.pulse) {
       withAnimation(.easeOut(duration: 0.2)) { glow = true }
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {

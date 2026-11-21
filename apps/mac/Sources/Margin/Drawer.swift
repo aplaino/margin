@@ -28,7 +28,7 @@ final class DrawerPanel: NSPanel {
 }
 
 // Hosts SwiftUI and reports the pointer entering and leaving, even when Margin isn't active.
-final class TrackingHostingView<Content: View>: NSHostingView<Content> {
+class TrackingHostingView<Content: View>: NSHostingView<Content> {
   var onHover: ((Bool) -> Void)?
   private var area: NSTrackingArea?
 
@@ -44,6 +44,37 @@ final class TrackingHostingView<Content: View>: NSHostingView<Content> {
   override func mouseEntered(with event: NSEvent) { onHover?(true) }
   override func mouseExited(with event: NSEvent) { onHover?(false) }
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+// The strip handles its own mouse: a click opens the drawer, a drag moves the strip along
+// the edge, or across to the other edge. Screen coordinates keep the drag steady while the
+// window itself moves.
+final class StripHostingView: TrackingHostingView<AnyView> {
+  var onPress: (() -> Void)?
+  var onClick: (() -> Void)?
+  var onDrag: ((NSPoint) -> Void)?
+  var onDragEnd: (() -> Void)?
+  private var downAt: NSPoint?
+  private var dragging = false
+
+  override func mouseDown(with event: NSEvent) {
+    downAt = NSEvent.mouseLocation
+    dragging = false
+    onPress?()
+  }
+
+  override func mouseDragged(with event: NSEvent) {
+    guard let downAt else { return }
+    let point = NSEvent.mouseLocation
+    if !dragging, hypot(point.x - downAt.x, point.y - downAt.y) > 3 { dragging = true }
+    if dragging { onDrag?(point) }
+  }
+
+  override func mouseUp(with event: NSEvent) {
+    if dragging { onDragEnd?() } else if downAt != nil { onClick?() }
+    downAt = nil
+    dragging = false
+  }
 }
 
 // ⌥M from anywhere. Carbon hotkeys need no Accessibility permission.
@@ -79,7 +110,7 @@ final class DrawerController {
   private let model: AppModel
   private let strip: DrawerPanel
   private let panel: DrawerPanel
-  private let stripView: TrackingHostingView<AnyView>
+  private let stripView: StripHostingView
   private let panelView: TrackingHostingView<AnyView>
   private var stripSize = CGSize(width: 8, height: 32)
   private var openTimer: Timer?
@@ -94,20 +125,23 @@ final class DrawerController {
 
   init(model: AppModel) {
     self.model = model
-    stripView = TrackingHostingView(rootView: AnyView(EmptyView()))
+    stripView = StripHostingView(rootView: AnyView(EmptyView()))
     panelView = TrackingHostingView(rootView: AnyView(EmptyView()))
     strip = DrawerPanel(content: stripView)
     panel = DrawerPanel(content: panelView)
 
-    let onTap: () -> Void = { [weak self] in self?.stripClicked() }
     let onClose: () -> Void = { [weak self] in self?.collapse() }
-    stripView.rootView = AnyView(Themed(model: model) { StripView(onTap: onTap) })
+    stripView.rootView = AnyView(Themed(model: model) { StripView() })
     panelView.rootView = AnyView(Themed(model: model) { PanelView(onClose: onClose) })
 
     // The windows are sized here, not by SwiftUI's constraints.
     stripView.sizingOptions = []
     panelView.sizingOptions = []
     stripView.onHover = { [weak self] inside in self?.stripHover(inside) }
+    stripView.onPress = { [weak self] in self?.openTimer?.invalidate() }
+    stripView.onClick = { [weak self] in self?.stripClicked() }
+    stripView.onDrag = { [weak self] point in self?.dragged(to: point) }
+    stripView.onDragEnd = { [weak self] in self?.dragEnded() }
     panelView.onHover = { [weak self] inside in self?.panelHover(inside) }
     panel.onEscape = { [weak self] in self?.escape() }
 
@@ -130,7 +164,7 @@ final class DrawerController {
   // Re-applies settings that affect the windows whenever they change.
   private func observePrefs() {
     withObservationTracking {
-      _ = (model.prefs.theme, model.prefs.edge, model.prefs.height, model.prefs.openOnHotkey)
+      _ = (model.prefs.theme, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey)
     } onChange: { [weak self] in
       DispatchQueue.main.async {
         MainActor.assumeIsolated {
@@ -164,13 +198,16 @@ final class DrawerController {
     let width = stripSize.width
     let height = min(stripSize.height, visible.height - edgeMargin * 2)
     let x = model.prefs.edge == "left" ? full.minX : full.maxX - width
-    let y: CGFloat =
-      switch model.prefs.resolvedHeight {
-      case "top": visible.maxY - edgeMargin - height
-      case "bottom": visible.minY + edgeMargin
-      default: visible.midY - height / 2
-      }
+    // 0 is as high as it goes, 1 as low, both keeping clear of the screen corners.
+    let (top, bottom) = travel(on: screen, height: height)
+    let y = top > bottom ? top - CGFloat(model.prefs.resolvedPosition) * (top - bottom) : visible.midY - height / 2
     return NSRect(x: x, y: y, width: width, height: height)
+  }
+
+  // The lowest y of the strip's frame at the top and at the bottom of its travel.
+  private func travel(on screen: NSScreen, height: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
+    let visible = screen.visibleFrame
+    return (visible.maxY - edgeMargin - height, visible.minY + edgeMargin)
   }
 
   private func panelFrame(on screen: NSScreen) -> NSRect {
@@ -178,13 +215,9 @@ final class DrawerController {
     let visible = screen.visibleFrame
     let width: CGFloat = 260
     let height = min(visible.height * 0.7, 620)
+    // Opens downward from a strip in the top half, upward from one in the bottom half.
     let anchor = stripFrame(on: screen)
-    var y: CGFloat =
-      switch model.prefs.resolvedHeight {
-      case "top": anchor.maxY - height
-      case "bottom": anchor.minY
-      default: anchor.midY - height / 2
-      }
+    var y = anchor.midY >= visible.midY ? anchor.maxY - height : anchor.minY
     y = min(max(y, visible.minY + 8), visible.maxY - height - 8)
     let x = model.prefs.edge == "left" ? full.minX : full.maxX - width
     return NSRect(x: x, y: y, width: width, height: height)
@@ -228,6 +261,36 @@ final class DrawerController {
     guard height != stripSize.height else { return }
     stripSize = CGSize(width: 8, height: height)
     place()
+  }
+
+  // MARK: dragging
+
+  private var dragEdge: String?
+
+  private func dragged(to point: NSPoint) {
+    guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? screen else { return }
+    if dragEdge == nil {
+      openTimer?.invalidate()
+      collapse()
+      NSCursor.closedHand.push()
+    }
+    let edge = point.x < screen.frame.midX ? "left" : "right"
+    dragEdge = edge
+    let (top, bottom) = travel(on: screen, height: stripSize.height)
+    let y = min(max(point.y - stripSize.height / 2, bottom), max(top, bottom))
+    let x = edge == "left" ? screen.frame.minX : screen.frame.maxX - stripSize.width
+    strip.setFrame(NSRect(x: x, y: y, width: stripSize.width, height: stripSize.height), display: true)
+  }
+
+  private func dragEnded() {
+    guard let edge = dragEdge else { return }
+    dragEdge = nil
+    NSCursor.pop()
+    guard let screen = strip.screen ?? screen else { return }
+    let (top, bottom) = travel(on: screen, height: stripSize.height)
+    let fraction = top > bottom ? Double((top - strip.frame.minY) / (top - bottom)) : 0.5
+    model.prefs.position = min(max(fraction, 0), 1)
+    model.prefs.edge = edge
   }
 
   // MARK: opening and closing

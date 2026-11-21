@@ -11,8 +11,13 @@ final class Prefs {
   var openOnHotkey: Bool { didSet { defaults.set(openOnHotkey, forKey: "openOnHotkey") } }
   // "right" or "left"
   var edge: String { didSet { defaults.set(edge, forKey: "edge") } }
-  // "auto" (top if the Dock shares the edge, else centre), "top", "centre", "bottom"
-  var height: String { didSet { defaults.set(height, forKey: "height") } }
+  // Where along the edge the strip sits, 0 (top) to 1 (bottom), set by dragging it.
+  // nil until you move it: top if the Dock shares the edge, else the middle.
+  var position: Double? {
+    didSet {
+      if let position { defaults.set(position, forKey: "position") } else { defaults.removeObject(forKey: "position") }
+    }
+  }
   // "system", "light", "dark"
   var theme: String { didSet { defaults.set(theme, forKey: "theme") } }
   var accent: Accent { didSet { defaults.set(accent.rawValue, forKey: "accent") } }
@@ -21,14 +26,14 @@ final class Prefs {
 
   init() {
     defaults.register(defaults: [
-      "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right", "height": "auto",
+      "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right",
       "theme": "system", "accent": Accent.blue.rawValue, "notifications": false, "setupDone": false,
     ])
     openOnHover = defaults.bool(forKey: "openOnHover")
     openOnClick = defaults.bool(forKey: "openOnClick")
     openOnHotkey = defaults.bool(forKey: "openOnHotkey")
     edge = defaults.string(forKey: "edge") ?? "right"
-    height = defaults.string(forKey: "height") ?? "auto"
+    position = defaults.object(forKey: "position") as? Double
     theme = defaults.string(forKey: "theme") ?? "system"
     accent = Accent(rawValue: defaults.string(forKey: "accent") ?? "") ?? .blue
     notifications = defaults.bool(forKey: "notifications")
@@ -39,8 +44,10 @@ final class Prefs {
     UserDefaults(suiteName: "com.apple.dock")?.string(forKey: "orientation") ?? "bottom"
   }
 
-  var resolvedHeight: String {
-    guard height == "auto" else { return height }
-    return Prefs.dockEdge == edge ? "top" : "centre"
+  var resolvedPosition: Double { position ?? (Prefs.dockEdge == edge ? 0 : 0.5) }
+
+  func resetPosition() {
+    edge = "right"
+    position = nil
   }
 }
