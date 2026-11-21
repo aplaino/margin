@@ -17,6 +17,7 @@ import {
 } from '@margin/protocol';
 import type { Server, ServerWebSocket, SQL } from 'bun';
 import * as v from 'valibot';
+import { type UpdateOptions, updates } from './updates';
 
 // The server holds identity, the friend graph, public key bundles and ciphertext in
 // transit. Presence lives in memory only. It never sees message plaintext.
@@ -29,6 +30,7 @@ export type Options = {
   devAuth?: boolean;
   fetchGithubUser?: (token: string) => Promise<GithubUser | null>;
   retentionMs?: number;
+  updates?: UpdateOptions;
 };
 
 type Account = { id: string; handle: string };
@@ -114,6 +116,7 @@ function limiter(limit: number, windowMs: number) {
 
 export function createApp(sql: SQL, options: Options = {}) {
   const fetchGithubUser = options.fetchGithubUser ?? githubUser;
+  const updateRoutes = options.updates ? updates(sql, options.updates) : undefined;
   const retentionMs = options.retentionMs ?? RETENTION_MS;
   const online = new Map<string, Online>();
   const limits = {
@@ -308,6 +311,8 @@ export function createApp(sql: SQL, options: Options = {}) {
     };
 
     if (method === 'GET' && path === '/health') return json({ ok: true });
+    const update = await updateRoutes?.(req, url);
+    if (update) return update;
     if (method === 'GET' && path === '/config') {
       const config: Config = { protocol: PROTOCOL, githubClientId: options.githubClientId ?? null };
       return json(config);

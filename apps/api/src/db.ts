@@ -37,6 +37,12 @@ const MIGRATIONS: string[][] = [
       ciphertext TEXT NOT NULL)`,
     `CREATE INDEX queued_messages_to ON queued_messages (to_id, sent_at)`,
   ],
+  // Margin.app releases served to Sparkle; the zips themselves are on disk.
+  [
+    `CREATE TABLE releases (
+      build BIGINT PRIMARY KEY, version TEXT NOT NULL, signature TEXT NOT NULL, length BIGINT NOT NULL,
+      min_system TEXT NOT NULL, created_at BIGINT NOT NULL)`,
+  ],
 ];
 
 export const TABLES = [
@@ -49,6 +55,7 @@ export const TABLES = [
   'blocks',
   'reports',
   'queued_messages',
+  'releases',
   'schema_migrations',
 ];
 

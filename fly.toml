@@ -12,6 +12,12 @@ primary_region = "ord"
   HOST = "0.0.0.0"
   # Public: it's shown to anyone during GitHub sign-in.
   GITHUB_CLIENT_ID = "Ov23lih46hAtRfO5kTd3"
+  MARGIN_PUBLIC_URL = "https://margin-api.fly.dev"
+
+# Margin.app release zips (served to Sparkle and /download).
+[mounts]
+  source = "margin_data"
+  destination = "/data"
 
 [http_service]
   internal_port = 8080

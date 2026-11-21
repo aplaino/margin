@@ -10,6 +10,7 @@ enum SetupStep { case welcome, signIn, tools, addFriend }
 final class AppModel {
   let prefs = Prefs()
   let client = DaemonClient(path: DaemonClient.defaultPath())
+  let updates = Updates()
 
   var daemonUp = false
   var me: SelfInfo?
@@ -50,6 +51,7 @@ final class AppModel {
   }
 
   init() {
+    updates.model = self
     client.onConnected = { [weak self] up in
       self?.daemonUp = up
       if !up { self?.me = nil }
@@ -70,6 +72,8 @@ final class AppModel {
   private func handle(_ push: Push) {
     switch push {
     case .selfInfo(let info):
+      // Too old for the server: look for an update straight away.
+      if info.connection == "update-required", me?.connection != "update-required" { updates.checkInBackground() }
       me = info
       if info.connection == "signed-out" { setupStep = prefs.setupDone ? .signIn : setupStep }
     case .loginCode(let code, let uri):

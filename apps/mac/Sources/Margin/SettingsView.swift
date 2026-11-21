@@ -70,6 +70,15 @@ struct SettingsView: View {
           "Open Margin at login",
           isOn: Binding(get: { opensAtLogin }, set: { on in Launcher.setOpensAtLogin(on); opensAtLogin = Launcher.opensAtLogin }))
 
+        if model.updates.enabled {
+          HStack {
+            Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+              .foregroundStyle(theme.secondary)
+            Spacer()
+            Button("Check for updates") { model.updates.checkNow() }.buttonStyle(.link)
+          }
+        }
+
         SectionLabel("Notifications").padding(.top, 6)
         Toggle("macOS notifications", isOn: Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }))
 

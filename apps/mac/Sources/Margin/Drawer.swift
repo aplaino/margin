@@ -369,6 +369,7 @@ final class DrawerController {
     if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
     clickMonitor = nil
     model.expanded = false
+    model.updates.drawerClosed()
     let wasKey = panel.isKeyWindow
     let frame = panel.frame
     let offset: CGFloat = model.prefs.edge == "left" ? -frame.width : frame.width

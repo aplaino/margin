@@ -7,7 +7,7 @@ RUN bun install --frozen-lockfile && bun build apps/api/src/index.ts --target=bu
 FROM oven/bun:1.3.14-slim
 WORKDIR /app
 COPY --from=build /out/api.js .
-USER bun
-ENV PORT=8080 HOST=0.0.0.0 MARGIN_ENV=production
+ENV PORT=8080 HOST=0.0.0.0 MARGIN_ENV=production MARGIN_UPDATES_DIR=/data/updates
 EXPOSE 8080
-CMD ["bun", "api.js"]
+# Starts as root only to give the bun user the release volume, then runs as bun.
+CMD ["sh", "-c", "mkdir -p /data/updates && chown -R bun:bun /data && exec setpriv --reuid=bun --regid=bun --init-groups bun api.js"]

@@ -23,7 +23,15 @@ if (process.env.MARGIN_ENV === 'production') {
 const sql = openDb();
 await migrate(sql);
 
-const app = createApp(sql, { devAuth, githubClientId: process.env.GITHUB_CLIENT_ID });
+const app = createApp(sql, {
+  devAuth,
+  githubClientId: process.env.GITHUB_CLIENT_ID,
+  updates: {
+    dir: process.env.MARGIN_UPDATES_DIR ?? '/data/updates',
+    releaseToken: process.env.RELEASE_TOKEN,
+    publicUrl: process.env.MARGIN_PUBLIC_URL,
+  },
+});
 const server = Bun.serve({
   port: Number(process.env.PORT ?? 8787),
   hostname: process.env.HOST ?? '127.0.0.1',

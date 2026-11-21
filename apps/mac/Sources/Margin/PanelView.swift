@@ -13,6 +13,9 @@ struct PanelView: View {
           text: "Your friends and messages will appear once it’s back. It restarts automatically.")
       } else if model.me?.connection == "update-required" {
         StateView(title: "Margin needs an update", text: "This version can’t talk to the server any more.")
+        if model.updates.enabled {
+          Button("Update now") { model.updates.checkNow() }.buttonStyle(.link).padding(.horizontal, 20)
+        }
       } else if model.needsSetup {
         SetupView()
       } else if let handle = model.chatWith {
