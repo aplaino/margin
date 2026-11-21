@@ -3,6 +3,11 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@margin/protocol": "workspace:*"
+    "@margin/protocol": "workspace:*",
+    "valibot": "1.5.0"
+  },
+  "scripts": {
+    "dev": "MARGIN_DEV_AUTH=1 bun --watch src/index.ts",
+    "start": "bun src/index.ts"
   }
 }
