@@ -130,18 +130,20 @@ export class Signal {
     return !!bytes && SessionRecord.deserialize(JSON.parse(bytes.toString())).haveOpenSession();
   }
 
-  async encrypt(to: PeerBundle, plaintext: string): Promise<Ciphertext> {
-    const address = new ProtocolAddress(to.handle, 1);
+  // Starts a session from the friend's bundle the first time; after that the bundle isn't needed.
+  async encrypt(handle: string, plaintext: string, bundle?: PeerBundle): Promise<Ciphertext> {
+    const address = new ProtocolAddress(handle, 1);
     const storage = this.storage();
-    if (!this.hasSession(to.handle)) {
-      const preKey = to.preKeys[0];
+    if (!this.hasSession(handle)) {
+      if (!bundle) throw new Error('no session and no bundle to start one');
+      const preKey = bundle.preKeys[0];
       await new SessionBuilder(storage, address).initOutgoing({
-        registrationId: to.registrationId,
-        identityKey: buf(to.identityKey),
+        registrationId: bundle.registrationId,
+        identityKey: buf(bundle.identityKey),
         signedPreKey: {
-          keyId: to.signedPreKey.keyId,
-          publicKey: buf(to.signedPreKey.publicKey),
-          signature: buf(to.signedPreKey.signature),
+          keyId: bundle.signedPreKey.keyId,
+          publicKey: buf(bundle.signedPreKey.publicKey),
+          signature: buf(bundle.signedPreKey.signature),
         },
         ...(preKey ? { preKey: { keyId: preKey.keyId, publicKey: buf(preKey.publicKey) } } : {}),
       });

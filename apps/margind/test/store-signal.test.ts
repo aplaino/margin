@@ -153,13 +153,14 @@ describe('store', () => {
 describe('signal', () => {
   test('a conversation both ways, starting from a prekey message', async () => {
     const { a, b } = pair();
-    const first = await a.signal.encrypt(peerBundle('bob', b.signal), 'hi bob');
+    const first = await a.signal.encrypt('bob', 'hi bob', peerBundle('bob', b.signal));
     expect(first.type).toBe(3);
     expect(await b.signal.decrypt('alice', first)).toBe('hi bob');
 
-    const reply = await b.signal.encrypt(peerBundle('alice', a.signal), 'hi alice');
+    // Bob already has a session from Alice's first message, so no bundle is needed.
+    const reply = await b.signal.encrypt('alice', 'hi alice');
     expect(await a.signal.decrypt('bob', reply)).toBe('hi alice');
-    const next = await a.signal.encrypt(peerBundle('bob', b.signal), 'second');
+    const next = await a.signal.encrypt('bob', 'second', peerBundle('bob', b.signal));
     expect(next.type).toBe(1);
     expect(await b.signal.decrypt('alice', next)).toBe('second');
   });
@@ -167,7 +168,10 @@ describe('signal', () => {
   test('the prekey used to start a session is deleted', async () => {
     const { a, b } = pair();
     const used = peerBundle('bob', b.signal).preKeys[0]?.keyId;
-    await b.signal.decrypt('alice', await a.signal.encrypt(peerBundle('bob', b.signal), 'x'));
+    await b.signal.decrypt(
+      'alice',
+      await a.signal.encrypt('bob', 'x', peerBundle('bob', b.signal)),
+    );
     expect(b.store.preKeyIds()).not.toContain(used);
   });
 
@@ -177,7 +181,7 @@ describe('signal', () => {
     const mallory = new Signal(malloryStore);
     malloryStore.upsertFriend('bob');
     malloryStore.pin(peerBundle('bob', b.signal));
-    const forged = await mallory.encrypt(peerBundle('bob', b.signal), 'it is me, alice');
+    const forged = await mallory.encrypt('bob', 'it is me, alice', peerBundle('bob', b.signal));
     await expect(b.signal.decrypt('alice', forged)).rejects.toThrow();
   });
 
