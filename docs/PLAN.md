@@ -41,7 +41,7 @@ reporters (Claude Code + Codex hooks, OpenCode plugin, shell) ─▶ margind ─
 ```
 
 - **Margin.app** — the drawer (Swift/SwiftUI, Xcode project). The only UI.
-- **`margind`** — background service: sessions, redaction, encrypted local store, Signal sessions, outbox, settings. The only thing that talks to the server. (**Open, Phase 2 kickoff:** keep it a separate Bun process, reusing KNOWLEDGE.md's findings and libsignal JS, or move it into the app.)
+- **`margind`** — background service: sessions, redaction, encrypted local store, Signal sessions, outbox, settings. The only thing that talks to the server. A separate Bun process (decided at Phase 2 kickoff), reusing KNOWLEDGE.md's findings and libsignal JS.
 - **`api`** — Bun HTTP + WebSocket service: auth, friend graph, key directory, presence fan-out (memory), ciphertext queue. Postgres.
 - **Protocols** — local (app/reporters ↔ margind) and server (margind ↔ api), versioned and validated against shared schemas at every boundary.
 
@@ -62,7 +62,19 @@ Where Margin lives and how it behaves: [DESIGN.md](DESIGN.md), with a visual moc
 ### Phase 2 — Functionality
 Build the core against DESIGN.md and prove it **between two different users on two different machines**, each with their own margind, through a staging server that runs on neither machine (Fly.io + Neon).
 
-Kickoff decisions: margind as a separate process or inside the app; the second test user and machine; repo bootstrap (workspaces, Biome, CI, protocol schemas, private GitHub repo `aplaino/margin`).
+Kickoff decisions (2026-11-21):
+- **margind is a separate Bun process**; Margin.app is a thin Swift UI over a local socket.
+- **Second machine:** a macOS VM on this Mac with a second GitHub account, until a real second Mac is available.
+- **Xcode** is installed by the owner in parallel; everything up to step 6 doesn't need it.
+
+Build order:
+1. Bootstrap: Bun workspaces (`packages/protocol`, `apps/api`, `apps/margind`), Biome, strict tsconfig, CI.
+2. Protocol: Valibot schemas for server and local messages, with the protocol version.
+3. api: GitHub device sign-in, friends, key directory, presence fan-out, ciphertext queue; Postgres + SQLite.
+4. margind: encrypted store, Signal sessions, transport, tool hooks, token totals, redaction.
+5. Two-daemon end-to-end tests on one machine.
+6. Margin.app: the drawer, built against the mockup.
+7. Staging on Fly.io + Neon; run the matrix between this Mac and the VM; record in `docs/TESTING.md`.
 
 Scope: sign-in, friends, presence from each v1 tool, token totals, privacy settings, chat, the drawer (collapsed, expanded, chat, Add, Settings incl. System/Light/Dark + accent, first launch, connecting tools). The drawer reads every colour, font and size from one theme definition so full themes can follow.
 

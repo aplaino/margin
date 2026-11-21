@@ -1,0 +1,8 @@
+{
+  "name": "@margin/api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@margin/protocol": "workspace:*"
+  }
+}
