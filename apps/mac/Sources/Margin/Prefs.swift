@@ -23,12 +23,14 @@ final class Prefs {
   var appearance: String { didSet { defaults.set(appearance, forKey: "appearance") } }
   var accent: Accent { didSet { defaults.set(accent.rawValue, forKey: "accent") } }
   var notifications: Bool { didSet { defaults.set(notifications, forKey: "notifications") } }
+  // New messages: "preview" (a tab with the name and first words), "name", or "glow" (strip only).
+  var alert: String { didSet { defaults.set(alert, forKey: "alert") } }
   var setupDone: Bool { didSet { defaults.set(setupDone, forKey: "setupDone") } }
 
   init() {
     defaults.register(defaults: [
       "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right",
-      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "setupDone": false,
+      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "setupDone": false,
     ])
     openOnHover = defaults.bool(forKey: "openOnHover")
     openOnClick = defaults.bool(forKey: "openOnClick")
@@ -39,6 +41,7 @@ final class Prefs {
     appearance = defaults.string(forKey: "appearance") ?? "system"
     accent = Accent(rawValue: defaults.string(forKey: "accent") ?? "") ?? .blue
     notifications = defaults.bool(forKey: "notifications")
+    alert = defaults.string(forKey: "alert") ?? "preview"
     setupDone = defaults.bool(forKey: "setupDone")
   }
 

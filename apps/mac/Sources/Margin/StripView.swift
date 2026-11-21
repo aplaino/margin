@@ -23,9 +23,12 @@ struct StripView: View {
           Text("+\(online.count - maxDots)").font(theme.font(6.5, bold: true))
             .foregroundStyle(theme.secondary).fixedSize().frame(height: theme.stripLabel)
         }
+        // Stays a filled badge until read.
         if model.unreadTotal > 0 {
-          Text("\(min(model.unreadTotal, 99))").font(theme.font(7, bold: true))
-            .foregroundStyle(theme.unread).fixedSize().frame(height: theme.stripLabel)
+          Text(model.unreadTotal > 9 ? "9+" : "\(model.unreadTotal)").font(theme.font(6.5, bold: true))
+            .foregroundStyle(theme.onUnread).fixedSize()
+            .frame(width: 8, height: theme.stripLabel)
+            .background(Capsule().fill(theme.unread))
         }
       }
     }
@@ -34,10 +37,15 @@ struct StripView: View {
     .frame(minHeight: 32)
     .themeSurface(shape, theme)
     .shadow(color: theme.unread.opacity(glow ? 0.9 : 0), radius: glow ? 6 : 0)
+    // Three pulses for a new message.
     .onChange(of: model.pulse) {
-      withAnimation(.easeOut(duration: 0.2)) { glow = true }
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-        withAnimation(.easeIn(duration: 0.2)) { glow = false }
+      for beat in 0..<3 {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(beat) * 0.5) {
+          withAnimation(.easeOut(duration: 0.18)) { glow = true }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(beat) * 0.5 + 0.25) {
+          withAnimation(.easeIn(duration: 0.2)) { glow = false }
+        }
       }
     }
     .accessibilityElement()

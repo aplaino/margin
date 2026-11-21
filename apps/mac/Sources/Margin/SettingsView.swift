@@ -80,6 +80,16 @@ struct SettingsView: View {
         }
 
         SectionLabel("Notifications").padding(.top, 6)
+        Picker("New messages", selection: $prefs.alert) {
+          Text("Peek with a preview").tag("preview")
+          Text("Peek with the name").tag("name")
+          Text("Glow only").tag("glow")
+        }
+        .labelsHidden()
+        if prefs.alert == "preview" {
+          Text("The first words show beside the strip, where anyone looking at your screen can see them.")
+            .font(theme.caption).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
+        }
         Toggle("macOS notifications", isOn: Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }))
 
         SectionLabel("Account").padding(.top, 6)

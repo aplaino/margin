@@ -26,6 +26,8 @@ final class AppModel {
   var results: [String: (ok: Bool, message: String?)] = [:]
   // Bumped on each new incoming message; the strip pulses once.
   var pulse = 0
+  // The message tab beside the strip, while it's out.
+  var peek: Peek?
   var moveError: String?
   // The how-it-works pages, opened again from Settings.
   var showGuide = false
@@ -139,7 +141,16 @@ final class AppModel {
 
   private func received(_ message: ChatMessage) {
     let reading = expanded && chatWith == message.peer
-    if !reading { pulse += 1 }
+    if !reading {
+      pulse += 1
+      if prefs.alert != "glow", !expanded {
+        let line = message.text.split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
+        let words = line.trimmingCharacters(in: .whitespaces)
+        peek = Peek(
+          id: message.id, handle: message.peer, name: friend(message.peer)?.displayName ?? message.peer,
+          preview: prefs.alert == "preview" && !words.isEmpty ? (words.count > 60 ? words.prefix(60) + "…" : words) : nil)
+      }
+    }
     guard prefs.notifications, !reading else { return }
     // Metadata only: who, never what.
     let content = UNMutableNotificationContent()
@@ -168,6 +179,7 @@ final class AppModel {
   }
 
   func openChat(_ handle: String) {
+    if peek?.handle == handle { peek = nil }
     selected = handle
     chatWith = handle
     request("history", ["with": handle])

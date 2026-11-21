@@ -37,7 +37,7 @@ Margin shows what your friends are building, from one fixed spot at the edge of 
 - **One dot per online friend**: solid ● in a tool, ◐ idle. Offline friends aren't shown. Order: in a tool, then idle, each by most recent change.
 - More than 12 online friends: the first 12 dots, then `+N`.
 - **Unread count** below the dots when above zero.
-- **New message:** the strip pulses once (brightness, about 600 ms). No system notification by default.
+- **New message:** the strip pulses three times, the unread count becomes a filled badge until read, and a tab slides out beside the strip for about 4 seconds showing the sender and the first words ("Maya: want to pair…"). Hovering keeps the tab out; clicking it opens the chat. No tab while you're reading that chat. Settings → Notifications chooses **Peek with a preview** (default, the owner's choice), **Peek with the name**, or **Glow only**; the preview option notes that anyone looking at the screen can read it. macOS notifications stay off by default.
 - **Not signed in / daemon not running:** a single hollow ○ dot; expanding shows what to do.
 - **Click-through:** only the strip's own pixels take the pointer. Anything outside it, such as a window's scroll bar or resize edge, behaves as if Margin weren't there.
 - Colours follow light/dark mode; the strip is translucent so the window behind stays visible at the edges.

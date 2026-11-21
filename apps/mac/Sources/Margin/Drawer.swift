@@ -140,6 +140,10 @@ final class DrawerController {
   private let panel: DrawerPanel
   private let stripView: StripHostingView
   private let panelView: TrackingHostingView<AnyView>
+  private let peekPanel: DrawerPanel
+  private let peekView: TrackingHostingView<AnyView>
+  private var peekTimer: Timer?
+  private let peekSize = CGSize(width: 250, height: 34)
   private var stripSize = CGSize(width: 8, height: 32)
   private var openTimer: Timer?
   private var closeTimer: Timer?
@@ -156,10 +160,16 @@ final class DrawerController {
     panelView = TrackingHostingView(rootView: AnyView(EmptyView()))
     strip = DrawerPanel(content: stripView)
     panel = DrawerPanel(content: panelView)
+    peekView = TrackingHostingView(rootView: AnyView(EmptyView()))
+    peekPanel = DrawerPanel(content: peekView)
 
     let onClose: () -> Void = { [weak self] in self?.collapse() }
     stripView.rootView = AnyView(Themed(model: model) { StripView() })
     panelView.rootView = AnyView(Themed(model: model) { PanelView(onClose: onClose) })
+    let onPeek: () -> Void = { [weak self] in self?.openPeek() }
+    peekView.rootView = AnyView(Themed(model: model) { PeekView(onOpen: onPeek) })
+    peekView.sizingOptions = []
+    peekView.onHover = { [weak self] inside in self?.peekHover(inside) }
 
     // The windows are sized here, not by SwiftUI's constraints.
     stripView.sizingOptions = []
@@ -176,6 +186,7 @@ final class DrawerController {
     hotKey = HotKey { [weak self] in self?.hotKeyPressed() }
     observePrefs()
     observeStrip()
+    observePeek()
 
     let center = NotificationCenter.default
     center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: panel, queue: .main) { [weak self] _ in
@@ -219,6 +230,7 @@ final class DrawerController {
       }
     strip.appearance = appearance
     panel.appearance = appearance
+    peekPanel.appearance = appearance
     hotKey?.set(enabled: model.prefs.openOnHotkey)
     place()
   }
@@ -295,6 +307,88 @@ final class DrawerController {
     guard height != stripSize.height else { return }
     stripSize = CGSize(width: 8, height: height)
     place()
+  }
+
+  // MARK: the message peek
+
+  private func observePeek() {
+    withObservationTracking {
+      _ = model.peek
+    } onChange: { [weak self] in
+      DispatchQueue.main.asyncAfter(deadline: .now()) {
+        MainActor.assumeIsolated {
+          self?.model.peek == nil ? self?.hidePeek() : self?.showPeek()
+          self?.observePeek()
+        }
+      }
+    }
+  }
+
+  private func peekFrame() -> NSRect {
+    let anchor = strip.frame
+    let x = model.prefs.edge == "left" ? anchor.maxX - 1 : anchor.minX - peekSize.width + 1
+    let y = anchor.maxY - peekSize.height
+    return NSRect(origin: CGPoint(x: x, y: y), size: peekSize)
+  }
+
+  private func showPeek() {
+    guard !model.expanded else {
+      model.peek = nil
+      return
+    }
+    let target = peekFrame()
+    let offset: CGFloat = model.prefs.edge == "left" ? -peekSize.width : peekSize.width
+    if !peekPanel.isVisible {
+      peekPanel.setFrame(reduceMotion ? target : target.offsetBy(dx: offset, dy: 0), display: true)
+      peekPanel.alphaValue = reduceMotion ? 0 : 1
+      peekPanel.orderFrontRegardless()
+      strip.orderFrontRegardless()
+      NSAnimationContext.runAnimationGroup { context in
+        context.duration = 0.22
+        context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        if reduceMotion { peekPanel.animator().alphaValue = 1 } else { peekPanel.animator().setFrame(target, display: true) }
+      }
+    }
+    schedulePeekHide(after: 4)
+  }
+
+  private func schedulePeekHide(after seconds: TimeInterval) {
+    peekTimer?.invalidate()
+    peekTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
+      MainActor.assumeIsolated { self?.model.peek = nil }
+    }
+  }
+
+  // Hovering keeps it out; leaving gives you a moment before it goes.
+  private func peekHover(_ inside: Bool) {
+    guard model.peek != nil else { return }
+    if inside { peekTimer?.invalidate() } else { schedulePeekHide(after: 1.5) }
+  }
+
+  private func hidePeek() {
+    peekTimer?.invalidate()
+    guard peekPanel.isVisible else { return }
+    let frame = peekPanel.frame
+    let offset: CGFloat = model.prefs.edge == "left" ? -frame.width : frame.width
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = 0.18
+      if self.reduceMotion { peekPanel.animator().alphaValue = 0 } else {
+        peekPanel.animator().setFrame(frame.offsetBy(dx: offset, dy: 0), display: true)
+      }
+    } completionHandler: { [weak self] in
+      MainActor.assumeIsolated {
+        guard let self, self.model.peek == nil else { return }
+        self.peekPanel.orderOut(nil)
+        self.peekPanel.alphaValue = 1
+      }
+    }
+  }
+
+  private func openPeek() {
+    guard let handle = model.peek?.handle else { return }
+    model.peek = nil
+    expand(byHover: false, focus: false)
+    model.openChat(handle)
   }
 
   // MARK: dragging
@@ -396,6 +490,7 @@ final class DrawerController {
     openTimer?.invalidate()
     closeTimer?.invalidate()
     openedByHover = byHover
+    model.peek = nil
     model.expanded = true
     let target = panelFrame(on: screen)
     if reduceMotion {
