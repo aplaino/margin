@@ -61,7 +61,7 @@ struct FriendRow: View {
               Text(Format.tokens(tokens)).font(theme.mono).foregroundStyle(theme.secondary)
             }
             if friend.unread > 0 {
-              Text("\(friend.unread)").font(.system(size: 10, weight: .bold))
+              Text("\(friend.unread)").font(theme.font(10, bold: true))
                 .foregroundStyle(theme.onUnread)
                 .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16)
                 .background(Capsule().fill(theme.unread))
@@ -113,11 +113,11 @@ struct OfflineRow: View {
         let ago = Format.ago(friend.lastSeenAt, now: now)
         if !ago.isEmpty { Text("· \(ago)").font(theme.caption) }
         if friend.unread > 0 {
-          Text("\(friend.unread)").font(.system(size: 10, weight: .bold)).foregroundStyle(theme.onUnread)
+          Text("\(friend.unread)").font(theme.font(10, bold: true)).foregroundStyle(theme.onUnread)
             .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16).background(Capsule().fill(theme.unread))
         }
       }
-      .font(.system(size: 12))
+      .font(theme.font(12))
       .foregroundStyle(theme.secondary)
       .padding(.horizontal, 8).padding(.vertical, 4)
       .contentShape(Rectangle())

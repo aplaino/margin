@@ -35,8 +35,7 @@ struct PanelView: View {
     .frame(maxHeight: .infinity, alignment: .top)
     .font(theme.body)
     .foregroundStyle(theme.text)
-    .background(shape.fill(theme.background))
-    .overlay(shape.strokeBorder(theme.border, lineWidth: 1))
+    .themeSurface(shape, theme)
     .clipShape(shape)
   }
 
@@ -59,7 +58,7 @@ struct PanelView: View {
         Button {
           model.tab = .settings
         } label: {
-          Image(systemName: "gearshape").font(.system(size: 13))
+          Image(systemName: "gearshape").font(theme.font(13))
             .foregroundStyle(model.tab == .settings ? theme.text : theme.secondary)
             .padding(.bottom, 8)
             .overlay(alignment: .bottom) { underline(model.tab == .settings) }
@@ -67,7 +66,7 @@ struct PanelView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Settings")
       }
-      .font(.system(size: 12))
+      .font(theme.font(12))
     }
     .padding(.horizontal, 16)
     .padding(.top, 14)

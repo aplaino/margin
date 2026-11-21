@@ -163,7 +163,7 @@ final class DrawerController {
   // Re-applies settings that affect the windows whenever they change.
   private func observePrefs() {
     withObservationTracking {
-      _ = (model.prefs.theme, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey)
+      _ = (model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey)
     } onChange: { [weak self] in
       DispatchQueue.main.async {
         MainActor.assumeIsolated {
@@ -177,7 +177,7 @@ final class DrawerController {
 
   private func applyPrefs() {
     let appearance: NSAppearance? =
-      switch model.prefs.theme {
+      switch model.prefs.appearance {
       case "light": NSAppearance(named: .aqua)
       case "dark": NSAppearance(named: .darkAqua)
       default: nil
@@ -245,7 +245,7 @@ final class DrawerController {
 
   // Worked out from what the strip shows, with the same theme metrics it's drawn with.
   private func stripHeight() -> CGFloat {
-    let metrics = Theme.make(dark: true, accent: Accent.blue.color)
+    let metrics = model.prefs.style.theme(dark: true, accent: .clear)
     guard model.signedIn else { return 32 }
     let online = model.onlineFriends.count
     var items = Array(repeating: metrics.dot, count: min(online, 12))

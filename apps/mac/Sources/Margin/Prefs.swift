@@ -18,8 +18,9 @@ final class Prefs {
       if let position { defaults.set(position, forKey: "position") } else { defaults.removeObject(forKey: "position") }
     }
   }
+  var style: ThemeStyle { didSet { defaults.set(style.rawValue, forKey: "style") } }
   // "system", "light", "dark"
-  var theme: String { didSet { defaults.set(theme, forKey: "theme") } }
+  var appearance: String { didSet { defaults.set(appearance, forKey: "appearance") } }
   var accent: Accent { didSet { defaults.set(accent.rawValue, forKey: "accent") } }
   var notifications: Bool { didSet { defaults.set(notifications, forKey: "notifications") } }
   var setupDone: Bool { didSet { defaults.set(setupDone, forKey: "setupDone") } }
@@ -27,14 +28,15 @@ final class Prefs {
   init() {
     defaults.register(defaults: [
       "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right",
-      "theme": "system", "accent": Accent.blue.rawValue, "notifications": false, "setupDone": false,
+      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "setupDone": false,
     ])
     openOnHover = defaults.bool(forKey: "openOnHover")
     openOnClick = defaults.bool(forKey: "openOnClick")
     openOnHotkey = defaults.bool(forKey: "openOnHotkey")
     edge = defaults.string(forKey: "edge") ?? "right"
     position = defaults.object(forKey: "position") as? Double
-    theme = defaults.string(forKey: "theme") ?? "system"
+    style = ThemeStyle(rawValue: defaults.string(forKey: "style") ?? "") ?? .graphite
+    appearance = defaults.string(forKey: "appearance") ?? "system"
     accent = Accent(rawValue: defaults.string(forKey: "accent") ?? "") ?? .blue
     notifications = defaults.bool(forKey: "notifications")
     setupDone = defaults.bool(forKey: "setupDone")

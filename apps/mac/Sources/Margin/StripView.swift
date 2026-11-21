@@ -20,11 +20,11 @@ struct StripView: View {
           dot(friend).opacity(connected ? 1 : 0.35)
         }
         if online.count > maxDots {
-          Text("+\(online.count - maxDots)").font(.system(size: 6.5, weight: .semibold))
+          Text("+\(online.count - maxDots)").font(theme.font(6.5, bold: true))
             .foregroundStyle(theme.secondary).fixedSize().frame(height: theme.stripLabel)
         }
         if model.unreadTotal > 0 {
-          Text("\(min(model.unreadTotal, 99))").font(.system(size: 7, weight: .bold))
+          Text("\(min(model.unreadTotal, 99))").font(theme.font(7, bold: true))
             .foregroundStyle(theme.unread).fixedSize().frame(height: theme.stripLabel)
         }
       }
@@ -32,8 +32,7 @@ struct StripView: View {
     .padding(.vertical, theme.stripPadding)
     .frame(width: theme.stripWidth)
     .frame(minHeight: 32)
-    .background(shape.fill(theme.background))
-    .overlay(shape.strokeBorder(theme.border, lineWidth: 1))
+    .themeSurface(shape, theme)
     .shadow(color: theme.unread.opacity(glow ? 0.9 : 0), radius: glow ? 6 : 0)
     .onChange(of: model.pulse) {
       withAnimation(.easeOut(duration: 0.2)) { glow = true }
@@ -48,8 +47,8 @@ struct StripView: View {
 
   private var shape: UnevenRoundedRectangle {
     model.prefs.edge == "left"
-      ? UnevenRoundedRectangle(bottomTrailingRadius: 5, topTrailingRadius: 5)
-      : UnevenRoundedRectangle(topLeadingRadius: 5, bottomLeadingRadius: 5)
+      ? UnevenRoundedRectangle(bottomTrailingRadius: theme.stripRadius, topTrailingRadius: theme.stripRadius)
+      : UnevenRoundedRectangle(topLeadingRadius: theme.stripRadius, bottomLeadingRadius: theme.stripRadius)
   }
 
   @ViewBuilder private func dot(_ friend: Friend) -> some View {

@@ -21,17 +21,17 @@ struct AddView: View {
               Button {
                 model.request("friend.accept", ["handle": handle])
               } label: {
-                Image(systemName: "checkmark").font(.system(size: 12, weight: .bold))
+                Image(systemName: "checkmark").font(theme.font(12, bold: true))
                   .frame(width: 30, height: 30).foregroundStyle(.white)
-                  .background(RoundedRectangle(cornerRadius: 8).fill(theme.inTool))
+                  .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.inTool))
               }
               .buttonStyle(.plain).accessibilityLabel("Accept \(handle)")
               Button {
                 model.request("friend.decline", ["handle": handle])
               } label: {
-                Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
+                Image(systemName: "xmark").font(theme.font(11, bold: true))
                   .frame(width: 30, height: 30).foregroundStyle(theme.secondary)
-                  .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.border, lineWidth: 1))
+                  .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
               }
               .buttonStyle(.plain).accessibilityLabel("Decline \(handle)")
             }
@@ -67,13 +67,13 @@ struct HandleField: View {
         TextField("GitHub handle", text: $handle)
           .textFieldStyle(.plain)
           .padding(.horizontal, 10).padding(.vertical, 7)
-          .background(RoundedRectangle(cornerRadius: 8).fill(theme.surface))
-          .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.border, lineWidth: 1))
+          .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.surface))
+          .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
           .onSubmit(send)
         Button("Send", action: send)
           .buttonStyle(.plain).fontWeight(.semibold).foregroundStyle(theme.onAccent)
           .padding(.horizontal, 12).padding(.vertical, 7)
-          .background(RoundedRectangle(cornerRadius: 8).fill(theme.accent))
+          .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.accent))
       }
       if let sent, let result = model.results["friend.request"] {
         Text(result.ok ? "Request sent to \(sent)." : (result.message == "not found" ? "No Margin user called \(sent)." : result.message ?? "Couldn’t send"))

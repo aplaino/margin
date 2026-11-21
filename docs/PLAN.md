@@ -76,7 +76,7 @@ Build order:
 6. Margin.app: the drawer, built against the mockup (`apps/mac`, a Swift package; `bun run dev` runs it locally with simulated friends).
 7. Staging on Fly.io + Neon; run the matrix between this Mac and the VM; record in `docs/TESTING.md`.
 
-Scope: sign-in, friends, presence from each v1 tool, token totals, privacy settings, chat, the drawer (collapsed, expanded, chat, Add, Settings incl. System/Light/Dark + accent, first launch, connecting tools). The drawer reads every colour, font and size from one theme definition so full themes can follow.
+Scope: sign-in, friends, presence from each v1 tool, token totals, privacy settings, chat, the drawer (collapsed, expanded, chat, Add, Settings incl. five themes with light and dark plus accent, first launch, connecting tools). Every colour, font, size and shape comes from one theme definition.
 
 Test matrix — each row run on both machines, in both directions:
 
@@ -96,7 +96,7 @@ Test matrix — each row run on both machines, in both directions:
 Results are recorded in `docs/TESTING.md`. **Done when** every row passes.
 
 ### Review
-What worked, what felt wrong, and what comes next — first up, full themes (fonts and colours) — then production (signed app, Homebrew, monitoring, backups) and a private beta.
+What worked, what felt wrong, and what comes next, then production (signed app, Homebrew, monitoring, backups) and a private beta.
 
 ## 5. Engineering practices
 

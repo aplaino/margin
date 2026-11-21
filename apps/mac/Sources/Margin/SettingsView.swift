@@ -26,16 +26,22 @@ struct SettingsView: View {
           Button("Reset position") { prefs.resetPosition() }.buttonStyle(.link)
         } else if Prefs.dockEdge == prefs.edge {
           Text("Near the top for now, because your Dock is on the \(prefs.edge).")
-            .font(.system(size: 10.5)).foregroundStyle(theme.tertiary)
+            .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
         }
 
         SectionLabel("Theme").padding(.top, 6)
-        Picker("Theme", selection: $prefs.theme) {
+        Picker("Appearance", selection: $prefs.appearance) {
           Text("System").tag("system")
           Text("Light").tag("light")
           Text("Dark").tag("dark")
         }
         .pickerStyle(.segmented).labelsHidden()
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+          ForEach(ThemeStyle.allCases) { style in
+            ThemeTile(style: style, selected: prefs.style == style) { prefs.style = style }
+          }
+        }
+        .padding(.vertical, 4)
         HStack(spacing: 8) {
           Text("Accent")
           Spacer()
@@ -75,7 +81,7 @@ struct SettingsView: View {
       }
       .toggleStyle(.checkbox)
       .controlSize(.small)
-      .font(.system(size: 12))
+      .font(theme.font(12))
       .padding(.horizontal, 16).padding(.vertical, 10)
     }
   }
@@ -122,7 +128,7 @@ struct SettingsView: View {
         Button {
           model.updateSettings { $0.repos[repo] = nil }
         } label: {
-          Image(systemName: "xmark").font(.system(size: 9, weight: .semibold))
+          Image(systemName: "xmark").font(theme.font(9, bold: true))
         }
         .buttonStyle(.plain).accessibilityLabel("Remove override for \(repo)")
       }
@@ -199,5 +205,45 @@ struct FlowRow: Layout {
       x += size.width + spacing
       row = max(row, size.height)
     }
+  }
+}
+
+// A miniature drawer drawn in a theme, in the current light or dark appearance.
+struct ThemeTile: View {
+  var style: ThemeStyle
+  var selected: Bool
+  var choose: () -> Void
+  @Environment(AppModel.self) private var model
+  @Environment(\.theme) private var current
+  @Environment(\.colorScheme) private var scheme
+
+  var body: some View {
+    let theme = style.theme(dark: scheme == .dark, accent: model.prefs.accent.color)
+    Button(action: choose) {
+      VStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
+          RoundedRectangle(cornerRadius: 1).fill(theme.text).frame(width: 28, height: 3)
+          ForEach(0..<3, id: \.self) { row in
+            HStack(spacing: 4) {
+              Circle().fill(row == 2 ? theme.idle : theme.inTool).frame(width: 4, height: 4)
+              RoundedRectangle(cornerRadius: 1).fill(theme.secondary).frame(width: row == 1 ? 22 : 30, height: 2.5)
+            }
+          }
+          RoundedRectangle(cornerRadius: 1).fill(theme.accent).frame(width: 18, height: 3)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, minHeight: 50, alignment: .topLeading)
+        .themeSurface(RoundedRectangle(cornerRadius: min(theme.radius, 8)), theme)
+        .overlay(
+          RoundedRectangle(cornerRadius: min(theme.radius, 8) + 3)
+            .strokeBorder(selected ? current.accent : .clear, lineWidth: 2)
+            .padding(-3))
+        Text(style.name).font(theme.font(10, heading: true)).foregroundStyle(current.text).lineLimit(1)
+          .minimumScaleFactor(0.8)
+      }
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(style.name) theme")
+    .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }

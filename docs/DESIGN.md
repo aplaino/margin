@@ -137,7 +137,9 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │ Drag the strip to move it.   │
 │ Reset position               │
 │ THEME                        │
-│ ◉ System  ○ Light  ○ Dark    │
+│ [System | Light | Dark]      │
+│ ▢Graphite ▢Glass  ▢Paper     │
+│ ▢Terminal ▢High Contrast     │
 │ Accent  ● ● ● ● ●            │
 │ CONNECTED TOOLS              │
 │ ☑ Claude Code   ☑ Codex      │
@@ -157,7 +159,14 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 └──────────────────────────────┘
 ```
 - **Connected tools:** turning one on explains what will change ("adds a hook to ~/.claude/settings.json"), asks, backs the file up, then installs. Turning it off removes only Margin's entry. Margin's hooks print nothing into Claude's context.
-- **Theme:** System (follows macOS), Light or Dark, plus an accent colour (blue, green, orange, purple, graphite) used for your own chat bubbles, buttons and the selected tab. Presence colours (green in a tool, amber idle) don't change, so the strip always reads the same. **After Phase 2:** full themes that change fonts and colours. To keep that a data change, every colour, font and size in the app comes from one theme definition; nothing is hard-coded in views.
+- **Theme:** a gallery of five themes, each shown as a miniature drawer, like the Appearance tiles in System Settings. A theme sets colours, fonts and weights, corner shapes and the panel material (solid or frosted glass); each has a light and a dark version, picked by **Appearance** (System, Light, Dark).
+  - **Graphite** (default): SF Pro, neutral greys, near-solid panel.
+  - **Glass**: frosted material that blurs what's behind, like Control Center.
+  - **Paper**: warm paper or charcoal, New York serif headings and names.
+  - **Terminal**: SF Mono throughout, square corners.
+  - **High Contrast**: pure black or white, heavier text, stronger borders.
+
+  The **accent** (blue, green, orange, purple, graphite) is separate and works with every theme: your chat bubbles, buttons and the selected tab. Presence colours stay green for in a tool and amber for idle in every theme, so the strip always reads the same. Every colour, font, size and shape comes from the theme definition (`apps/mac/Sources/Margin/Theme.swift`); nothing is hard-coded in views, so adding a theme is adding a value.
 - **Privacy:** as in KNOWLEDGE.md — invisible, which fields friends see, close friends only (others see online/idle), per-repo "hidden" or "always private".
 
 ## 6. First launch
@@ -204,7 +213,7 @@ Claude Code, Codex, OpenCode and the shell (zsh/bash) report activity through ho
 | macOS notifications | Off |
 | Invisible | Off |
 | Friends see | Tool, model, repo, time, tokens |
-| Theme | System, blue accent |
+| Theme | Graphite, System appearance, blue accent |
 | Audience | Everyone (not close friends only) |
 | Connected tools | Chosen during first launch |
 

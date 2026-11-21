@@ -20,7 +20,7 @@ struct SetupView: View {
 
   private var welcome: some View {
     Group {
-      Text("Margin").font(.system(size: 20, weight: .semibold))
+      Text("Margin").font(theme.font(20, bold: true, heading: true))
       Text("See what your friends are building, right here at the edge of your screen.")
         .foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
       Text("Friends only see the tool, the model, your token count, and the repo when it’s public. Never your code, prompts, files or branches.")
@@ -35,10 +35,10 @@ struct SetupView: View {
       Text("Sign in with GitHub").font(theme.title)
       if let code = model.loginCode {
         Text("Your browser opened GitHub. Enter this code:").foregroundStyle(theme.secondary)
-        Text(code.code).font(.system(size: 20, design: .monospaced)).kerning(1.5)
+        Text(code.code).font(.system(size: 20, weight: theme.weight, design: .monospaced)).kerning(1.5)
           .textSelection(.enabled)
           .padding(.horizontal, 18).padding(.vertical, 12)
-          .background(RoundedRectangle(cornerRadius: 10).fill(theme.surface))
+          .background(RoundedRectangle(cornerRadius: theme.controlRadius + 2).fill(theme.surface))
           .frame(maxWidth: .infinity)
         HStack(spacing: 8) {
           Circle().fill(theme.idle).frame(width: 7, height: 7)
@@ -81,7 +81,7 @@ struct SetupView: View {
       Spacer()
       Button("Done") { finish() }
         .buttonStyle(.plain).frame(maxWidth: .infinity).padding(.vertical, 10)
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.border, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
       Text("Margin then tucks into the edge of your screen.").font(theme.caption).foregroundStyle(theme.tertiary)
         .frame(maxWidth: .infinity)
     }
@@ -96,7 +96,7 @@ struct SetupView: View {
     Button(action: action) {
       Text(title).fontWeight(.semibold).foregroundStyle(theme.onAccent)
         .frame(maxWidth: .infinity).padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(theme.accent))
+        .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.accent))
     }
     .buttonStyle(.plain)
   }

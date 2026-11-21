@@ -15,7 +15,7 @@ struct ChatView: View {
         Button {
           model.chatWith = nil
         } label: {
-          Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold))
+          Image(systemName: "chevron.left").font(theme.font(13, bold: true))
             .foregroundStyle(theme.secondary).frame(width: 22, height: 28)
         }
         .buttonStyle(.plain)
@@ -38,7 +38,7 @@ struct ChatView: View {
         ScrollView {
           VStack(spacing: 6) {
             if let first = messages.first {
-              Text(Format.time(first.sentAt)).font(.system(size: 10.5)).foregroundStyle(theme.tertiary)
+              Text(Format.time(first.sentAt)).font(theme.font(10.5)).foregroundStyle(theme.tertiary)
                 .padding(.bottom, 4)
             }
             ForEach(messages) { message in
@@ -59,15 +59,15 @@ struct ChatView: View {
         .lineLimit(1...5)
         .focused($focused)
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(theme.surface))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.border, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
         .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
         .onSubmit(send)
       if let error = model.results["send"], !error.ok {
         Text(error.message ?? "Couldn’t send").font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
       }
-      Text("End-to-end encrypted").font(.system(size: 10)).foregroundStyle(theme.tertiary).padding(.bottom, 8)
+      Text("End-to-end encrypted").font(theme.font(10)).foregroundStyle(theme.tertiary).padding(.bottom, 8)
     }
   }
 
@@ -87,12 +87,14 @@ struct ChatView: View {
         .foregroundStyle(message.incoming ? theme.text : theme.onAccent)
         .background(
           UnevenRoundedRectangle(
-            topLeadingRadius: 13, bottomLeadingRadius: message.incoming ? 4 : 13,
-            bottomTrailingRadius: message.incoming ? 13 : 4, topTrailingRadius: 13
+            topLeadingRadius: theme.bubbleRadius,
+            bottomLeadingRadius: message.incoming ? min(4, theme.bubbleRadius) : theme.bubbleRadius,
+            bottomTrailingRadius: message.incoming ? theme.bubbleRadius : min(4, theme.bubbleRadius),
+            topTrailingRadius: theme.bubbleRadius
           )
           .fill(message.incoming ? theme.surface : theme.accent))
       if message.state == "queued" {
-        Text("Sending…").font(.system(size: 10)).foregroundStyle(theme.tertiary)
+        Text("Sending…").font(theme.font(10)).foregroundStyle(theme.tertiary)
       }
     }
     .frame(maxWidth: 190, alignment: message.incoming ? .leading : .trailing)
