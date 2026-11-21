@@ -31,6 +31,8 @@ export type Options = {
   fetchGithubUser?: (token: string) => Promise<GithubUser | null>;
   retentionMs?: number;
   updates?: UpdateOptions;
+  // Serves the website at / and its two assets.
+  site?: (req: Request, url: URL) => Response | null;
 };
 
 type Account = { id: string; handle: string };
@@ -313,6 +315,8 @@ export function createApp(sql: SQL, options: Options = {}) {
     if (method === 'GET' && path === '/health') return json({ ok: true });
     const update = await updateRoutes?.(req, url);
     if (update) return update;
+    const page = options.site?.(req, url);
+    if (page) return page;
     if (method === 'GET' && path === '/config') {
       const config: Config = { protocol: PROTOCOL, githubClientId: options.githubClientId ?? null };
       return json(config);

@@ -1,5 +1,6 @@
 import { createApp } from './app';
 import { migrate, openDb } from './db';
+import { site } from './site';
 
 const devAuth = process.env.MARGIN_DEV_AUTH === '1';
 if (devAuth)
@@ -29,6 +30,7 @@ await migrate(sql);
 const app = createApp(sql, {
   devAuth,
   githubClientId: process.env.GITHUB_CLIENT_ID,
+  site: await site(process.env.MARGIN_WEB_DIR ?? new URL('../../web', import.meta.url).pathname),
   updates: {
     dir: process.env.MARGIN_UPDATES_DIR ?? '/data/updates',
     releaseToken: process.env.RELEASE_TOKEN,
