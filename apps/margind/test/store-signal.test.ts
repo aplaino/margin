@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_SETTINGS, type PeerBundle } from '@margin/protocol';
@@ -121,10 +121,32 @@ describe('store', () => {
     expect(store.friend('leo')?.identityKey).toBe('first');
   });
 
-  test('invalid saved settings fall back to the defaults', () => {
+  test('damaged settings fail closed: invisible, not the share-everything defaults', () => {
     const store = new Store(':memory:', keys('s'));
-    store.setJson('settings', { audience: 'the whole internet' });
     expect(store.settings()).toEqual(DEFAULT_SETTINGS);
+    store.setJson('settings', {
+      audience: 'the whole internet',
+      repos: { 'acme/secret': 'hidden' },
+    });
+    expect(store.settings()).toMatchObject({ invisible: true, damaged: true });
+  });
+
+  test('database files are readable only by you', () => {
+    const { path, store } = tempStore();
+    store.set('x', 'y');
+    for (const file of [path, `${path}-wal`, `${path}-shm`]) {
+      expect((statSync(file).mode & 0o777).toString(8)).toBe('600');
+    }
+  });
+
+  test('removing a friend only touches their own Signal sessions', () => {
+    const store = new Store(':memory:', keys('rm'));
+    store.storeSignalSession('leo.1', '{}');
+    store.storeSignalSession('leon.1', '{}');
+    store.removeFriend('leo');
+    expect(store.loadSignalSession('leo.1')).toBeNull();
+    expect(store.loadSignalSession('leon.1')).not.toBeNull();
+    expect(() => store.removeFriend('%')).toThrow();
   });
 });
 
@@ -173,5 +195,20 @@ describe('signal', () => {
       b.signal.safetyNumber(a.signal.identityKey()),
     );
     expect(a.signal.safetyNumber(b.signal.identityKey())).toMatch(/^[0-9a-f]{5}( [0-9a-f]{5}){3}$/);
+  });
+});
+
+describe('paths', () => {
+  test('the data folder is private, and a symlink is refused', async () => {
+    const { paths } = await import('../src/paths');
+    const base = mkdtempSync(join(tmpdir(), 'margind-paths-'));
+    dirs.push(base);
+    const home = join(base, 'home');
+    const { mkdirSync, symlinkSync } = await import('node:fs');
+    mkdirSync(home, { mode: 0o755 });
+    paths(home);
+    expect((statSync(home).mode & 0o777).toString(8)).toBe('700');
+    symlinkSync(home, join(base, 'link'));
+    expect(() => paths(join(base, 'link'))).toThrow('not a private folder');
   });
 });

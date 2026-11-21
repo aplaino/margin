@@ -1,10 +1,10 @@
 import { Database } from 'bun:sqlite';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { chmodSync } from 'node:fs';
+import { chmodSync, existsSync } from 'node:fs';
 import {
   type ChatMessage,
   DEFAULT_SETTINGS,
-  type Handle,
+  Handle,
   type PeerBundle,
   Settings,
 } from '@margin/protocol';
@@ -42,8 +42,10 @@ export class Store {
     private key: Buffer,
   ) {
     this.db = new Database(path, { create: true, strict: true });
-    if (path !== ':memory:') chmodSync(path, 0o600);
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+    for (const file of [path, `${path}-wal`, `${path}-shm`]) {
+      if (path !== ':memory:' && existsSync(file)) chmodSync(file, 0o600);
+    }
     const { user_version } = this.db
       .query<{ user_version: number }, []>('PRAGMA user_version')
       .get() ?? {
@@ -110,15 +112,18 @@ export class Store {
     else this.delete('account');
   }
 
-  settings(): Settings {
-    const saved = this.getJson<Partial<Settings>>('settings') ?? {};
+  // Damaged settings fail closed: invisible until you look at them, because they might
+  // have held a "hidden" repo override that the defaults would no longer honour.
+  settings(): Settings & { damaged?: true } {
+    const saved = this.getJson<Partial<Settings>>('settings');
+    if (!saved) return DEFAULT_SETTINGS;
     const merged = {
       ...DEFAULT_SETTINGS,
       ...saved,
       share: { ...DEFAULT_SETTINGS.share, ...saved.share },
     };
     const parsed = v.safeParse(Settings, merged);
-    return parsed.success ? parsed.output : DEFAULT_SETTINGS;
+    return parsed.success ? parsed.output : { ...DEFAULT_SETTINGS, invisible: true, damaged: true };
   }
 
   saveSettings(settings: Settings) {
@@ -210,9 +215,14 @@ export class Store {
 
   // Forgets the friend and anything waiting to be sent to them. Chat history stays.
   removeFriend(handle: string) {
+    v.parse(Handle, handle);
     this.db.query('DELETE FROM friends WHERE handle = ?').run(handle);
     this.db.query('DELETE FROM outbox WHERE peer = ?').run(handle);
-    this.db.query('DELETE FROM signal_sessions WHERE address LIKE ?').run(`${handle}.%`);
+    // Signal addresses are "<handle>.<deviceId>"; match that exact prefix.
+    const prefix = `${handle}.`;
+    this.db
+      .query('DELETE FROM signal_sessions WHERE substr(address, 1, ?) = ?')
+      .run(prefix.length, prefix);
   }
 
   hasMessage(id: string) {
