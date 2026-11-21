@@ -1,4 +1,4 @@
-import { PROTOCOL } from '@margin/protocol';
+import { CONTROL, PROTOCOL } from '@margin/protocol';
 import * as v from 'valibot';
 
 export class ApiError extends Error {
@@ -47,7 +47,7 @@ export class Api {
     if (!response.ok) {
       const error =
         typeof data?.error === 'string'
-          ? data.error.slice(0, 200)
+          ? data.error.replace(CONTROL, '').slice(0, 200)
           : `request failed (${response.status})`;
       throw new ApiError(response.status, error);
     }

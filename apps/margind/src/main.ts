@@ -29,6 +29,7 @@ const daemon = await startDaemon({
   keys: keychainKey,
   server: process.env.MARGIN_SERVER ?? 'http://127.0.0.1:8787',
   devHandle: process.env.MARGIN_DEV_HANDLE,
+  githubClientId: process.env.MARGIN_GITHUB_CLIENT_ID,
   tools: { home: homedir(), dataHome: where.home, socket: where.socket, self },
   tokenSources: defaultSources(),
 });

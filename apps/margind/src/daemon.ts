@@ -5,6 +5,7 @@ import {
   type ClientFrame,
   CONTROL,
   Config,
+  Count,
   type Friend,
   FriendList,
   PeerBundle,
@@ -49,6 +50,8 @@ export type DaemonOptions = {
   tokenSources: TokenSources;
   // Development and tests: sign in through the server's dev login as this handle.
   devHandle?: string;
+  // The GitHub OAuth app's client id, fixed per build.
+  githubClientId?: string;
   deviceLogin?: DeviceLogin;
   fetchRepo?: FetchRepo;
   idle?: () => Promise<number>;
@@ -56,6 +59,8 @@ export type DaemonOptions = {
   heartbeatMs?: number;
   tokenScanMs?: number;
 };
+
+const KeyCount = v.object({ remaining: Count });
 
 const IDLE_AFTER_S = 5 * 60;
 const STALE_MS = 90_000;
@@ -223,7 +228,7 @@ export async function startDaemon(options: DaemonOptions) {
 
   async function fetchBundle(handle: string) {
     try {
-      store.pin(await api().call(PeerBundle, 'GET', `/keys/${handle}`));
+      store.pin(handle, await api().call(PeerBundle, 'GET', `/keys/${handle}`));
     } catch (e) {
       // They may not have published keys yet; the next sync tries again.
       if (!(e instanceof ApiError && e.status === 404)) throw e;
@@ -232,9 +237,13 @@ export async function startDaemon(options: DaemonOptions) {
 
   async function topUpPreKeys(remaining?: number) {
     const client = api();
+    // An answer that isn't a plain count is treated as "low": restocking is always safe.
     const count =
       remaining ??
-      ((await client.call(null, 'GET', '/keys/count')) as { remaining: number }).remaining;
+      (await client.call(KeyCount, 'GET', '/keys/count').then(
+        (r) => r.remaining,
+        () => 0,
+      ));
     if (count < PREKEY_LOW)
       await client.call(null, 'POST', '/keys/prekeys', { preKeys: signal.replenish(PREKEY_BATCH) });
   }
@@ -366,11 +375,16 @@ export async function startDaemon(options: DaemonOptions) {
     if (options.devHandle) {
       session = await client.call(Session, 'POST', '/auth/dev', { handle: options.devHandle });
     } else {
+      // The GitHub app Margin signs in through is fixed in the build, not taken from the
+      // server, so a server can't route your sign-in through an app of its own.
+      const clientId = options.githubClientId;
+      if (!clientId) throw new DaemonError('This build of Margin has no GitHub sign-in configured');
       const config = await client.call(Config, 'GET', '/config');
-      if (!config.githubClientId)
-        throw new DaemonError('This server has no GitHub sign-in configured');
+      if (config.githubClientId !== clientId) {
+        throw new DaemonError('This server isn’t set up for this version of Margin');
+      }
       const deviceLogin = options.deviceLogin ?? githubDeviceLogin;
-      const accessToken = await deviceLogin(config.githubClientId, (code) =>
+      const accessToken = await deviceLogin(clientId, (code) =>
         push({ type: 'login', state: 'code', ...code }),
       );
       session = await client.call(Session, 'POST', '/auth/github', { accessToken });

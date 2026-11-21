@@ -32,8 +32,8 @@ function pair() {
   const b = { ...bob, signal: new Signal(bob.store) };
   a.store.upsertFriend('bob');
   b.store.upsertFriend('alice');
-  a.store.pin(peerBundle('bob', b.signal));
-  b.store.pin(peerBundle('alice', a.signal));
+  a.store.pin('bob', peerBundle('bob', b.signal));
+  b.store.pin('alice', peerBundle('alice', a.signal));
   return { a, b };
 }
 
@@ -116,8 +116,11 @@ describe('store', () => {
       signedPreKey: { keyId: 1, publicKey: 'AA==', signature: 'AA==' },
       preKeys: [],
     });
-    store.pin(bundle('first'));
-    store.pin(bundle('second'));
+    store.pin('leo', bundle('first'));
+    store.pin('leo', bundle('second'));
+    expect(() => store.pin('leo', { ...bundle('third'), handle: 'mallory' })).toThrow(
+      'different handle',
+    );
     expect(store.friend('leo')?.identityKey).toBe('first');
   });
 
@@ -180,7 +183,7 @@ describe('signal', () => {
     const malloryStore = new Store(':memory:', keys('mallory'));
     const mallory = new Signal(malloryStore);
     malloryStore.upsertFriend('bob');
-    malloryStore.pin(peerBundle('bob', b.signal));
+    malloryStore.pin('bob', peerBundle('bob', b.signal));
     const forged = await mallory.encrypt('bob', 'it is me, alice', peerBundle('bob', b.signal));
     await expect(b.signal.decrypt('alice', forged)).rejects.toThrow();
   });

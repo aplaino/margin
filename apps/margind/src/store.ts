@@ -198,12 +198,14 @@ export class Store {
   }
 
   // The identity key is pinned once; the bundle is kept for starting the first session.
-  pin(bundle: PeerBundle) {
+  // Pinned under the handle that was asked for, never one taken from the response.
+  pin(handle: Handle, bundle: PeerBundle) {
+    if (bundle.handle !== handle) throw new Error('keys returned for a different handle');
     this.db
       .query(
         'UPDATE friends SET identity_key = COALESCE(identity_key, ?), bundle = ? WHERE handle = ?',
       )
-      .run(bundle.identityKey, this.seal(JSON.stringify(bundle)), bundle.handle);
+      .run(bundle.identityKey, this.seal(JSON.stringify(bundle)), handle);
   }
 
   bundle(handle: string): PeerBundle | undefined {
