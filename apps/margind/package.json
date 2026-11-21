@@ -3,6 +3,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@margin/protocol": "workspace:*"
+    "@margin/protocol": "workspace:*",
+    "libsignal": "6.0.0",
+    "valibot": "1.5.0"
+  },
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts"
   }
 }
