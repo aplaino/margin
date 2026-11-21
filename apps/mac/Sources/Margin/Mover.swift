@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Security
 
 // Moves a Margin that's running from Downloads (or anywhere else) into /Applications, where
 // it can update itself and its tool hooks stay put, then relaunches it from there.
@@ -26,24 +27,32 @@ enum Mover {
     return (resolve(url as CFURL, nil)?.takeRetainedValue() as URL?) ?? url
   }
 
+  private static func signatureIntact(_ url: URL) -> Bool {
+    var code: SecStaticCode?
+    guard SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess, let code else { return false }
+    return SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode), nil) == errSecSuccess
+  }
+
   @MainActor
   static func moveToApplications() throws {
     let running = Bundle.main.bundleURL
     let source = original(of: running)
     let files = FileManager.default
+    // Only an intact Margin is copied, and only an older Margin is replaced.
+    guard signatureIntact(running) else { throw Failure.copy("this copy of Margin looks damaged") }
+    let existing = (try? destination.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink
+    if existing == true { throw Failure.copy("/Applications/Margin.app is a link, not an app") }
+    if files.fileExists(atPath: destination.path), Bundle(url: destination)?.bundleIdentifier != Bundle.main.bundleIdentifier {
+      throw Failure.copy("something else is already called Margin in Applications")
+    }
     do {
       // An older Margin already there goes to the Trash, so nothing is lost.
       if files.fileExists(atPath: destination.path) { try files.trashItem(at: destination, resultingItemURL: nil) }
+      // The copy keeps macOS's quarantine flag, so Gatekeeper checks it like any download.
       try files.copyItem(at: running, to: destination)
     } catch {
       throw Failure.copy(error.localizedDescription)
     }
-    // You already chose to open this copy; the one in Applications needn't ask again.
-    let xattr = Process()
-    xattr.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
-    xattr.arguments = ["-dr", "com.apple.quarantine", destination.path]
-    try? xattr.run()
-    xattr.waitUntilExit()
     // The download itself goes to the Trash (only from Downloads, never from anywhere else).
     let downloads = files.urls(for: .downloadsDirectory, in: .userDomainMask).first?.standardizedFileURL.path ?? "/nonexistent"
     if source.standardizedFileURL.path.hasPrefix(downloads + "/") {
