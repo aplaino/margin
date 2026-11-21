@@ -168,7 +168,10 @@ function scanOpenCode(store: Store, path: string) {
       }
     });
   } catch (e) {
-    console.error(`[margind] OpenCode tokens: ${(e as Error).message}`);
+    // Error messages can contain paths; log only what kind of failure it was.
+    console.error(
+      `[margind] OpenCode tokens unreadable (${(e as NodeJS.ErrnoException).code ?? (e as Error).name})`,
+    );
   } finally {
     db?.close();
   }
