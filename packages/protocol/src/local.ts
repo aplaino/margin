@@ -5,8 +5,14 @@ import { Requests } from './server';
 // Newline-delimited JSON over margind's Unix socket: the app and reporters send
 // requests ({op}), margind sends pushes ({type}).
 
+// Control characters and bidi overrides can rewrite a terminal or disguise text in the drawer.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting control characters is the point
-const NoControl = v.regex(/^[^\u0000-\u001f\u007f-\u009f]*$/);
+const NoControl = v.regex(/^[^\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]*$/);
+// The same, but chat keeps newlines and tabs.
+const NoControlText = v.regex(
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting control characters is the point
+  /^[^\u0000-\u0008\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]*$/,
+);
 
 export const ReporterEvent = v.object({
   tool: Tool,
@@ -43,7 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   closeFriends: [],
 };
 
-export const ChatText = v.pipe(v.string(), v.minLength(1), v.maxLength(4000));
+export const ChatText = v.pipe(v.string(), v.minLength(1), v.maxLength(4000), NoControlText);
 
 const HandleOp = <T extends string>(op: T) => v.object({ op: v.literal(op), handle: Handle });
 

@@ -107,6 +107,13 @@ describe('local protocol', () => {
     expect(ok(Request, { op: 'send', to: 'maya', text: 'hey' })).toBe(true);
   });
 
+  test('chat text keeps newlines but rejects escapes and bidi overrides', () => {
+    expect(ok(Request, { op: 'send', to: 'maya', text: 'line one\n\tline two' })).toBe(true);
+    for (const text of ['hi\u001b[2J', 'a\rb', 'pay \u202eyas', '\u2066x\u2069', 'x\u009b']) {
+      expect(ok(Request, { op: 'send', to: 'maya', text })).toBe(false);
+    }
+  });
+
   test('login pushes are told apart by state', () => {
     expect(ok(Push, { type: 'login', state: 'done' })).toBe(true);
     expect(
