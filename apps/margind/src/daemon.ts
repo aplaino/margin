@@ -22,7 +22,7 @@ import {
 import * as v from 'valibot';
 import { Api, ApiError } from './api';
 import { Connection, type ConnectionState } from './connection';
-import { type DeviceLogin, githubDeviceLogin } from './github';
+import { type DeviceLogin, GitHubError, githubDeviceLogin } from './github';
 import { idleSeconds } from './idle';
 import type { KeyProvider } from './keychain';
 import { onLines, sendOnce, write } from './net';
@@ -67,8 +67,14 @@ const IDLE_AFTER_S = 5 * 60;
 const STALE_MS = 90_000;
 const PREKEY_LOW = 20;
 
-const log = (what: string, e?: unknown) =>
-  console.error(`[margind] ${what}${e ? ` (${(e as Error).name ?? 'error'})` : ''}`);
+// Other errors can carry paths, so only Margin's own messages are logged in full.
+const log = (what: string, e?: unknown) => {
+  const own = e instanceof ApiError || e instanceof DaemonError || e instanceof GitHubError;
+  const detail = e
+    ? ` (${(e as Error).name ?? 'error'}${own ? `: ${(e as Error).message}` : ''})`
+    : '';
+  console.error(`[margind] ${what}${detail}`);
+};
 
 // Received chat text keeps newlines, tabs and joiners; every other control or format character goes.
 function cleanChat(text: string) {
@@ -77,7 +83,9 @@ function cleanChat(text: string) {
 }
 
 const errorText = (e: unknown) =>
-  e instanceof ApiError || e instanceof DaemonError ? e.message : 'Something went wrong';
+  e instanceof ApiError || e instanceof DaemonError || e instanceof GitHubError
+    ? e.message
+    : 'Something went wrong';
 
 class DaemonError extends Error {}
 
@@ -476,7 +484,10 @@ export async function startDaemon(options: DaemonOptions) {
       case 'ping':
         return { protocol: PROTOCOL };
       case 'login':
-        void login().catch((e) => push({ type: 'login', state: 'failed', error: errorText(e) }));
+        void login().catch((e) => {
+          log('sign-in failed', e);
+          push({ type: 'login', state: 'failed', error: errorText(e) });
+        });
         return undefined;
       case 'logout':
         await api()

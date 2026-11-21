@@ -7,6 +7,17 @@ struct PanelView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      if model.misplaced {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Move Margin to Applications").font(theme.bodyBold)
+          Text("It’s running from your Downloads folder, so it can’t update itself. Quit it, drag Margin into Applications, and open it from there.")
+            .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
+          Button("Quit Margin") { NSApp.terminate(nil) }.buttonStyle(.link)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surface)
+      }
       if !model.daemonUp {
         StateView(
           title: "Margin isn’t running in the background",

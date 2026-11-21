@@ -32,6 +32,14 @@ final class AppModel {
   var chatWith: String?
   var setupStep: SetupStep = .welcome
 
+  // A release build running from Downloads runs from a temporary read-only copy
+  // (App Translocation): it can't update itself, and tool hooks would point at a path
+  // that disappears.
+  var misplaced: Bool {
+    let path = Bundle.main.bundlePath
+    return updates.enabled && (path.contains("/AppTranslocation/") || !path.hasPrefix("/Applications/"))
+  }
+
   var signedIn: Bool { daemonUp && me != nil && me?.connection != "signed-out" }
   var needsSetup: Bool { daemonUp && (!signedIn || !prefs.setupDone) }
   var unreadTotal: Int { friends.reduce(0) { $0 + $1.unread } }

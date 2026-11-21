@@ -2,17 +2,30 @@
 // GitHub hands margind a token that's used once to prove who you are. No scopes are
 // requested, so it can only read your public profile.
 
+// Failures with a message fit to show you in the drawer.
+export class GitHubError extends Error {}
+
 export type DeviceCode = { userCode: string; verificationUri: string };
 export type DeviceLogin = (clientId: string, onCode: (code: DeviceCode) => void) => Promise<string>;
 
 const post = async (url: string, body: Record<string, string>) => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10_000),
-  });
-  return (await response.json()) as Record<string, unknown>;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    throw new GitHubError('Can’t reach GitHub. Check your connection and try again.');
+  }
+  if (response.status === 429)
+    throw new GitHubError('GitHub is busy. Wait a minute and try again.');
+  const data = await response.json().catch(() => null);
+  if (!data || typeof data !== 'object')
+    throw new GitHubError('GitHub sent an unexpected answer. Try again.');
+  return data as Record<string, unknown>;
 };
 
 export const githubDeviceLogin: DeviceLogin = async (clientId, onCode) => {
@@ -26,7 +39,7 @@ export const githubDeviceLogin: DeviceLogin = async (clientId, onCode) => {
     typeof start.user_code !== 'string' ||
     !uri.startsWith('https://github.com/')
   ) {
-    throw new Error('GitHub didn’t start sign-in');
+    throw new GitHubError('GitHub didn’t start sign-in');
   }
   onCode({ userCode: start.user_code.slice(0, 16), verificationUri: uri });
   let interval = Number(start.interval) || 5;
@@ -41,7 +54,7 @@ export const githubDeviceLogin: DeviceLogin = async (clientId, onCode) => {
     if (typeof poll.access_token === 'string') return poll.access_token;
     if (poll.error === 'slow_down') interval += 5;
     else if (poll.error !== 'authorization_pending')
-      throw new Error('GitHub sign-in was cancelled or expired');
+      throw new GitHubError('GitHub sign-in was cancelled or expired');
   }
-  throw new Error('GitHub sign-in expired');
+  throw new GitHubError('GitHub sign-in expired');
 };
