@@ -71,6 +71,7 @@ export async function startApi(options: Options = {}) {
     async stop() {
       for (const socket of sockets) socket.ws.close();
       server.stop(true);
+      await app.drain();
       await sql.close();
     },
   };

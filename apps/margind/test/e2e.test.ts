@@ -19,13 +19,14 @@ import { paths } from '../src/paths';
 let root: string;
 let server: ReturnType<typeof Bun.serve>;
 let sql: SQL;
+let app: ReturnType<typeof createApp>;
 const keys: KeyProvider = memoryKeys();
 
 beforeAll(async () => {
   root = mkdtempSync(join(tmpdir(), 'margin-e2e-'));
   sql = new SQL('sqlite://:memory:');
   await migrate(sql);
-  const app = createApp(sql, { devAuth: true });
+  app = createApp(sql, { devAuth: true });
   server = Bun.serve({
     port: 0,
     hostname: '127.0.0.1',
@@ -35,6 +36,7 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   server.stop(true);
+  await app.drain();
   await sql.close();
   rmSync(root, { recursive: true, force: true });
 });

@@ -640,6 +640,7 @@ export function createApp(sql: SQL, options: Options = {}) {
   // Each socket's frames are handled strictly in order: a targeted presence must be
   // applied before the default view that follows it.
   const queues = new WeakMap<Socket, Promise<void>>();
+  const closing = new Set<Promise<void>>();
   const log = (what: string) => (e: unknown) => console.error(`[api] ${what}: ${e}`);
 
   return {
@@ -677,7 +678,17 @@ export function createApp(sql: SQL, options: Options = {}) {
           .catch(log('frame'));
         queues.set(ws, next);
       },
-      close: (ws: Socket) => void onClose(ws).catch(log('close')),
+      close: (ws: Socket) => {
+        const done = onClose(ws)
+          .catch(log('close'))
+          .finally(() => closing.delete(done));
+        closing.add(done);
+      },
+    },
+    // Waits for socket-close work (offline presence) to finish, for a clean shutdown.
+    async drain() {
+      await Bun.sleep(0);
+      await Promise.all(closing);
     },
   };
 }

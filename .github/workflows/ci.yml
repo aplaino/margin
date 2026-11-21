@@ -11,6 +11,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
+      # The shell integration test checks the generated zsh script; macOS has zsh, Ubuntu doesn't.
+      - run: sudo apt-get install -y zsh
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
