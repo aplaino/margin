@@ -14,7 +14,7 @@ Margin shows what your friends are building, from one fixed spot at the edge of 
 - **Edge:** right by default.
 - **Vertical position:** saved as a fraction of the screen height, so it holds across displays and resolutions. Until you move it: the middle, except when the Dock sits on the same edge, then near the top, so hovering Margin never reveals the Dock. (The owner's Dock auto-hides on the right, vertically centred.) Settings has **Reset position**.
 - **Opening:** the drawer opens downward from a strip in the top half of the screen and upward from one in the bottom half.
-- **Corners:** Margin stays at least 80 px from the top and bottom of the screen, clear of hot corners and the menu bar.
+- **Range:** the strip can sit anywhere from just under the menu bar to the bottom of the screen (above the Dock when it's on that edge and not hidden). Parking it in a corner can put it next to a hot corner; that's your call.
 - **Display:** the screen that contains the frontmost window (falling back to the one with the pointer). It moves to another display only when you switch work there, never while open.
 - **Full-screen apps and Spaces:** visible on every Space and over full-screen apps.
 - **Stage Manager:** sits above the stage; unaffected.

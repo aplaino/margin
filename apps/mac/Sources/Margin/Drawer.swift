@@ -120,7 +120,6 @@ final class DrawerController {
   private var clickMonitor: Any?
   private var hotKey: HotKey?
 
-  private let edgeMargin: CGFloat = 80
   private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
   init(model: AppModel) {
@@ -196,9 +195,9 @@ final class DrawerController {
     let full = screen.frame
     let visible = screen.visibleFrame
     let width = stripSize.width
-    let height = min(stripSize.height, visible.height - edgeMargin * 2)
+    let height = min(stripSize.height, visible.height)
     let x = model.prefs.edge == "left" ? full.minX : full.maxX - width
-    // 0 is as high as it goes, 1 as low, both keeping clear of the screen corners.
+    // 0 is right under the menu bar, 1 the bottom of the screen.
     let (top, bottom) = travel(on: screen, height: height)
     let y = top > bottom ? top - CGFloat(model.prefs.resolvedPosition) * (top - bottom) : visible.midY - height / 2
     return NSRect(x: x, y: y, width: width, height: height)
@@ -207,7 +206,7 @@ final class DrawerController {
   // The lowest y of the strip's frame at the top and at the bottom of its travel.
   private func travel(on screen: NSScreen, height: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
     let visible = screen.visibleFrame
-    return (visible.maxY - edgeMargin - height, visible.minY + edgeMargin)
+    return (visible.maxY - height, visible.minY)
   }
 
   private func panelFrame(on screen: NSScreen) -> NSRect {
