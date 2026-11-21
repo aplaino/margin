@@ -68,11 +68,11 @@ Kickoff decisions (2026-11-21):
 - **Xcode** is installed by the owner in parallel; everything up to step 6 doesn't need it.
 
 Build order:
-1. Bootstrap: Bun workspaces (`packages/protocol`, `apps/api`, `apps/margind`), Biome, strict tsconfig, CI.
-2. Protocol: Valibot schemas for server and local messages, with the protocol version.
-3. api: GitHub device sign-in, friends, key directory, presence fan-out, ciphertext queue; Postgres + SQLite.
-4. margind: encrypted store, Signal sessions, transport, tool hooks, token totals, redaction.
-5. Two-daemon end-to-end tests on one machine.
+1. ✓ Bootstrap: Bun workspaces (`packages/protocol`, `apps/api`, `apps/margind`), Biome, strict tsconfig, CI.
+2. ✓ Protocol: Valibot schemas for server and local messages, with the protocol version.
+3. ✓ api: GitHub device sign-in, friends, key directory, presence fan-out, ciphertext queue; Postgres + SQLite.
+4. ✓ margind: encrypted store, Signal sessions, transport, tool hooks, token totals, redaction.
+5. ✓ Two-daemon end-to-end tests on one machine (`apps/margind/test/e2e.test.ts`).
 6. Margin.app: the drawer, built against the mockup.
 7. Staging on Fly.io + Neon; run the matrix between this Mac and the VM; record in `docs/TESTING.md`.
 

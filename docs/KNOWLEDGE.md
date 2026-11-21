@@ -107,6 +107,13 @@ Rule: **whitelist fields at the reporter**, so raw payloads (prompts, replies, b
 - Validate handles (`^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$`) at every boundary before using them in paths.
 - Treat **server responses as untrusted** too: any value that ends up in a file path (e.g. an avatar's `updatedAt`) must be checked (integer, expected shape) and the resolved path asserted to stay inside its directory before writing.
 
+### Token usage records (checked 2026-11-21)
+Margin's token total is input + output + cache writes, never cache reads (`apps/margind/src/tokens.ts`).
+- **Claude Code**: `~/.claude/projects/**/*.jsonl` (subagents in `<session>/subagents/`). Assistant lines carry `message.usage` with `input_tokens` (excludes cache), `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`. One response is written over several lines with the same `message.id`, and resumed/forked sessions copy earlier lines into new files: count each id once, globally.
+- **Codex**: `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`, `event_msg` with `payload.type: "token_count"` and `payload.info.total_token_usage` = running session total: `input_tokens` (includes `cached_input_tokens`), `cache_write_input_tokens`, `output_tokens` (includes reasoning). Count `input − cached + cache_write + output` from the last event per file.
+- **OpenCode**: `~/.local/share/opencode/opencode.db`, tables `session` and newer `session_v2` (same ids can be in both) with `tokens_input` (excludes cache reads), `tokens_output`, `tokens_reasoning` (separate from output), `tokens_cache_read`, `tokens_cache_write`. Open read-only.
+- On the owner's Mac the first full scan (1.1 GB of Claude transcripts) took 0.8 s and matched an independent count exactly; rescans take ~10 ms.
+
 ## 4. Surfaces and macOS specifics
 
 - **TUI** (`src/tui.ts`): raw ANSI, alternate screen, ANSI-aware clip/pad, word wrap, sidebar ≥ 76 columns else stacked, real cursor at the input line, one write per frame. Split input chunks into CSI sequences / escape pairs / single chars (pastes and arrows arrive mixed). The first key after a reveal-type animation should only dismiss it.
