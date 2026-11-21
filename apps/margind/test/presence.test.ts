@@ -10,6 +10,7 @@ import {
   localSecrets,
   publicModel,
   shareable,
+  withoutLocalDetails,
 } from '../src/presence';
 import { originRepo, repoClassifier } from '../src/repo';
 import { type LocalSession, Sessions } from '../src/sessions';
@@ -55,6 +56,19 @@ describe('repo', () => {
       'maya-chen/tidepool-ui',
     );
     expect(originRepo(repoDir(origin('git@github.com:samr/glyphs.git')))).toBe('samr/glyphs');
+  });
+
+  test('only github.com itself counts, not hosts that merely contain it', () => {
+    for (const url of [
+      'https://evilgithub.com/maya/app.git',
+      'https://github.com.example.org/maya/app.git',
+      'https://example.org/github.com/maya/app.git',
+      'git@gitlab.com:github.com/maya.git',
+    ]) {
+      expect(originRepo(repoDir(origin(url)))).toBeNull();
+    }
+    expect(originRepo(repoDir(origin('ssh://git@github.com/maya/app.git')))).toBe('maya/app');
+    expect(originRepo(repoDir(origin('https://token@github.com/maya/app')))).toBe('maya/app');
   });
 
   test('anything unusual is no repo at all', () => {
@@ -164,6 +178,34 @@ describe('what friends see', () => {
     ).toEqual({ visibility: 'private' });
   });
 
+  test('a renamed repo honours an override under either name; hidden wins', () => {
+    const renamed = { visibility: 'public' as const, repo: 'maya/new-name' };
+    expect(
+      shareable(
+        session(),
+        renamed,
+        'maya/old-name',
+        settings({ repos: { 'maya/new-name': 'hidden' } }),
+      ),
+    ).toBeUndefined();
+    expect(
+      shareable(
+        session(),
+        renamed,
+        'maya/old-name',
+        settings({ repos: { 'maya/old-name': 'private' } }),
+      )?.project,
+    ).toEqual({ visibility: 'private' });
+    expect(
+      shareable(
+        session(),
+        renamed,
+        'maya/old-name',
+        settings({ repos: { 'maya/old-name': 'private', 'maya/new-name': 'hidden' } }),
+      ),
+    ).toBeUndefined();
+  });
+
   test('the session start is rounded down to the minute', () => {
     expect(shareable(session(), publicRepo, null, settings())?.since).toBe(1_700_000_100_000);
   });
@@ -172,6 +214,8 @@ describe('what friends see', () => {
     expect(publicModel('claude-opus-5-5[1m]')).toBe('claude-opus-5-5');
     expect(publicModel('anthropic/claude-sonnet-5-5')).toBe('anthropic/claude-sonnet-5-5');
     expect(publicModel('my model (local)')).toBeUndefined();
+    expect(publicModel('acme-proxy/internal-finetune')).toBe('internal-finetune');
+    expect(publicModel('ollama-at-work/llama4')).toBe('llama4');
     expect(publicModel(undefined)).toBeUndefined();
   });
 
@@ -218,6 +262,27 @@ describe('what friends see', () => {
     for (const secret of ['acme', 'secret', 'clients', '/users', 'sess-7f3a9c'])
       expect(sent).not.toContain(secret);
     expect(() => assertPublic(view.full, localSecrets([s]))).not.toThrow();
+  });
+
+  test('every folder name in a project path counts as local, and only the model is dropped for it', () => {
+    const secrets = localSecrets([session({ cwd: '/Users/me/clients/acme-secret/web' })]);
+    expect(secrets).toEqual(expect.arrayContaining(['clients', 'acme-secret', 'web', 'Users']));
+    const presence: PublicPresence = {
+      status: 'online',
+      at: 1,
+      activity: { tool: 'opencode', model: 'acme-secret-v2', project: { visibility: 'private' } },
+    };
+    expect(withoutLocalDetails(presence, secrets)).toEqual({
+      status: 'online',
+      at: 1,
+      activity: { tool: 'opencode', project: { visibility: 'private' } },
+    });
+    const clean: PublicPresence = {
+      status: 'online',
+      at: 1,
+      activity: { model: 'claude-opus-5-5' },
+    };
+    expect(withoutLocalDetails(clean, secrets)).toBe(clean);
   });
 
   test('the final check refuses extra fields and local details in the model', () => {

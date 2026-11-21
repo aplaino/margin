@@ -1,4 +1,3 @@
-import { basename } from 'node:path';
 import {
   type Handle,
   Model,
@@ -15,15 +14,44 @@ import type { LocalSession } from './sessions';
 export type PresenceView = { full: PublicPresence; basic: PublicPresence; close: Handle[] };
 
 // Tool model names can carry suffixes like "[1m]"; keep the plain name or nothing.
+// Providers whose "provider/model" prefix is safe to show. Any other prefix could be a
+// name you chose (a local model server, a company proxy), so only the model part is kept.
+const PROVIDERS = new Set([
+  'anthropic',
+  'openai',
+  'google',
+  'openrouter',
+  'github-copilot',
+  'amazon-bedrock',
+  'azure',
+  'mistral',
+  'groq',
+  'xai',
+  'deepseek',
+]);
+
+// Tool model names can carry suffixes like "[1m]"; keep the plain name or nothing.
 export function publicModel(model?: string) {
-  const cleaned = model?.replace(/\[[^\]]*\]$/, '').trim();
+  let cleaned = model?.replace(/\[[^\]]*\]$/, '').trim();
+  const slash = cleaned?.lastIndexOf('/') ?? -1;
+  if (
+    cleaned &&
+    slash >= 0 &&
+    !PROVIDERS.has(cleaned.slice(0, cleaned.indexOf('/')).toLowerCase())
+  ) {
+    cleaned = cleaned.slice(slash + 1);
+  }
   return cleaned && v.is(Model, cleaned) ? cleaned : undefined;
 }
 
-function repoOverride(settings: Settings, remote: string | null) {
-  if (!remote) return undefined;
-  const key = Object.keys(settings.repos).find((r) => r.toLowerCase() === remote.toLowerCase());
-  return key ? settings.repos[key] : undefined;
+// A renamed or transferred repo has its old name in the git remote and its new one on
+// GitHub; an override under either name applies, and "hidden" wins over "private".
+function repoOverride(settings: Settings, names: (string | null)[]) {
+  const wanted = new Set(names.filter((n): n is string => !!n).map((n) => n.toLowerCase()));
+  const matches = Object.entries(settings.repos)
+    .filter(([repo]) => wanted.has(repo.toLowerCase()))
+    .map(([, value]) => value);
+  return matches.includes('hidden') ? 'hidden' : matches[0];
 }
 
 // The session as friends may see it, after the sharing settings. Undefined when nothing may be shown.
@@ -33,7 +61,10 @@ export function shareable(
   remote: string | null,
   settings: Settings,
 ): PublicActivity | undefined {
-  const override = repoOverride(settings, remote);
+  const override = repoOverride(settings, [
+    remote,
+    repo.visibility === 'public' ? repo.repo : null,
+  ]);
   if (override === 'hidden') return undefined;
   const activity: PublicActivity = {};
   if (settings.share.tool) activity.tool = session.tool;
@@ -79,7 +110,7 @@ export class LeakError extends Error {}
 // Strings from this machine that must never appear in what's sent.
 export function localSecrets(sessions: LocalSession[]) {
   return sessions
-    .flatMap((s) => [s.cwd, s.cwd && basename(s.cwd), s.sessionId])
+    .flatMap((s) => [s.cwd, ...(s.cwd?.split('/') ?? []), s.sessionId])
     .filter((s): s is string => !!s && s.length > 2);
 }
 
@@ -94,4 +125,14 @@ export function assertPublic(presence: PublicPresence, secrets: string[]) {
   const model = presence.activity?.model?.toLowerCase() ?? '';
   const leaked = secrets.filter((s) => model.includes(s.toLowerCase()));
   if (leaked.length) throw new LeakError(`model name contains local details: ${leaked.length}`);
+}
+
+// A model name that happens to match a local folder name loses the model, not the
+// whole activity: a folder called "claude" shouldn't hide what you're doing.
+export function withoutLocalDetails(presence: PublicPresence, secrets: string[]): PublicPresence {
+  const model = presence.activity?.model?.toLowerCase();
+  if (!model || !secrets.some((s) => model.includes(s.toLowerCase())) || !presence.activity)
+    return presence;
+  const { model: _dropped, ...activity } = presence.activity;
+  return { ...presence, activity };
 }

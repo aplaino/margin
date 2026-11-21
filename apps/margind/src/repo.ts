@@ -26,7 +26,10 @@ export function originRepo(cwd: string): string | null {
   if (!config || !existsSync(config)) return null;
   const text = readFileSync(config, 'utf8');
   const url = text.match(/\[remote "origin"\][^[]*?url\s*=\s*(\S+)/)?.[1];
-  const github = url?.match(/github\.com[:/]([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/);
+  // The host must be exactly github.com (https, ssh:// or scp-style git@github.com:).
+  const github = url?.match(
+    /^(?:(?:https?|ssh|git):\/\/(?:[^@/\s]*@)?(?:www\.)?github\.com(?::\d+)?\/|git@github\.com:)([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/,
+  );
   const repo = github ? `${github[1]}/${github[2]}` : null;
   return repo && v.is(Repo, repo) ? repo : null;
 }
