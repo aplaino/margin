@@ -13,6 +13,9 @@ if (process.env.MARGIN_ENV === 'production') {
     devAuth && 'MARGIN_DEV_AUTH must be off',
     !process.env.GITHUB_CLIENT_ID && 'GITHUB_CLIENT_ID is required',
     !process.env.DATABASE_URL?.startsWith('postgres') && 'DATABASE_URL must point at Postgres',
+    // Update feed links must never come from a request's Host header.
+    !process.env.MARGIN_PUBLIC_URL?.startsWith('https://') &&
+      'MARGIN_PUBLIC_URL must be the https:// address',
   ].filter(Boolean);
   if (problems.length) {
     console.error(`[api] refusing to start in production: ${problems.join('; ')}`);

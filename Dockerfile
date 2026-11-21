@@ -9,5 +9,6 @@ WORKDIR /app
 COPY --from=build /out/api.js .
 ENV PORT=8080 HOST=0.0.0.0 MARGIN_ENV=production MARGIN_UPDATES_DIR=/data/updates
 EXPOSE 8080
-# Starts as root only to give the bun user the release volume, then runs as bun.
+# Root only for mkdir/chown (Fly volumes mount owned by root, with no way to set an owner);
+# exec setpriv then replaces the shell, so the server and every request run as bun.
 CMD ["sh", "-c", "mkdir -p /data/updates && chown -R bun:bun /data && exec setpriv --reuid=bun --regid=bun --init-groups bun api.js"]
