@@ -98,6 +98,16 @@ describe('signing in with GitHub', () => {
   });
 });
 
+describe('signing out', () => {
+  test('returns the app to the signed-out state', async () => {
+    const { socket, waitFor } = await setup('Iv1.margin', 'Iv1.margin');
+    write(socket, { op: 'login' });
+    await waitFor((p) => p.type === 'self' && p.connection === 'online');
+    write(socket, { op: 'logout' });
+    await waitFor((p) => p.type === 'self' && p.connection === 'signed-out');
+  });
+});
+
 describe('server errors', () => {
   test('control characters in an error message are removed', async () => {
     const server = Bun.serve({

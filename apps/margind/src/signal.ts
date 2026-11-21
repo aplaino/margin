@@ -21,6 +21,7 @@ type Saved = {
 };
 
 export const PREKEY_BATCH = 50;
+export const PREKEY_CAP = 200;
 const b64 = (b: Buffer) => b.toString('base64');
 const buf = (s: string) => Buffer.from(s, 'base64');
 
@@ -82,7 +83,10 @@ export class Signal {
   }
 
   // Fresh one-time prekeys, numbered after the highest ever used (used ones are deleted locally).
+  // Never holds more than the server will (200), however often it's asked.
   replenish(count = PREKEY_BATCH) {
+    count = Math.min(count, PREKEY_CAP - this.store.preKeyIds().length);
+    if (count <= 0) return [];
     const highest = Number(this.store.get('signal:maxPreKey')?.toString() ?? 0);
     const start = Math.max(highest, ...this.store.preKeyIds()) + 1;
     const preKeys = [];

@@ -210,17 +210,19 @@ export async function startDaemon(options: DaemonOptions) {
     const client = api();
     const { friends } = await client.call(FriendList, 'GET', '/friends');
     requests = await client.call(Requests, 'GET', '/friends/requests');
-    const known = new Set(store.friends().map((f) => f.handle));
-    for (const friend of friends) {
-      store.upsertFriend(friend.handle, friend.name);
-      if (!store.friend(friend.handle)?.identityKey) await fetchBundle(friend.handle);
-    }
+    // Removals first, so nothing that goes wrong fetching keys can keep a removed friend.
     const current = new Set(friends.map((f) => f.handle));
-    for (const handle of known) {
+    for (const { handle } of store.friends()) {
       if (!current.has(handle)) {
         store.removeFriend(handle);
         friendPresence.delete(handle);
       }
+    }
+    for (const friend of friends) {
+      store.upsertFriend(friend.handle, friend.name);
+      if (store.friend(friend.handle)?.identityKey) continue;
+      // One friend's bad or missing keys don't stop the rest of the sync.
+      await fetchBundle(friend.handle).catch((e) => log('could not pin a friend’s keys', e));
     }
     push({ type: 'roster', friends: roster() });
     push({ type: 'requests', requests });
@@ -237,15 +239,11 @@ export async function startDaemon(options: DaemonOptions) {
 
   async function topUpPreKeys(remaining?: number) {
     const client = api();
-    // An answer that isn't a plain count is treated as "low": restocking is always safe.
-    const count =
-      remaining ??
-      (await client.call(KeyCount, 'GET', '/keys/count').then(
-        (r) => r.remaining,
-        () => 0,
-      ));
-    if (count < PREKEY_LOW)
-      await client.call(null, 'POST', '/keys/prekeys', { preKeys: signal.replenish(PREKEY_BATCH) });
+    // An unreadable count throws and skips this round; the next sync tries again.
+    const count = remaining ?? (await client.call(KeyCount, 'GET', '/keys/count')).remaining;
+    if (count >= PREKEY_LOW) return;
+    const preKeys = signal.replenish(PREKEY_BATCH);
+    if (preKeys.length) await client.call(null, 'POST', '/keys/prekeys', { preKeys });
   }
 
   function flushOutbox() {
@@ -330,11 +328,17 @@ export async function startDaemon(options: DaemonOptions) {
       beforeConnect: async () => {
         try {
           await client.call(Config, 'GET', '/config');
+          await client.withToken(a.token).call(null, 'GET', '/me');
           return true;
         } catch (e) {
           if (e instanceof ApiError && e.status === 426) {
             connectionState = 'update-required';
             push(selfPush());
+            return false;
+          }
+          // The server no longer knows this session (signed out elsewhere, or reset).
+          if (e instanceof ApiError && e.status === 401) {
+            signOutLocally();
             return false;
           }
           return true;

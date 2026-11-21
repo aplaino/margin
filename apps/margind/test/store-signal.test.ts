@@ -196,6 +196,14 @@ describe('signal', () => {
     expect(Math.min(...ids)).toBeGreaterThan(50);
   });
 
+  test('the local prekey supply is capped at 200', () => {
+    const store = new Store(':memory:', keys('cap'));
+    const signal = new Signal(store);
+    for (let i = 0; i < 10; i++) signal.replenish();
+    expect(store.preKeyIds().length).toBe(200);
+    expect(signal.replenish()).toEqual([]);
+  });
+
   test('safety numbers match on both sides', () => {
     const { a, b } = pair();
     expect(a.signal.safetyNumber(b.signal.identityKey())).toBe(
