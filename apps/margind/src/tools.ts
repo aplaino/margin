@@ -15,6 +15,9 @@ import type { Tool } from '@margin/protocol';
 // only Margin's entries. Every file is backed up before it's changed, and a config that
 // can't be parsed is left alone rather than overwritten.
 
+// Failures with a message fit to show you in the drawer.
+export class ToolError extends Error {}
+
 // Every line Margin adds carries this, so it can always find (and remove) its own entries.
 export const MARKER = 'MARGIN_HOOK=1';
 
@@ -196,11 +199,50 @@ export function toolStatus(env: ToolEnv): { tool: Tool; found: boolean; connecte
   ];
 }
 
+// macOS runs a downloaded app that hasn't been moved from a temporary copy that vanishes
+// when it quits; hooks pointing there would quietly stop working.
+const temporary = (env: ToolEnv) => env.self.some((p) => p.includes('/AppTranslocation/'));
+
+function hooksCurrent(path: string, events: string[], command: string) {
+  try {
+    const hooks = readConfig(path).hooks ?? {};
+    return events.every((event) =>
+      (hooks[event] ?? []).some((g) => g.hooks?.some((h) => h.command === command)),
+    );
+  } catch {
+    return false;
+  }
+}
+
+// After Margin moves (say, from Downloads into Applications), points its existing Claude Code
+// and Codex hooks at where it is now. Returns the tools it changed.
+export function repointTools(env: ToolEnv): Tool[] {
+  if (temporary(env)) return [];
+  const f = files(env);
+  const changed: Tool[] = [];
+  for (const [tool, path, events] of [
+    ['claude-code', f.claude, CLAUDE_EVENTS],
+    ['codex', f.codex, CODEX_EVENTS],
+  ] as const) {
+    const command = hookCommand(env, tool);
+    if (hooksInstalled(path, events) && !hooksCurrent(path, events, command)) {
+      setHooks(path, events, command);
+      changed.push(tool);
+    }
+  }
+  return changed;
+}
+
 // Returns a note for the user when the tool needs a step of its own.
 export function connectTool(env: ToolEnv, tool: Tool): string | undefined {
   const f = files(env);
+  if (temporary(env)) {
+    throw new ToolError(
+      'Move Margin to Applications first. It’s running from a temporary copy, and hooks would stop working when it quits.',
+    );
+  }
   if (!toolStatus(env).find((t) => t.tool === tool)?.found)
-    throw new Error(`${tool} isn't installed`);
+    throw new ToolError(`${tool} isn’t installed`);
   switch (tool) {
     case 'claude-code':
       setHooks(f.claude, CLAUDE_EVENTS, hookCommand(env, tool));

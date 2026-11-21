@@ -40,7 +40,14 @@ import { Sessions } from './sessions';
 import { PREKEY_BATCH, Signal } from './signal';
 import { Store } from './store';
 import { scanTokens, type TokenSources } from './tokens';
-import { connectTool, disconnectTool, type ToolEnv, toolStatus } from './tools';
+import {
+  connectTool,
+  disconnectTool,
+  repointTools,
+  type ToolEnv,
+  ToolError,
+  toolStatus,
+} from './tools';
 
 export type DaemonOptions = {
   paths: Paths;
@@ -69,7 +76,11 @@ const PREKEY_LOW = 20;
 
 // Other errors can carry paths, so only Margin's own messages are logged in full.
 const log = (what: string, e?: unknown) => {
-  const own = e instanceof ApiError || e instanceof DaemonError || e instanceof GitHubError;
+  const own =
+    e instanceof ApiError ||
+    e instanceof DaemonError ||
+    e instanceof GitHubError ||
+    e instanceof ToolError;
   const detail = e
     ? ` (${(e as Error).name ?? 'error'}${own ? `: ${(e as Error).message}` : ''})`
     : '';
@@ -83,7 +94,10 @@ function cleanChat(text: string) {
 }
 
 const errorText = (e: unknown) =>
-  e instanceof ApiError || e instanceof DaemonError || e instanceof GitHubError
+  e instanceof ApiError ||
+  e instanceof DaemonError ||
+  e instanceof GitHubError ||
+  e instanceof ToolError
     ? e.message
     : 'Something went wrong';
 
@@ -594,6 +608,11 @@ export async function startDaemon(options: DaemonOptions) {
   });
   chmodSync(paths.socket, 0o600);
 
+  try {
+    if (repointTools(options.tools).length) log('pointed tool hooks at where Margin is now');
+  } catch (e) {
+    log('could not update tool hooks', e);
+  }
   await refreshTokens();
   await recompute();
   connect();

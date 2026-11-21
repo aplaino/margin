@@ -8,7 +8,9 @@ import {
   disconnectTool,
   hookCommand,
   MARKER,
+  repointTools,
   type ToolEnv,
+  ToolError,
   toolStatus,
 } from '../src/tools';
 
@@ -44,7 +46,7 @@ describe('connecting tools', () => {
       { tool: 'opencode', found: true, connected: false },
       { tool: 'shell', found: true, connected: false },
     ]);
-    expect(() => connectTool(env, 'codex')).toThrow("isn't installed");
+    expect(() => connectTool(env, 'codex')).toThrow('isn’t installed');
   });
 
   test('Claude Code: adds hooks beside the user’s own, once, and removes only Margin’s', () => {
@@ -107,6 +109,42 @@ describe('connecting tools', () => {
     );
     const run = Bun.spawnSync(['sh', '-c', command.replace(/ hook claude-code$/, '')]);
     expect(run.stdout.toString().trim()).toBe(env.dataHome);
+  });
+});
+
+describe('when Margin moves', () => {
+  test('a temporary copy from Downloads can’t connect tools', () => {
+    const temp = {
+      ...env,
+      self: ['/private/var/folders/x/T/AppTranslocation/ABC/d/Margin.app/Contents/MacOS/margind'],
+    };
+    expect(() => connectTool(temp, 'claude-code')).toThrow(ToolError);
+    expect(repointTools(temp)).toEqual([]);
+  });
+
+  test('hooks left pointing at an old copy are re-pointed, and others’ hooks stay', () => {
+    const theirs = { hooks: [{ type: 'command', command: '/usr/local/bin/other stop' }] };
+    writeFileSync(claudeSettings(), JSON.stringify({ hooks: { Stop: [theirs] } }));
+    connectTool(
+      { ...env, self: ['/Users/me/Downloads/Margin.app/Contents/MacOS/margind'] },
+      'claude-code',
+    );
+    connectTool(
+      { ...env, self: ['/Users/me/Downloads/Margin.app/Contents/MacOS/margind'] },
+      'codex',
+    );
+    const moved = { ...env, self: ['/Applications/Margin.app/Contents/MacOS/margind'] };
+
+    expect(repointTools(moved)).toEqual(['claude-code', 'codex']);
+    const stop = read(claudeSettings()).hooks.Stop;
+    expect(stop).toHaveLength(2);
+    expect(stop[0]).toEqual(theirs);
+    expect(stop[1].hooks[0].command).toContain('/Applications/Margin.app');
+    expect(repointTools(moved)).toEqual([]);
+  });
+
+  test('tools that were never connected are left alone', () => {
+    expect(repointTools(env)).toEqual([]);
   });
 });
 
