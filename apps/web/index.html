@@ -161,7 +161,12 @@ Done. Large photos now upload in under 2 seconds.
 <section class="download" id="download">
   <h2 class="reveal">Margin for Mac.</h2>
   <p class="lede reveal">Early beta. Updates itself as it improves.</p>
-  <div class="ctas reveal"><a class="pill large" href="/download">Download</a></div>
+  <div class="install-cmd reveal">
+    <code id="install-command">curl -fsSL https://margin-api.fly.dev/install.sh | sh</code>
+    <button type="button" class="copy" data-copy="install-command">Copy</button>
+  </div>
+  <p class="fine reveal">Paste it into Terminal: it installs Margin in Applications and opens it.</p>
+  <div class="ctas reveal"><a class="link" href="/download">Or download the disk image</a></div>
   <p class="fine reveal">Requires macOS 26 or later on a Mac with Apple silicon.</p>
   <details class="install reveal">
     <summary>Installing the beta</summary>

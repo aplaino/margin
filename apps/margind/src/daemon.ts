@@ -193,7 +193,11 @@ export async function startDaemon(options: DaemonOptions) {
   };
 
   // What friends see, recomputed from sessions, settings, idle time and tokens.
+  // Recalculations overlap (a heartbeat and a tool event, say); one that a newer one has
+  // overtaken is dropped, so stale activity never overwrites fresh.
+  let generation = 0;
   async function recompute() {
+    const mine = ++generation;
     const settings = store.settings();
     const session = sessions.current();
     const status = (await idle()) > IDLE_AFTER_S ? 'idle' : 'online';
@@ -214,14 +218,27 @@ export async function startDaemon(options: DaemonOptions) {
       log('withheld activity that failed the privacy check');
       next = buildView({ status, tokens, settings });
     }
+    if (mine !== generation) return;
     view = next;
     sendPresence();
     push(selfPush());
   }
 
   // Targeted view first, so close friends never flicker to the basic one.
-  function sendPresence() {
+  // Sent when it changes, and at least every 25 s so friends don't see you go stale (they
+  // treat 90 s of silence as offline). The server caps how often presence may be sent.
+  let lastSent = '';
+  let lastSentAt = 0;
+  function sendPresence(force = false) {
     if (!view || !connection?.connected) return;
+    const key = JSON.stringify({
+      ...view,
+      full: { ...view.full, at: 0 },
+      basic: { ...view.basic, at: 0 },
+    });
+    if (!force && key === lastSent && Date.now() - lastSentAt < 25_000) return;
+    lastSent = key;
+    lastSentAt = Date.now();
     if (view.close.length) connection.send({ t: 'presence', presence: view.full, to: view.close });
     connection.send({ t: 'presence', presence: view.basic });
   }
@@ -388,7 +405,8 @@ export async function startDaemon(options: DaemonOptions) {
         connectionState = state;
         push(selfPush());
         if (state === 'online') {
-          sendPresence();
+          // The server starts each connection knowing nothing about you.
+          sendPresence(true);
           flushOutbox();
           void syncFriends()
             .then(() => topUpPreKeys())

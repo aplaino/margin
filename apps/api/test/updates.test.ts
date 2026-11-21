@@ -121,6 +121,22 @@ describe('releases', () => {
     expect(await download.text()).toBe('disk image');
   });
 
+  test('the Terminal installer points at this server and is valid shell', async () => {
+    const response = await fetch(`${api.base}/install.sh`);
+    const script = await response.text();
+    expect(response.headers.get('content-type')).toStartWith('text/plain');
+    expect(script).toContain('curl -fsSL "https://margin.example/download.zip"');
+    expect(script).toContain('codesign --verify --deep --strict');
+    const check = Bun.spawnSync(['sh', '-n'], { stdin: new TextEncoder().encode(script) });
+    expect(check.exitCode).toBe(0);
+  });
+
+  test('/download.zip is the newest zip', async () => {
+    await upload(1, 'one');
+    await upload(2, 'two');
+    expect(await (await fetch(`${api.base}/download.zip`)).text()).toBe('two');
+  });
+
   test('before any release, /download says so', async () => {
     const response = await fetch(`${api.base}/download`);
     expect(response.status).toBe(404);

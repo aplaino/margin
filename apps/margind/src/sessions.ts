@@ -8,6 +8,8 @@ export type LocalSession = {
   pid?: number;
   startedAt: number;
   lastEventAt: number;
+  // Which session reported most recently, even within the same millisecond.
+  order: number;
 };
 
 // Tools whose process outlives your use of them (Codex's app-server, OpenCode's server,
@@ -31,6 +33,7 @@ const alive = (pid: number) => {
 
 export class Sessions {
   private sessions = new Map<string, LocalSession>();
+  private events = 0;
 
   constructor(private isAlive: (pid: number) => boolean = alive) {}
 
@@ -53,6 +56,7 @@ export class Sessions {
       pid: event.pid ?? existing?.pid,
       startedAt: existing?.startedAt ?? now,
       lastEventAt: now,
+      order: ++this.events,
     });
   }
 
@@ -72,6 +76,6 @@ export class Sessions {
   // Friends see one activity: an AI tool beats a bare shell, then the most recently active.
   current(): LocalSession | undefined {
     const rank = (s: LocalSession) => (s.tool === 'shell' ? 0 : 1);
-    return this.list().toSorted((a, b) => rank(b) - rank(a) || b.lastEventAt - a.lastEventAt)[0];
+    return this.list().toSorted((a, b) => rank(b) - rank(a) || b.order - a.order)[0];
   }
 }

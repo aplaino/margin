@@ -42,6 +42,7 @@ const session = (overrides: Partial<LocalSession> = {}): LocalSession => ({
   cwd: '/Users/me/clients/acme-secret',
   startedAt: 1_700_000_123_456,
   lastEventAt: 1_700_000_200_000,
+  order: 1,
   ...overrides,
 });
 
@@ -121,6 +122,15 @@ describe('sessions', () => {
     living.clear();
     sessions.expire(16 * 60_000);
     expect(sessions.list()).toEqual([]);
+  });
+
+  test('the session that reported last wins, even in the same millisecond', () => {
+    const sessions = new Sessions(() => true);
+    sessions.onEvent({ tool: 'claude-code', event: 'start', sessionId: 'a' }, 1000);
+    sessions.onEvent({ tool: 'codex', event: 'prompt', sessionId: 'b' }, 1000);
+    expect(sessions.current()?.tool).toBe('codex');
+    sessions.onEvent({ tool: 'claude-code', event: 'prompt', sessionId: 'a' }, 1000);
+    expect(sessions.current()?.tool).toBe('claude-code');
   });
 
   test('keeps the model and start time across events, and an AI tool beats the shell', () => {

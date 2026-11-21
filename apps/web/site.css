@@ -935,3 +935,39 @@ h3 {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* The Terminal install command */
+.install-cmd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 600px;
+  margin: 34px auto 0;
+  padding: 14px 14px 14px 20px;
+  border-radius: 14px;
+  background: #1d1d1f;
+  text-align: left;
+}
+.install-cmd code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0;
+  color: #f5f5f7;
+}
+.install-cmd .copy {
+  font: inherit;
+  font-size: 14px;
+  border: 0;
+  border-radius: 980px;
+  padding: 7px 16px;
+  background: var(--button);
+  color: #fff;
+  cursor: pointer;
+}
+.install-cmd .copy:hover {
+  background: var(--button-hover);
+}

@@ -158,6 +158,17 @@ ${items}
     if (req.method === 'POST' && image) return uploadImage(req, Number(image[1]));
     if (req.method !== 'GET' && req.method !== 'HEAD') return null;
     if (path === '/updates/appcast.xml') return appcast(url);
+    // The Terminal installer, and the zip it fetches (Terminal downloads skip Chrome's and
+    // macOS's warnings, which only apply to files downloaded in a browser).
+    if (path === '/install.sh') {
+      return new Response(installer(base(url)), {
+        headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
+      });
+    }
+    if (path === '/download.zip') {
+      const [newest] = await latest(1);
+      return newest ? zip(newest.build, 'Margin.zip') : json({ error: 'no release yet' }, 404);
+    }
     // First installs get the newest disk image, or the zip for releases made before images.
     if (path === '/download') {
       const [newest] = await latest(1);
@@ -169,4 +180,35 @@ ${items}
     const file = path.match(/^\/updates\/Margin-(\d{1,9})\.zip$/);
     return file ? zip(Number(file[1])) : null;
   };
+}
+
+// curl -fsSL <server>/install.sh | sh
+function installer(base: string) {
+  return `#!/bin/sh
+# Installs Margin into /Applications and opens it.
+set -eu
+[ "$(uname -s)" = Darwin ] || { echo "Margin is a Mac app." >&2; exit 1; }
+[ "$(uname -m)" = arm64 ] || { echo "Margin needs a Mac with Apple silicon." >&2; exit 1; }
+[ "$(sw_vers -productVersion | cut -d. -f1)" -ge 26 ] || { echo "Margin needs macOS 26 or later." >&2; exit 1; }
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+echo "Downloading Margin…"
+curl -fsSL "${base}/download.zip" -o "$tmp/Margin.zip"
+ditto -x -k "$tmp/Margin.zip" "$tmp"
+if ! codesign --verify --deep --strict "$tmp/Margin.app" 2>/dev/null ||
+   [ "$(defaults read "$tmp/Margin.app/Contents/Info" CFBundleIdentifier 2>/dev/null)" != dev.margin.app ]; then
+  echo "The download didn't check out, so nothing was installed." >&2
+  exit 1
+fi
+
+osascript -e 'quit app id "dev.margin.app"' >/dev/null 2>&1 || true
+sleep 1
+if [ -e /Applications/Margin.app ]; then
+  mv /Applications/Margin.app "$HOME/.Trash/Margin $(date '+%Y-%m-%d %H.%M.%S').app"
+fi
+ditto "$tmp/Margin.app" /Applications/Margin.app
+open /Applications/Margin.app
+echo "Margin is installed. Look for the strip at the edge of your screen."
+`;
 }

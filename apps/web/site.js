@@ -39,3 +39,18 @@ for (const button of document.querySelectorAll('.switch button')) {
       other.classList.toggle('on', other === button);
   });
 }
+
+for (const button of document.querySelectorAll('[data-copy]')) {
+  button.addEventListener('click', async () => {
+    const text = document.getElementById(button.dataset.copy)?.textContent ?? '';
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = 'Copied';
+      setTimeout(() => {
+        button.textContent = 'Copy';
+      }, 1600);
+    } catch {
+      getSelection()?.selectAllChildren(document.getElementById(button.dataset.copy));
+    }
+  });
+}
