@@ -1,5 +1,6 @@
 #!/bin/sh
-# Builds a Margin.zip to send to testers. Needs the real server and GitHub app:
+# Builds Margin.zip (what updates download) and Margin.dmg (what first installs download,
+# with an Applications shortcut to drag onto). Needs the real server and GitHub app:
 #   MARGIN_SERVER=https://… MARGIN_GITHUB_CLIENT_ID=… bun run package
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -10,4 +11,12 @@ app=$("$root/scripts/build-app.sh" release)
 zip="$root/apps/mac/build/Margin.zip"
 rm -f "$zip"
 ditto -c -k --keepParent "$app" "$zip"
+
+image="$root/apps/mac/build/Margin.dmg"
+staging=$(mktemp -d)
+trap 'rm -rf "$staging"' EXIT
+ditto "$app" "$staging/Margin.app"
+ln -s /Applications "$staging/Applications"
+rm -f "$image"
+hdiutil create -quiet -volname Margin -srcfolder "$staging" -ov -format UDZO "$image"
 echo "$zip"

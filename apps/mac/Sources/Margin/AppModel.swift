@@ -4,7 +4,7 @@ import Observation
 import UserNotifications
 
 enum Tab { case friends, add, settings }
-enum SetupStep { case welcome, signIn, tools, addFriend }
+enum SetupStep { case welcome, guide, signIn, tools, addFriend }
 
 @Observable @MainActor
 final class AppModel {
@@ -26,6 +26,9 @@ final class AppModel {
   var results: [String: (ok: Bool, message: String?)] = [:]
   // Bumped on each new incoming message; the strip pulses once.
   var pulse = 0
+  var moveError: String?
+  // The how-it-works pages, opened again from Settings.
+  var showGuide = false
 
   var expanded = false
   var tab: Tab = .friends

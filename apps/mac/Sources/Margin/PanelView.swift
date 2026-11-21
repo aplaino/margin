@@ -10,9 +10,15 @@ struct PanelView: View {
       if model.misplaced {
         VStack(alignment: .leading, spacing: 6) {
           Text("Move Margin to Applications").font(theme.bodyBold)
-          Text("It’s running from your Downloads folder, so it can’t update itself. Quit it, drag Margin into Applications, and open it from there.")
+          Text("It’s running from outside Applications, so it can’t update itself and can’t connect your tools.")
             .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
-          Button("Quit Margin") { NSApp.terminate(nil) }.buttonStyle(.link)
+          Button("Move to Applications") {
+            do { try Mover.moveToApplications() } catch { model.moveError = error.localizedDescription }
+          }
+          .buttonStyle(.link)
+          if let error = model.moveError {
+            Text(error).font(theme.caption).foregroundStyle(theme.danger).fixedSize(horizontal: false, vertical: true)
+          }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -29,6 +35,8 @@ struct PanelView: View {
         }
       } else if model.needsSetup {
         SetupView()
+      } else if model.showGuide {
+        GuideView(onDone: { model.showGuide = false })
       } else if let handle = model.chatWith {
         ChatView(handle: handle)
       } else {

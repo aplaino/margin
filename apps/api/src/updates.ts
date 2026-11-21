@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { mkdirSync, renameSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SQL } from 'bun';
 
@@ -33,6 +33,7 @@ type Release = {
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const esc = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const zipName = (build: number) => `Margin-${build}.zip`;
+const imageName = (build: number) => `Margin-${build}.dmg`;
 
 function tokenMatches(header: string | null, token: string) {
   const given = Buffer.from(header?.match(/^Bearer (\S+)$/)?.[1] ?? '');
@@ -92,6 +93,22 @@ export function updates(sql: SQL, options: UpdateOptions) {
     return json({ version, build, length: bytes.byteLength });
   }
 
+  // The disk image for an existing release, for first installs from the website.
+  async function uploadImage(req: Request, build: number) {
+    if (!options.releaseToken) return json({ error: 'not found' }, 404);
+    if (!tokenMatches(req.headers.get('authorization'), options.releaseToken))
+      return json({ error: 'unauthorized' }, 401);
+    const [release] = await sql`SELECT build FROM releases WHERE build = ${build}`;
+    if (!release) return json({ error: 'no such release' }, 404);
+    const bytes = await req.arrayBuffer();
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_ZIP)
+      return json({ error: 'invalid image' }, 400);
+    const path = join(options.dir, imageName(build));
+    await Bun.write(`${path}.partial`, bytes);
+    renameSync(`${path}.partial`, path);
+    return json({ build, length: bytes.byteLength });
+  }
+
   async function appcast(url: URL) {
     const items = (await latest(5))
       .map(
@@ -119,15 +136,15 @@ ${items}
   }
 
   function zip(build: number, filename = zipName(build)) {
-    const path = join(options.dir, zipName(build));
-    try {
-      statSync(path);
-    } catch {
-      return json({ error: 'not found' }, 404);
-    }
+    return serveFile(zipName(build), filename, 'application/zip');
+  }
+
+  function serveFile(name: string, filename: string, type: string) {
+    const path = join(options.dir, name);
+    if (!existsSync(path)) return json({ error: 'not found' }, 404);
     return new Response(Bun.file(path), {
       headers: {
-        'content-type': 'application/zip',
+        'content-type': type,
         'content-disposition': `attachment; filename="${filename}"`,
       },
     });
@@ -137,11 +154,17 @@ ${items}
   return async (req: Request, url: URL): Promise<Response | null> => {
     const path = url.pathname;
     if (req.method === 'POST' && path === '/updates/releases') return upload(req);
+    const image = path.match(/^\/updates\/releases\/(\d{1,9})\/dmg$/);
+    if (req.method === 'POST' && image) return uploadImage(req, Number(image[1]));
     if (req.method !== 'GET' && req.method !== 'HEAD') return null;
     if (path === '/updates/appcast.xml') return appcast(url);
+    // First installs get the newest disk image, or the zip for releases made before images.
     if (path === '/download') {
       const [newest] = await latest(1);
-      return newest ? zip(newest.build, 'Margin.zip') : json({ error: 'no release yet' }, 404);
+      if (!newest) return json({ error: 'no release yet' }, 404);
+      return existsSync(join(options.dir, imageName(newest.build)))
+        ? serveFile(imageName(newest.build), 'Margin.dmg', 'application/x-apple-diskimage')
+        : zip(newest.build, 'Margin.zip');
     }
     const file = path.match(/^\/updates\/Margin-(\d{1,9})\.zip$/);
     return file ? zip(Number(file[1])) : null;

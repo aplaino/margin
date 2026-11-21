@@ -92,6 +92,7 @@ struct SettingsView: View {
           Button("Export data") { model.request("account.export") }.buttonStyle(.link)
           Button("Delete account", action: confirmDelete).buttonStyle(.link).foregroundStyle(theme.danger)
         }
+        Button("How Margin works") { model.showGuide = true }.buttonStyle(.link)
         Button("Quit Margin", action: onQuit).buttonStyle(.plain).foregroundStyle(theme.secondary).padding(.top, 4)
       }
       .toggleStyle(.checkbox)

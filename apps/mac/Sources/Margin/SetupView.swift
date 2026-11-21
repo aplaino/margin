@@ -9,6 +9,7 @@ struct SetupView: View {
     VStack(alignment: .leading, spacing: 14) {
       switch model.signedIn ? model.setupStep : (model.prefs.setupDone ? .signIn : model.setupStep) {
       case .welcome: welcome
+      case .guide: GuideView(onDone: { model.setupStep = .signIn }).padding(.horizontal, -20).padding(.vertical, -28)
       case .signIn: signIn
       case .tools: tools
       case .addFriend: addFriend
@@ -26,7 +27,7 @@ struct SetupView: View {
       Text("Friends only see the tool, the model, your token count, and the repo when it’s public. Never your code, prompts, files or branches.")
         .font(theme.small).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
       Spacer()
-      primary("Get started") { model.setupStep = .signIn }
+      primary("Get started") { model.setupStep = .guide }
     }
   }
 

@@ -25,6 +25,27 @@ final class DrawerPanel: NSPanel {
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { false }
   override func cancelOperation(_ sender: Any?) { onEscape?() }
+
+  // Margin has no menu bar, which is where ⌘C, ⌘V and friends normally come from, so the
+  // drawer sends those actions to whatever has focus itself.
+  override func performKeyEquivalent(with event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    guard flags.contains(.command), let key = event.charactersIgnoringModifiers?.lowercased() else {
+      return super.performKeyEquivalent(with: event)
+    }
+    let action: Selector? =
+      switch (key, flags.contains(.shift)) {
+      case ("c", false): #selector(NSText.copy(_:))
+      case ("v", false): #selector(NSText.paste(_:))
+      case ("x", false): #selector(NSText.cut(_:))
+      case ("a", false): #selector(NSResponder.selectAll(_:))
+      case ("z", false): Selector(("undo:"))
+      case ("z", true): Selector(("redo:"))
+      default: nil
+      }
+    if let action, NSApp.sendAction(action, to: nil, from: self) { return true }
+    return super.performKeyEquivalent(with: event)
+  }
 }
 
 // Hosts SwiftUI and reports the pointer entering and leaving, even when Margin isn't active.

@@ -30,4 +30,7 @@ curl -fsS -X POST "$server/updates/releases" -H @"$headers" \
   -H "x-release-signature: $signature" -H "x-release-min-system: 26.0" \
   -H "content-type: application/zip" --data-binary @"$zip"
 echo
+curl -fsS -X POST "$server/updates/releases/$MARGIN_BUILD/dmg" -H @"$headers" \
+  -H "content-type: application/x-apple-diskimage" --data-binary @"$root/apps/mac/build/Margin.dmg"
+echo
 echo "released Margin $MARGIN_VERSION (build $MARGIN_BUILD): $server/download"

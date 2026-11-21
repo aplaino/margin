@@ -102,6 +102,25 @@ describe('releases', () => {
     }
   });
 
+  test('a release can carry a disk image, which /download then prefers', async () => {
+    await upload(1, 'zip one');
+    const post = (build: number, token = TOKEN) =>
+      fetch(`${api.base}/updates/releases/${build}/dmg`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}` },
+        body: 'disk image',
+      });
+    expect((await post(1, 'wrong')).status).toBe(401);
+    expect((await post(9)).status).toBe(404);
+    expect((await fetch(`${api.base}/download`)).headers.get('content-disposition')).toContain(
+      'Margin.zip',
+    );
+    expect((await post(1)).status).toBe(200);
+    const download = await fetch(`${api.base}/download`);
+    expect(download.headers.get('content-disposition')).toBe('attachment; filename="Margin.dmg"');
+    expect(await download.text()).toBe('disk image');
+  });
+
   test('before any release, /download says so', async () => {
     const response = await fetch(`${api.base}/download`);
     expect(response.status).toBe(404);
