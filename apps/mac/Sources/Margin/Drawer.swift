@@ -99,18 +99,21 @@ final class DrawerController {
     strip = DrawerPanel(content: stripView)
     panel = DrawerPanel(content: panelView)
 
-    let onSize: (CGSize) -> Void = { [weak self] size in self?.stripResized(size) }
     let onTap: () -> Void = { [weak self] in self?.stripClicked() }
     let onClose: () -> Void = { [weak self] in self?.collapse() }
-    stripView.rootView = AnyView(Themed(model: model) { StripView(onSize: onSize, onTap: onTap) })
+    stripView.rootView = AnyView(Themed(model: model) { StripView(onTap: onTap) })
     panelView.rootView = AnyView(Themed(model: model) { PanelView(onClose: onClose) })
 
+    // The windows are sized here, not by SwiftUI's constraints.
+    stripView.sizingOptions = []
+    panelView.sizingOptions = []
     stripView.onHover = { [weak self] inside in self?.stripHover(inside) }
     panelView.onHover = { [weak self] inside in self?.panelHover(inside) }
     panel.onEscape = { [weak self] in self?.escape() }
 
     hotKey = HotKey { [weak self] in self?.hotKeyPressed() }
     observePrefs()
+    observeStrip()
 
     let center = NotificationCenter.default
     center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) {
@@ -193,9 +196,25 @@ final class DrawerController {
     if model.expanded { panel.setFrame(panelFrame(on: screen), display: true) }
   }
 
-  private func stripResized(_ size: CGSize) {
-    guard size != stripSize, size.height > 0 else { return }
-    stripSize = CGSize(width: 8, height: max(32, size.height))
+  // The strip is as tall as its dots and counts: it grows as friends come online.
+  private func observeStrip() {
+    withObservationTracking {
+      _ = (model.onlineFriends.count, model.unreadTotal, model.signedIn)
+    } onChange: { [weak self] in
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          self?.resizeStrip()
+          self?.observeStrip()
+        }
+      }
+    }
+    resizeStrip()
+  }
+
+  private func resizeStrip() {
+    let height = max(32, stripView.fittingSize.height)
+    guard height != stripSize.height else { return }
+    stripSize = CGSize(width: 8, height: height)
     place()
   }
 
