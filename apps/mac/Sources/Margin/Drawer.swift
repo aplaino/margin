@@ -178,6 +178,12 @@ final class DrawerController {
     observeStrip()
 
     let center = NotificationCenter.default
+    center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: panel, queue: .main) { [weak self] _ in
+      MainActor.assumeIsolated { self?.model.drawerFocused = true }
+    }
+    center.addObserver(forName: NSWindow.didResignKeyNotification, object: panel, queue: .main) { [weak self] _ in
+      MainActor.assumeIsolated { self?.model.drawerFocused = false }
+    }
     center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) {
       [weak self] _ in MainActor.assumeIsolated { self?.place() }
     }

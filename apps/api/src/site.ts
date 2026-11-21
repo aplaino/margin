@@ -7,6 +7,7 @@ const FILES: Record<string, { file: string; type: string }> = {
   '/': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/site.css': { file: 'site.css', type: 'text/css; charset=utf-8' },
   '/site.js': { file: 'site.js', type: 'text/javascript; charset=utf-8' },
+  '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' },
 };
 
 const HEADERS = {

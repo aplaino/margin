@@ -30,7 +30,8 @@ binary="$(swift build -c "$config" --package-path "$mac" --show-bin-path)/Margin
 
 app="$mac/build/Margin.app"
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" "$app/Contents/Resources"
+cp "$mac/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 cp "$binary" "$app/Contents/MacOS/Margin"
 ditto "$(dirname "$binary")/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 bun build --compile --target=bun-darwin-arm64 "$root/apps/margind/src/main.ts" \
@@ -44,6 +45,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>Margin</string>
   <key>CFBundleDisplayName</key><string>Margin</string>
   <key>CFBundleExecutable</key><string>Margin</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$build</string>

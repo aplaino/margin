@@ -971,3 +971,9 @@ h3 {
 .install-cmd .copy:hover {
   background: var(--button-hover);
 }
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

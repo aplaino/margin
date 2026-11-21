@@ -35,6 +35,9 @@ final class AppModel {
   var chatWith: String?
   // The friend picked with ↑/↓, highlighted in the list.
   var selected: String?
+  // True while the drawer has the keyboard (opened with ⌥M, or clicked into); only then may a
+  // field take focus by itself, so keystrokes meant for your work never land in Margin.
+  var drawerFocused = false
   var setupStep: SetupStep = .welcome
 
   // A release build running from Downloads runs from a temporary read-only copy
@@ -106,7 +109,9 @@ final class AppModel {
       loginError = error
     case .settings(let s): settings = s
     case .tools(let t): tools = t
-    case .roster(let r): friends = r
+    case .roster(let r):
+      friends = r
+      if let selected, !r.contains(where: { $0.handle == selected }) { self.selected = nil }
     case .requests(let r): requests = r
     case .message(let message):
       var list = conversations[message.peer] ?? []
