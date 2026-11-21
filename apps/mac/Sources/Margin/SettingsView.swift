@@ -7,6 +7,7 @@ struct SettingsView: View {
   @Environment(\.theme) private var theme
   @State private var newRepo = ""
   @State private var newRepoMode = "hidden"
+  @State private var opensAtLogin = Launcher.opensAtLogin
 
   var body: some View {
     @Bindable var prefs = model.prefs
@@ -63,6 +64,11 @@ struct SettingsView: View {
         if let settings = model.settings {
           privacy(settings)
         }
+
+        SectionLabel("General").padding(.top, 6)
+        Toggle(
+          "Open Margin at login",
+          isOn: Binding(get: { opensAtLogin }, set: { on in Launcher.setOpensAtLogin(on); opensAtLogin = Launcher.opensAtLogin }))
 
         SectionLabel("Notifications").padding(.top, 6)
         Toggle("macOS notifications", isOn: Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }))

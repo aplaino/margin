@@ -89,6 +89,7 @@ struct SetupView: View {
 
   private func finish() {
     model.prefs.setupDone = true
+    Launcher.setOpensAtLogin(true)
     model.tab = .friends
   }
 

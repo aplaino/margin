@@ -35,6 +35,15 @@ const daemon = await startDaemon({
 });
 console.error('[margind] running');
 
+// Started by Margin.app: stop if the app goes away without stopping us (a crash or a kill),
+// rather than keep you looking online with no app.
+const parent = Number(process.env.MARGIN_PARENT_PID);
+if (parent > 0) {
+  setInterval(() => {
+    if (process.ppid !== parent) void daemon.stop().then(() => process.exit(0));
+  }, 3000);
+}
+
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, () => {
     void daemon.stop().then(() => process.exit(0));

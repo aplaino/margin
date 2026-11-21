@@ -1,17 +1,11 @@
 import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
 import type { Ciphertext, KeyBundle, PeerBundle } from '@margin/protocol';
+// libsignal (the JS port: X3DH + Double Ratchet) ships without types; see libsignal.d.ts.
+// A static import, so it's bundled into the compiled margind.
+import libsignal from 'libsignal';
 import type { Store } from './store';
 
-// libsignal (the JS port: X3DH + Double Ratchet) ships without types.
-const require = createRequire(import.meta.url);
-const {
-  keyhelper,
-  ProtocolAddress,
-  SessionBuilder,
-  SessionCipher,
-  SessionRecord,
-} = require('libsignal');
+const { keyhelper, ProtocolAddress, SessionBuilder, SessionCipher, SessionRecord } = libsignal;
 
 type KeyPair = { pubKey: Buffer; privKey: Buffer };
 type Saved = {

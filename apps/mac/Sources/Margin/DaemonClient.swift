@@ -44,6 +44,12 @@ final class DaemonClient: @unchecked Sendable {
     }
   }
 
+  static func isRunning(path: String) -> Bool {
+    guard let socket = DaemonClient(path: path).connectSocket() else { return false }
+    close(socket)
+    return true
+  }
+
   private func connectSocket() -> Int32? {
     let socket = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
     guard socket >= 0 else { return nil }

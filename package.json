@@ -13,7 +13,8 @@
     "test": "bun test",
     "check": "bun run lint && bun run typecheck && bun run test",
     "dev": "bun scripts/dev.ts",
-    "app": "scripts/build-app.sh"
+    "app": "scripts/build-app.sh",
+    "package": "scripts/package.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",
