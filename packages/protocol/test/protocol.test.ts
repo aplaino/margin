@@ -109,8 +109,20 @@ describe('local protocol', () => {
 
   test('chat text keeps newlines but rejects escapes and bidi overrides', () => {
     expect(ok(Request, { op: 'send', to: 'maya', text: 'line one\n\tline two' })).toBe(true);
-    for (const text of ['hi\u001b[2J', 'a\rb', 'pay \u202eyas', '\u2066x\u2069', 'x\u009b']) {
+    const hidden = ['hi\u001b[2J', 'a\rb', 'pay \u202eyas', '\u2066x\u2069', 'x\u009b'];
+    // Zero-width space, direction marks, Arabic letter mark, soft hyphen, BOM, line separator.
+    hidden.push('a\u200bb', 'a\u200eb', 'a\u200fb', 'a\u061cb', 'a\u00adb', '\ufeffa', 'a\u2028b');
+    for (const text of hidden) {
       expect(ok(Request, { op: 'send', to: 'maya', text })).toBe(false);
+    }
+  });
+
+  test('chat keeps emoji sequences and joiners real scripts need', () => {
+    for (const text of [
+      '\u{1f469}\u200d\u{1f4bb} shipping',
+      '\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645',
+    ]) {
+      expect(ok(Request, { op: 'send', to: 'maya', text })).toBe(true);
     }
   });
 

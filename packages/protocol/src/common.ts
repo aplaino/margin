@@ -3,9 +3,21 @@ import * as v from 'valibot';
 // Bumped on any breaking change to the server or local protocol.
 export const PROTOCOL = 1;
 
+// Control and invisible formatting characters (Unicode Cc, Cf, Zl, Zp: escapes, bidi
+// overrides and isolates, zero-width and direction marks, soft hyphens, line separators)
+// can rewrite a terminal or disguise text in the drawer.
+export const CONTROL = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
+export const NoControl = v.regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*$/u);
+// Chat also keeps newlines, tabs, and the zero-width (non-)joiners that emoji sequences
+// and scripts like Persian and Hindi need.
+export const NoControlText = v.regex(/^(?:[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]|[\t\n\u200c\u200d])*$/u);
+
 // Lowercased GitHub login.
 export const Handle = v.pipe(v.string(), v.regex(/^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/));
 export type Handle = v.InferOutput<typeof Handle>;
+
+// Display name from GitHub, shown next to the handle.
+export const Name = v.pipe(v.string(), v.minLength(1), v.maxLength(64), NoControl);
 
 export const Tool = v.picklist(['claude-code', 'codex', 'opencode', 'shell']);
 export type Tool = v.InferOutput<typeof Tool>;

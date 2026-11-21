@@ -1,18 +1,20 @@
 import * as v from 'valibot';
-import { Count, Handle, MessageId, PublicPresence, Repo, Timestamp, Tool } from './common';
+import {
+  Count,
+  Handle,
+  MessageId,
+  Name,
+  NoControl,
+  NoControlText,
+  PublicPresence,
+  Repo,
+  Timestamp,
+  Tool,
+} from './common';
 import { Requests } from './server';
 
 // Newline-delimited JSON over margind's Unix socket: the app and reporters send
 // requests ({op}), margind sends pushes ({type}).
-
-// Control characters and bidi overrides can rewrite a terminal or disguise text in the drawer.
-// biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting control characters is the point
-const NoControl = v.regex(/^[^\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]*$/);
-// The same, but chat keeps newlines and tabs.
-const NoControlText = v.regex(
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting control characters is the point
-  /^[^\u0000-\u0008\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]*$/,
-);
 
 export const ReporterEvent = v.object({
   tool: Tool,
@@ -87,6 +89,7 @@ export type Request = v.InferOutput<typeof Request>;
 
 export const Friend = v.object({
   handle: Handle,
+  name: v.optional(Name),
   presence: PublicPresence,
   lastSeenAt: Timestamp,
   unread: Count,

@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { Ciphertext, Count, Handle, MessageId, PublicPresence, Timestamp } from './common';
+import { Ciphertext, Count, Handle, MessageId, Name, PublicPresence, Timestamp } from './common';
 
 const Base64Key = v.pipe(v.string(), v.base64(), v.maxLength(64));
 const KeyId = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(0xffffff));
@@ -18,8 +18,23 @@ export const KeyBundle = v.object({
 });
 export type KeyBundle = v.InferOutput<typeof KeyBundle>;
 
+// A friend's bundle as handed out by the server, with at most one one-time prekey.
+export const PeerBundle = v.object({ ...KeyBundle.entries, handle: Handle });
+export type PeerBundle = v.InferOutput<typeof PeerBundle>;
+
 export const Requests = v.object({ incoming: v.array(Handle), outgoing: v.array(Handle) });
 export type Requests = v.InferOutput<typeof Requests>;
+
+export const Config = v.object({ protocol: v.number(), githubClientId: v.nullable(v.string()) });
+export type Config = v.InferOutput<typeof Config>;
+
+export const Session = v.object({ token: v.string(), handle: Handle, name: v.optional(Name) });
+export type Session = v.InferOutput<typeof Session>;
+
+export const FriendList = v.object({
+  friends: v.array(v.object({ handle: Handle, name: v.optional(Name) })),
+});
+export type FriendList = v.InferOutput<typeof FriendList>;
 
 // margind → api over the WebSocket. The server sets the sender from the session.
 export const ClientFrame = v.variant('t', [
@@ -43,6 +58,13 @@ export const ServerFrame = v.variant('t', [
     from: Handle,
     sentAt: Timestamp,
     ciphertext: Ciphertext,
+  }),
+  // The server has stored a sent message (it is now safe to drop from the outbox), or refused it.
+  v.object({ t: v.literal('accepted'), id: MessageId }),
+  v.object({
+    t: v.literal('rejected'),
+    id: MessageId,
+    error: v.pipe(v.string(), v.maxLength(200)),
   }),
   v.object({ t: v.literal('friends-changed') }),
   v.object({ t: v.literal('prekeys-low'), remaining: Count }),
