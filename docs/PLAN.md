@@ -74,7 +74,7 @@ Build order:
 4. ✓ margind: encrypted store, Signal sessions, transport, tool hooks, token totals, redaction.
 5. ✓ Two-daemon end-to-end tests on one machine (`apps/margind/test/e2e.test.ts`).
 6. Margin.app: the drawer, built against the mockup (`apps/mac`, a Swift package; `bun run dev` runs it locally with simulated friends).
-7. Staging on Fly.io + Neon; run the matrix between this Mac and the VM; record in `docs/TESTING.md`.
+7. Server on Fly.io + Neon (live at https://margin-api.fly.dev), real GitHub sign-in, self-contained Margin.app with automatic updates (Sparkle, served by the server); run the matrix between this Mac and the friend's Mac; record in `docs/TESTING.md`.
 
 Scope: sign-in, friends, presence from each v1 tool, token totals, privacy settings, chat, the drawer (collapsed, expanded, chat, Add, Settings incl. five themes with light and dark plus accent, first launch, connecting tools). Every colour, font, size and shape comes from one theme definition.
 
