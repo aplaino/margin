@@ -33,6 +33,10 @@ struct Theme {
   var radius: CGFloat = 12
   var rowRadius: CGFloat = 7
   var dot: CGFloat = 5
+  // The strip: space between dots, padding at each end, and the height of its +N and unread labels.
+  var stripSpacing: CGFloat = 7
+  var stripPadding: CGFloat = 8
+  var stripLabel: CGFloat = 9
 
   // Presence colours never follow the accent, so the strip always reads the same.
   static func make(dark: Bool, accent: Color) -> Theme {

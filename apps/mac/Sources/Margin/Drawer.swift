@@ -211,8 +211,20 @@ final class DrawerController {
     resizeStrip()
   }
 
+  // Worked out from what the strip shows, with the same theme metrics it's drawn with.
+  private func stripHeight() -> CGFloat {
+    let metrics = Theme.make(dark: true, accent: Accent.blue.color)
+    guard model.signedIn else { return 32 }
+    let online = model.onlineFriends.count
+    var items = Array(repeating: metrics.dot, count: min(online, 12))
+    if online > 12 { items.append(metrics.stripLabel) }
+    if model.unreadTotal > 0 { items.append(metrics.stripLabel) }
+    let content = items.reduce(0, +) + metrics.stripSpacing * CGFloat(max(0, items.count - 1))
+    return max(32, content + metrics.stripPadding * 2)
+  }
+
   private func resizeStrip() {
-    let height = max(32, stripView.fittingSize.height)
+    let height = stripHeight()
     guard height != stripSize.height else { return }
     stripSize = CGSize(width: 8, height: height)
     place()

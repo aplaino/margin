@@ -13,7 +13,7 @@ struct StripView: View {
   var body: some View {
     let online = model.onlineFriends
     let connected = model.me?.connection == "online"
-    VStack(spacing: 7) {
+    VStack(spacing: theme.stripSpacing) {
       if !model.signedIn {
         Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: theme.dot, height: theme.dot)
       } else {
@@ -22,15 +22,15 @@ struct StripView: View {
         }
         if online.count > maxDots {
           Text("+\(online.count - maxDots)").font(.system(size: 6.5, weight: .semibold))
-            .foregroundStyle(theme.secondary).fixedSize()
+            .foregroundStyle(theme.secondary).fixedSize().frame(height: theme.stripLabel)
         }
         if model.unreadTotal > 0 {
           Text("\(min(model.unreadTotal, 99))").font(.system(size: 7, weight: .bold))
-            .foregroundStyle(theme.unread).fixedSize().padding(.top, 2)
+            .foregroundStyle(theme.unread).fixedSize().frame(height: theme.stripLabel)
         }
       }
     }
-    .padding(.vertical, 8)
+    .padding(.vertical, theme.stripPadding)
     .frame(width: theme.stripWidth)
     .frame(minHeight: 32)
     .background(shape.fill(theme.background))
