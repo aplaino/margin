@@ -125,6 +125,8 @@ export function createApp(sql: SQL, options: Options = {}) {
     // Receipts, previews and Undo Send, on their own budget so a friend's flood of messages
     // (each answered with a delivery receipt) can't use up yours.
     control: limiter(240, 60_000),
+    // Every send, however it's marked, so marking messages as controls can't buy more.
+    send: limiter(300, 60_000),
     // Each sign-in asks GitHub who you are; per address, since there's no account yet.
     signIn: limiter(30, 60 * 60_000),
     // Each fetch uses up one of a friend's one-time prekeys.
@@ -645,7 +647,7 @@ export function createApp(sql: SQL, options: Options = {}) {
     if (frame.t === 'send') {
       const reject = (error: string) =>
         ws.send(JSON.stringify({ t: 'rejected', id: frame.id, error } satisfies ServerFrame));
-      if (!(frame.control ? limits.control(me.id) : limits.message(me.id))) {
+      if (!limits.send(me.id) || !(frame.control ? limits.control(me.id) : limits.message(me.id))) {
         return reject('rate limited');
       }
       const peer = await accountByHandle(frame.to);
