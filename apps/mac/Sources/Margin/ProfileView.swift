@@ -79,11 +79,13 @@ struct ProfileView: View {
           Button("Privacy settings") {
             model.showProfile = false
             model.showTab(.settings)
+            model.settingsPage = .privacy
           }
           .buttonStyle(.link)
           .control("Privacy settings") {
             model.showProfile = false
             model.showTab(.settings)
+            model.settingsPage = .privacy
           }
           .padding(.top, 4)
         }

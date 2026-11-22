@@ -138,41 +138,27 @@ The top line of the drawer (your token total and @handle, with ›) opens your p
 ### Settings (⚙)
 ```
 ┌──────────────────────────────┐
-│ OPEN MARGIN WITH             │
-│ ☑ Hover   ☑ Click   ☑ ⌥M  ✎ │
-│ POSITION                     │
-│ [Screen edge | Menu bar]     │
-│ Drag the strip to move it.   │
-│ Reset position               │
-│ ☑ Fade when nobody's online  │
-│ APPEARANCE  (grouped cards,  │
-│ like System Settings)        │
-│ [▢Auto] [▢Light] [▢Dark]     │
-│ THEME                        │
-│ ▢Graphite ▢Glass  ▢Paper     │
-│ ▢Terminal ▢Contrast ▢Classic │
-│ ▢Gel  ▢Modern Glass ▢Midnight│
-│ ▢Custom  Edit custom theme…  │
-│ Accent  ● ● ● ● ●            │
-│ CONNECTED TOOLS              │
-│ ☑ Claude Code   ☑ Codex      │
-│ ☑ OpenCode      ☑ Cursor     │
-│ ☐ Gemini CLI    ☑ Ollama     │
-│ …               ☐ Shell (zsh)│
-│ PRIVACY                      │
-│ ☐ Invisible                  │
-│ Friends see: ☑ tool ☑ model  │
-│   ☑ repo ☑ time ☑ tokens     │
-│ Close friends only ▸         │
-│ Repo overrides ▸             │
-│ NOTIFICATIONS                │
-│ ☐ macOS notifications        │
-│ ACCOUNT                      │
-│ @aplaino · Sign out          │
-│ Export data · Delete account │
-│ Quit Margin                  │
+│ ⓐ Andreas                  › │  account card → Account
+│   @aplaino · Margin account  │
+│ ┌──────────────────────────┐ │
+│ │ ⚙ General              › │ │
+│ │ ◐ Appearance           › │ │
+│ │ ▥ Placement            › │ │
+│ └──────────────────────────┘ │
+│ ┌──────────────────────────┐ │
+│ │ 🔔 Notifications        › │ │
+│ │ ✋ Privacy & Security   › │ │
+│ │ 🔨 Connected Tools      › │ │
+│ └──────────────────────────┘ │
+│ │ Quit Margin              │ │
 └──────────────────────────────┘
+‹ General
+OPEN MARGIN WITH  Hover ◉  Click ◉  ⌥M from anywhere ◉
+Open at login ◉ · Version 0.1.x  Check for Updates
+CRASH REPORTS  Send reports [Ask after a crash ▾] · How Margin works  Show
 ```
+- **Organised like System Settings (owner's call, 2026-11-22):** your account on a card at the top, then categories with coloured icon tiles in two groups, each opening its own page of grouped cards (label left, control right, switches for on/off). The drawer is too narrow for System Settings' sidebar beside a page, so, as on iPhone, the list opens one page at a time; ‹ or Esc goes back.
+- **Pages:** **Account** (name and handle, profile, export your data, sign out, delete account); **General** (open with hover, click, ⌥M; open at login; version and updates; crash reports; how Margin works); **Appearance** (Auto, Light, Dark; theme gallery; accent colour; custom theme); **Placement** (screen edge or menu bar; fade; reset position); **Notifications** (new messages: preview, name only or glow only; macOS notifications); **Privacy & Security** (invisible; Find friends; what friends see; close friends; blocked; repo overrides); **Connected Tools**.
 - **Connected tools:** Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor, Ollama, LM Studio and the shell; tools that aren't installed are marked "not found". Ollama and LM Studio install nothing: margind watches their local servers while they're ticked (on by default when installed) and shows the model, never a project or tokens. For the rest, turning one on explains what will change ("adds a hook to ~/.claude/settings.json"), asks, backs the file up, then installs. Turning it off removes only Margin's entry. Margin's hooks print nothing into Claude's context.
 - **Crash reports (agreed with the owner 2026-11-21):** General → **Crash reports: Ask after a crash** (default) | Always send | Never send, with a line on what a report holds. margind keeps a report when it crashes (an unexpected error: it writes the report, exits, and the app restarts it), when macOS writes a crash report for Margin or margind, and for serious errors it survives (presence withheld by the privacy check, a failed token scan, keys that can't be pinned, a message that can't be decrypted, a server frame or request that fails unexpectedly, hooks that can't be updated; being offline doesn't count). A report holds the app and macOS versions, which part, what broke, the stack or crashed thread, and margind's last 50 log lines, and is scrubbed on the Mac first: paths, your and friends' handles and names, repo names, local folders, emails, URL queries and anything token-like are removed. It carries a random install id, never an account. After a crash Margin asks once: **Send Report** / **Don't Send**, with **Always send reports**; errors that aren't crashes wait (up to 20) and go with the next report you send, or from Settings, which shows "N reports waiting · Send · Discard". The server takes at most 64 KB per report, 30 a day per install and 100 an hour per address; new install ids share 1,000 an hour, and a hard ceiling of 5,000 an hour caps everything stored (owner's call, 2026-11-21: a flood can cost an hour of reports, never unbounded storage, so known installs are not exempt). It keeps them 90 days, and only the release token can read them (`bun run crashes`).
 - **Theme:** a gallery of ten tiles, each shown as a miniature drawer, like the Appearance tiles in System Settings. A theme sets colours, fonts and weights, corner shapes, the panel material (solid or frosted glass) and texture, and the dots' shape and colours; each has a light and a dark version, picked by **Appearance** (System, Light, Dark).

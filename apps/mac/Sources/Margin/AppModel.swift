@@ -41,6 +41,8 @@ final class AppModel {
   var safety: [String: String] = [:]
   var showProfile = false
   var showThemeEditor = false
+  // The Settings page open, or the list of them.
+  var settingsPage: SettingsPage? { didSet { cursor = nil } }
   private var askingAboutReports = false
 
   var expanded = false
@@ -221,6 +223,7 @@ final class AppModel {
     chatWith = nil
     showProfile = false
     showThemeEditor = false
+    settingsPage = nil
     cursor = nil
     tab = next
   }

@@ -800,6 +800,8 @@ final class DrawerController {
       model.showProfile = false
     } else if model.showThemeEditor {
       model.showThemeEditor = false
+    } else if model.tab == .settings, model.settingsPage != nil {
+      model.settingsPage = nil
     } else {
       collapse()
     }
