@@ -42,7 +42,7 @@ import {
 import { type FetchRepo, originRepo, repoClassifier } from './repo';
 import { Reports, stackOf } from './reports';
 import { Sessions } from './sessions';
-import { healable, PREKEY_BATCH, Signal } from './signal';
+import { changedKey, healable, PREKEY_BATCH, Signal } from './signal';
 import { Store } from './store';
 import { scanTokens, type TokenSources } from './tokens';
 import {
@@ -352,7 +352,16 @@ export async function startDaemon(options: DaemonOptions) {
 
   async function fetchBundle(handle: string) {
     try {
-      store.pin(handle, await api().call(PeerBundle, 'GET', `/keys/${handle}`));
+      const bundle = await api().call(PeerBundle, 'GET', `/keys/${handle}`);
+      store.pin(handle, bundle);
+      // A new identity key is trusted in the background (as Signal does by default): the
+      // old session can't reach them any more. The safety number shows the new key.
+      const pinned = store.friend(handle)?.identityKey;
+      if (pinned && pinned !== bundle.identityKey) {
+        log(`${handle}'s identity key changed`);
+        store.repin(handle, bundle.identityKey);
+        store.removeSignalSessions(handle);
+      }
     } catch (e) {
       // They may not have published keys yet; the next sync tries again.
       if (!(e instanceof ApiError && e.status === 404)) throw e;
@@ -411,6 +420,13 @@ export async function startDaemon(options: DaemonOptions) {
     try {
       text = cleanChat(await signal.decrypt(frame.from, frame.ciphertext));
     } catch (e) {
+      // From a new identity key: trusted if it's the key the server has for them now, then
+      // the message is asked for again on a session with that key.
+      const key = changedKey(e);
+      if (key) {
+        if (await keyNowTrusted(frame.from, key)) askToResend(frame.from, frame.id);
+        return ack();
+      }
       // Retrying this frame can't help, so it's dropped rather than jam the queue. A lost
       // session asks the sender to start a new one and send it again.
       problem('dropped a message that could not be decrypted', e);
@@ -442,8 +458,7 @@ export async function startDaemon(options: DaemonOptions) {
   }
 
   // A friend couldn't read one of your messages: start a new session from fresh keys (once,
-  // however many messages they ask about) and send that message again. The friend's identity
-  // key is still the one pinned, so this can't introduce a different person.
+  // however many messages they ask about) and send that message again.
   const lastReset = new Map<string, number>();
   async function onReset(from: string, id: string) {
     if (!store.friend(from)) return;
@@ -460,6 +475,18 @@ export async function startDaemon(options: DaemonOptions) {
     const frame: ClientFrame = { t: 'send', id: crypto.randomUUID(), to: from, ciphertext };
     store.enqueue(frame.id, from, frame);
     connection?.send(frame);
+  }
+
+  // Checks a key a message arrived with against the server's current one, at most once a
+  // minute per friend (each check uses up one of their prekeys).
+  const lastKeyCheck = new Map<string, number>();
+  async function keyNowTrusted(handle: string, key: string) {
+    const now = Date.now();
+    if (now - (lastKeyCheck.get(handle) ?? 0) > 60_000) {
+      lastKeyCheck.set(handle, now);
+      await fetchBundle(handle).catch((e) => problem('could not check a friend’s new keys', e));
+    }
+    return store.friend(handle)?.identityKey === key;
   }
 
   function onFrame(frame: ServerFrame) {
@@ -716,8 +743,9 @@ export async function startDaemon(options: DaemonOptions) {
         );
       case 'safety': {
         const key = store.friend(request.handle)?.identityKey;
-        if (!key) throw new DaemonError('Send a message first, so your keys are exchanged');
-        return { handle: request.handle, safety: signal.safetyNumber(key) };
+        const me = account()?.handle;
+        if (!key || !me) throw new DaemonError('Send a message first, so your keys are exchanged');
+        return { handle: request.handle, safety: signal.safetyNumber(me, request.handle, key) };
       }
       case 'report':
         return api().call(null, 'POST', '/reports', {

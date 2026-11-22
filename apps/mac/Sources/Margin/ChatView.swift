@@ -41,10 +41,7 @@ struct ChatView: View {
         }
         Spacer()
         Menu {
-          Button("Safety Number") {
-            showingSafety = true
-            model.request("safety", ["handle": handle])
-          }
+          Button("Safety Number") { showSafety() }
           Divider()
           Button("Remove Friend…") { confirm(.remove, friend?.displayName ?? handle) }
           Button("Block…") { confirm(.block, friend?.displayName ?? handle) }
@@ -103,6 +100,12 @@ struct ChatView: View {
     }
   }
 
+  private func showSafety() {
+    showingSafety = true
+    model.safety[handle] = nil
+    model.request("safety", ["handle": handle])
+  }
+
   // The same digits show on both Macs when nobody is in between; compared out loud, they
   // prove the chat is with this person.
   private func safetyNumber(_ name: String) -> some View {
@@ -113,7 +116,8 @@ struct ChatView: View {
         Button("Done") { showingSafety = false }.buttonStyle(.link)
       }
       if let number = model.safety[handle] {
-        Text(number).font(theme.font(15, bold: true).monospaced()).textSelection(.enabled)
+        Text(verbatim: Self.lines(number)).font(theme.font(15, bold: true).monospaced()).textSelection(.enabled)
+          .fixedSize()
         Text("Compare it with \(name) in person or on a call. If both of you see the same digits, your messages are only readable by the two of you.")
           .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
       } else if let result = model.results["safety"], !result.ok {
@@ -123,6 +127,14 @@ struct ChatView: View {
       }
     }
     .padding(.horizontal, 12).padding(.bottom, 10)
+  }
+
+  // Twelve groups of five, four to a line.
+  static func lines(_ number: String) -> String {
+    let groups = number.split(separator: " ")
+    return stride(from: 0, to: groups.count, by: 4)
+      .map { groups[$0..<min($0 + 4, groups.count)].joined(separator: " ") }
+      .joined(separator: "\n")
   }
 
   private enum Action { case remove, block }

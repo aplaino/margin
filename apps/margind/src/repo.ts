@@ -7,6 +7,7 @@ export type RepoInfo = { visibility: 'public'; repo: string } | { visibility: 'p
 export type FetchRepo = (repo: string) => Promise<{ private?: boolean; full_name?: string } | null>;
 
 const TTL_MS = 6 * 60 * 60 * 1000;
+const MAX_CONFIG = 64 * 1024;
 
 function gitConfig(cwd: string): string | null {
   for (let dir = cwd; ; dir = dirname(dir)) {
@@ -24,6 +25,10 @@ function gitConfig(cwd: string): string | null {
 export function originRepo(cwd: string): string | null {
   const config = gitConfig(cwd);
   if (!config || !existsSync(config)) return null;
+  // Only an ordinary file of a sensible size: a named pipe would block margind forever, and
+  // a link to /dev/zero would never end.
+  const stat = statSync(config);
+  if (!stat.isFile() || stat.size > MAX_CONFIG) return null;
   const text = readFileSync(config, 'utf8');
   const url = text.match(/\[remote "origin"\][^[]*?url\s*=\s*(\S+)/)?.[1];
   // The host must be exactly github.com (https, ssh:// or scp-style git@github.com:).

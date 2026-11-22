@@ -31,6 +31,14 @@ final class Prefs {
   var notifications: Bool { didSet { defaults.set(notifications, forKey: "notifications") } }
   // New messages: "preview" (a tab with the name and first words), "name", or "glow" (strip only).
   var alert: String { didSet { defaults.set(alert, forKey: "alert") } }
+  // New messages arrive quietly until then: no pulse, no tab, no macOS notification. Margin's
+  // own alerts aren't macOS notifications, so Focus doesn't silence them; this does.
+  var alertsPausedUntil: Date? {
+    didSet {
+      if let alertsPausedUntil { defaults.set(alertsPausedUntil, forKey: "alertsPausedUntil") } else { defaults.removeObject(forKey: "alertsPausedUntil") }
+    }
+  }
+  var alertsPaused: Bool { alertsPausedUntil.map { $0 > .now } ?? false }
   // Crash reports: "ask" after a crash, "always" send, or "never" send.
   var crashReports: String { didSet { defaults.set(crashReports, forKey: "crashReports") } }
   // Thin the strip to a faint hairline while nobody's online and nothing is unread.
@@ -72,6 +80,7 @@ final class Prefs {
     accent = Accent(rawValue: defaults.string(forKey: "accent") ?? "") ?? .blue
     notifications = defaults.bool(forKey: "notifications")
     alert = defaults.string(forKey: "alert") ?? "preview"
+    alertsPausedUntil = defaults.object(forKey: "alertsPausedUntil") as? Date
     crashReports = defaults.string(forKey: "crashReports") ?? "ask"
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
     tokenUnit = TokenUnit(rawValue: defaults.string(forKey: "tokenUnit") ?? "") ?? .m

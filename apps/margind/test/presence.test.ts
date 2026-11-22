@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_SETTINGS, type PublicPresence, type Settings } from '@margin/protocol';
@@ -77,6 +77,19 @@ describe('repo', () => {
     expect(originRepo(repoDir(null, true))).toBeNull();
     expect(originRepo(repoDir(origin('https://github.com/a/b;rm -rf ~.git')))).toBeNull();
     expect(originRepo('/')).toBeNull();
+  });
+
+  test('a config that is a pipe, a device or huge is skipped without reading it', () => {
+    const pipe = repoDir(null);
+    mkdirSync(join(pipe, '../../.git'));
+    Bun.spawnSync(['mkfifo', join(pipe, '../../.git/config')]);
+    expect(originRepo(pipe)).toBeNull();
+    const device = repoDir(null);
+    mkdirSync(join(device, '../../.git'));
+    symlinkSync('/dev/zero', join(device, '../../.git/config'));
+    expect(originRepo(device)).toBeNull();
+    const huge = 'https://github.com/maya/app.git'.padEnd(70_000, ' ');
+    expect(originRepo(repoDir(origin(huge)))).toBeNull();
   });
 
   test('only a repo GitHub confirms as public is public, and failures are not cached', async () => {

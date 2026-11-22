@@ -429,12 +429,59 @@ struct SettingsView: View {
           .control("New messages", choice: $prefs.alert, from: ["preview", "name", "glow"])
         }
         switchRow(
-          "macOS notifications", Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }), last: true)
+          "macOS notifications", Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }))
+        pauseRow
       }
       if prefs.alert == "preview" {
         note("The first words show beside the strip, where anyone looking at your screen can see them.")
       }
     }
+  }
+
+  // Off, or until when; choosing a length starts the pause and Resume ends it early.
+  private var pauseRow: some View {
+    @Bindable var prefs = model.prefs
+    let pause = Binding<String>(
+      get: { "off" },
+      set: { choice in
+        switch choice {
+        case "hour": prefs.alertsPausedUntil = .now.addingTimeInterval(3600)
+        case "tomorrow":
+          prefs.alertsPausedUntil = Calendar.current.nextDate(
+            after: .now, matching: DateComponents(hour: 8, minute: 0), matchingPolicy: .nextTime)
+        default: prefs.alertsPausedUntil = nil
+        }
+      })
+    return TimelineView(.everyMinute) { _ in
+      SettingsRow(label: "Pause alerts", last: true) {
+        if prefs.alertsPaused, let until = prefs.alertsPausedUntil {
+          HStack(spacing: 8) {
+            Text("Until \(Self.pauseEnd(until))").foregroundStyle(theme.secondary)
+              .lineLimit(1)
+            Button("Resume") { prefs.alertsPausedUntil = nil }.buttonStyle(.link)
+          }
+        } else {
+          Picker("Pause alerts", selection: pause) {
+            Text("Off").tag("off")
+            Text("For 1 hour").tag("hour")
+            Text("Until tomorrow morning").tag("tomorrow")
+          }
+          .labelsHidden().fixedSize()
+        }
+      }
+      .control("Pause alerts") {
+        prefs.alertsPausedUntil = prefs.alertsPaused ? nil : .now.addingTimeInterval(3600)
+      }
+    }
+  }
+
+  // "3:45 PM" today, "Tomorrow, 8:00 AM" after that.
+  static func pauseEnd(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.doesRelativeDateFormatting = true
+    formatter.dateStyle = Calendar.current.isDateInToday(date) ? .none : .short
+    formatter.timeStyle = .short
+    return formatter.string(from: date)
   }
 
   private var tools: some View {

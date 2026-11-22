@@ -13,6 +13,7 @@ const {
   SessionRecord,
   SessionError,
   MessageCounterError,
+  UntrustedIdentityKeyError,
 } = libsignal;
 
 // A message that failed because a session was lost (theirs or ours) heals by starting a new
@@ -31,6 +32,22 @@ export const PREKEY_BATCH = 50;
 export const PREKEY_CAP = 200;
 const b64 = (b: Buffer) => b.toString('base64');
 const buf = (s: string) => Buffer.from(s, 'base64');
+
+// The new identity key a message or bundle arrived with, when it isn't the one pinned.
+export const changedKey = (e: unknown): string | undefined =>
+  e instanceof UntrustedIdentityKeyError
+    ? b64(Buffer.from((e as { identityKey: Buffer }).identityKey))
+    : undefined;
+
+// Signal's numeric fingerprint: 30 digits per person from 5200 rounds of SHA-512 over their
+// identity key and handle.
+function fingerprint(key: Buffer, id: string) {
+  let hash = Buffer.concat([Buffer.from([0, 0]), key, Buffer.from(id)]);
+  for (let i = 0; i < 5200; i++) hash = createHash('sha512').update(hash).update(key).digest();
+  return Array.from({ length: 6 }, (_, i) =>
+    String(hash.readUIntBE(i * 5, 5) % 100_000).padStart(5, '0'),
+  ).join('');
+}
 
 // 1:1 end-to-end encryption. Identity keys are pinned per friend in the store; a
 // message from anyone presenting a different identity key is rejected.
@@ -106,11 +123,16 @@ export class Signal {
     return preKeys;
   }
 
-  // Short fingerprint of both identity keys, for comparing in person.
-  safetyNumber(peerIdentityKey: string): string {
-    const keys = [this.identityKey(), peerIdentityKey].sort();
-    const hash = createHash('sha256').update(keys.join('')).digest('hex');
-    return (hash.slice(0, 20).match(/.{5}/g) ?? []).join(' ');
+  // 60 digits from both identity keys and handles, the same on both Macs, for comparing in
+  // person or on a call.
+  safetyNumber(ourHandle: string, theirHandle: string, theirKey: string): string {
+    const digits = [
+      fingerprint(this.identity.pubKey, ourHandle),
+      fingerprint(buf(theirKey), theirHandle),
+    ]
+      .sort()
+      .join('');
+    return (digits.match(/.{5}/g) ?? []).join(' ');
   }
 
   private storage() {

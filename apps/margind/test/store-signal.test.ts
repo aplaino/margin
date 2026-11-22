@@ -228,12 +228,14 @@ describe('signal', () => {
     expect(signal.replenish()).toEqual([]);
   });
 
-  test('safety numbers match on both sides', () => {
+  test('safety numbers match on both sides, and change with either key or handle', () => {
     const { a, b } = pair();
-    expect(a.signal.safetyNumber(b.signal.identityKey())).toBe(
-      b.signal.safetyNumber(a.signal.identityKey()),
-    );
-    expect(a.signal.safetyNumber(b.signal.identityKey())).toMatch(/^[0-9a-f]{5}( [0-9a-f]{5}){3}$/);
+    const fromAlice = a.signal.safetyNumber('alice', 'bob', b.signal.identityKey());
+    expect(b.signal.safetyNumber('bob', 'alice', a.signal.identityKey())).toBe(fromAlice);
+    expect(fromAlice).toMatch(/^\d{5}( \d{5}){11}$/);
+    expect(a.signal.safetyNumber('alice', 'bobby', b.signal.identityKey())).not.toBe(fromAlice);
+    const other = new Signal(new Store(':memory:', keys('other')));
+    expect(a.signal.safetyNumber('alice', 'bob', other.identityKey())).not.toBe(fromAlice);
   });
 });
 

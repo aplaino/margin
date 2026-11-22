@@ -389,13 +389,49 @@ describe('two users, two daemons, one server', () => {
   test('safety numbers match on both Macs', async () => {
     const mine = (await maya.app.request({ op: 'safety', handle: 'leo' })) as { safety: string };
     const theirs = (await leo.app.request({ op: 'safety', handle: 'maya' })) as { safety: string };
-    expect(mine.safety).toMatch(/^[0-9a-f]{5}( [0-9a-f]{5}){3}$/);
+    expect(mine.safety).toMatch(/^\d{5}( \d{5}){11}$/);
     expect(mine.safety).toBe(theirs.safety);
   });
 
+  test('a friend with a new identity key keeps messaging, with a new safety number', async () => {
+    const before = (await maya.app.request({ op: 'safety', handle: 'leo' })) as { safety: string };
+    // Leo starts over with new keys, and the server lets the key change (today's server
+    // refuses it for an existing account).
+    leo.app.close();
+    await leo.daemon.stop();
+    rmSync(join(root, 'leo', 'data'), { recursive: true, force: true });
+    await sql`DELETE FROM key_bundles WHERE account_id = (SELECT id FROM accounts WHERE handle = 'leo')`;
+    leo = await startUser('leo');
+    await leo.app.request({ op: 'login' });
+    await leo.app.until(friendIn('maya', () => true));
+
+    // Both ways, without anyone accepting anything. Maya's first message goes out on the old
+    // session, which Leo can't read; it's sent again on a new one.
+    await leo.app.request({ op: 'send', to: 'maya', text: 'new laptop, who dis' });
+    await maya.app.until(
+      (p) =>
+        p.type === 'message' &&
+        p.message.direction === 'in' &&
+        p.message.text === 'new laptop, who dis',
+    );
+    await maya.app.request({ op: 'send', to: 'leo', text: 'is that you?' });
+    await leo.app.until(
+      (p) =>
+        p.type === 'message' && p.message.direction === 'in' && p.message.text === 'is that you?',
+    );
+
+    const now = (await maya.app.request({ op: 'safety', handle: 'leo' })) as { safety: string };
+    const leos = (await leo.app.request({ op: 'safety', handle: 'maya' })) as { safety: string };
+    expect(now.safety).toBe(leos.safety);
+    expect(now.safety).not.toBe(before.safety);
+  }, 15_000);
+
   test('removing a friend clears them on both sides', async () => {
+    const gone = (user: User, handle: string) =>
+      user.app.next((p) => p.type === 'roster' && !p.friends.some((f) => f.handle === handle));
+    const removed = Promise.all([gone(maya, 'leo'), gone(leo, 'maya')]);
     await maya.app.request({ op: 'friend.remove', handle: 'leo' });
-    await leo.app.until((p) => p.type === 'roster' && !p.friends.some((f) => f.handle === 'maya'));
+    await removed;
     const error = await maya.app.request({ op: 'send', to: 'leo', text: 'hello?' }).then(
       () => 'sent',
       (e: Error) => e.message,

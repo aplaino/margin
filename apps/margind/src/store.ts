@@ -210,6 +210,11 @@ export class Store {
       .run(bundle.identityKey, this.seal(JSON.stringify(bundle)), handle);
   }
 
+  // A friend's new identity key, replacing the pinned one.
+  repin(handle: Handle, identityKey: string) {
+    this.db.query('UPDATE friends SET identity_key = ? WHERE handle = ?').run(identityKey, handle);
+  }
+
   bundle(handle: string): PeerBundle | undefined {
     const row = this.db
       .query<{ bundle: Uint8Array | null }, [string]>('SELECT bundle FROM friends WHERE handle = ?')

@@ -187,6 +187,8 @@ final class AppModel {
   }
 
   private func received(_ message: ChatMessage) {
+    // Paused: it still counts as unread, it just doesn't call for attention.
+    if prefs.alertsPaused { return }
     let reading = expanded && chatWith == message.peer
     if !reading {
       pulse += 1
