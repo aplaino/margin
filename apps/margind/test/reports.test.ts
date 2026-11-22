@@ -156,8 +156,13 @@ describe('macOS crash reports', () => {
     reports.scanMacCrashes();
     expect(reports.state().count).toBe(0);
 
-    writeFileSync(join(logs, 'Margin-2026-11-21-214641.ips'), ips('EXC_BAD_ACCESS'));
-    writeFileSync(join(logs, 'Safari-2026-11-21-214641.ips'), ips('EXC_BAD_ACCESS'));
+    // Written after the first look; dated a minute on, since some filesystems' timestamps
+    // trail the clock by a few milliseconds.
+    const later = new Date(Date.now() + 60_000);
+    for (const name of ['Margin-2026-11-21-214641.ips', 'Safari-2026-11-21-214641.ips']) {
+      writeFileSync(join(logs, name), ips('EXC_BAD_ACCESS'));
+      utimesSync(join(logs, name), later, later);
+    }
     reports.scanMacCrashes();
     const pending = reports.pending();
     expect(pending).toHaveLength(1);
