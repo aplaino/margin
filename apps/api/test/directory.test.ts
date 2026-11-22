@@ -36,7 +36,10 @@ describe('find friends', () => {
       (await leo.call('/me/findable', { method: 'PUT', body: { findable: false } })).status,
     ).toBe(200);
     expect(handles(await maya.call('/directory'))).toEqual([]);
+    // A new install asks rather than overwriting the choice.
+    expect((await leo.call('/me/findable')).body).toEqual({ findable: false });
     await leo.call('/me/findable', { method: 'PUT', body: { findable: true } });
+    expect((await leo.call('/me/findable')).body).toEqual({ findable: true });
     expect(handles(await maya.call('/directory'))).toEqual(['leo']);
   });
 

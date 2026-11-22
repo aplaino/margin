@@ -8,6 +8,7 @@ import {
   Config,
   Count,
   Directory,
+  Findable,
   type Friend,
   FriendList,
   PeerBundle,
@@ -538,13 +539,24 @@ export async function startDaemon(options: DaemonOptions) {
     return message;
   }
 
-  // The server keeps the one setting it needs: whether you can be found. Sent on every
-  // connection and whenever it changes.
+  // The server keeps the one setting it needs: whether you can be found. A choice made on
+  // this Mac is sent on every connection and whenever it changes; a Mac that hasn't made one
+  // (a new install) takes the server's instead of overwriting it, and damaged settings never
+  // change it.
   function syncFindable() {
     if (!account()) return;
-    void api()
-      .call(null, 'PUT', '/me/findable', { findable: store.settings().findable })
-      .catch((e) => log('could not update Find friends', e));
+    const settings = store.settings();
+    if (settings.damaged) return;
+    const chosen = store.getJson<Partial<Settings>>('settings')?.findable !== undefined;
+    const request = chosen
+      ? api().call(null, 'PUT', '/me/findable', { findable: settings.findable })
+      : api()
+          .call(Findable, 'GET', '/me/findable')
+          .then(({ findable }) => {
+            store.saveSettings({ ...store.settings(), findable });
+            push({ type: 'settings', settings: store.settings() });
+          });
+    void request.catch((e) => log('could not update Find friends', e));
   }
 
   function updateSettings(patch: Partial<Settings>) {

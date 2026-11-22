@@ -124,14 +124,14 @@ describe('store', () => {
     expect(store.friend('leo')?.identityKey).toBe('first');
   });
 
-  test('damaged settings fail closed: invisible, not the share-everything defaults', () => {
+  test('damaged settings fail closed: invisible and unfindable, not the share-everything defaults', () => {
     const store = new Store(':memory:', keys('s'));
     expect(store.settings()).toEqual(DEFAULT_SETTINGS);
     store.setJson('settings', {
       audience: 'the whole internet',
       repos: { 'acme/secret': 'hidden' },
     });
-    expect(store.settings()).toMatchObject({ invisible: true, damaged: true });
+    expect(store.settings()).toMatchObject({ invisible: true, findable: false, damaged: true });
   });
 
   test('database files are readable only by you', () => {

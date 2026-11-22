@@ -463,6 +463,10 @@ export function createApp(sql: SQL, options: Options = {}) {
       };
       return json(directory);
     }
+    if (method === 'GET' && path === '/me/findable') {
+      const [row] = await sql`SELECT findable FROM accounts WHERE id = ${me.id}`;
+      return json({ findable: Boolean(Number(row?.findable) || row?.findable === true) });
+    }
     if (method === 'PUT' && path === '/me/findable') {
       const { findable } = await parseBody(Findable, req);
       await sql`UPDATE accounts SET findable = ${findable} WHERE id = ${me.id}`;

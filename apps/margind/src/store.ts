@@ -123,7 +123,9 @@ export class Store {
       share: { ...DEFAULT_SETTINGS.share, ...saved.share },
     };
     const parsed = v.safeParse(Settings, merged);
-    return parsed.success ? parsed.output : { ...DEFAULT_SETTINGS, invisible: true, damaged: true };
+    return parsed.success
+      ? parsed.output
+      : { ...DEFAULT_SETTINGS, invisible: true, findable: false, damaged: true };
   }
 
   saveSettings(settings: Settings) {
