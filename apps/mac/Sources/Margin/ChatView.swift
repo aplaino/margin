@@ -66,6 +66,7 @@ struct ChatView: View {
           }
           .padding(12)
         }
+        .edgeFade(10)
         .defaultScrollAnchor(.bottom)
         .onChange(of: messages.count) {
           if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
@@ -81,8 +82,8 @@ struct ChatView: View {
         .lineLimit(1...5)
         .focused($focused)
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.surface))
-        .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
+        .background(RoundedRectangle(cornerRadius: theme.nested(10)).fill(theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: theme.nested(10)).strokeBorder(theme.border, lineWidth: theme.borderWidth))
         .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
         .onSubmit(send)
         .onAppear { focused = model.drawerFocused }

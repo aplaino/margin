@@ -56,7 +56,7 @@ struct ProfileView: View {
               now: .now
             )
             .allowsHitTesting(false)
-            .background(RoundedRectangle(cornerRadius: theme.rowRadius).fill(theme.surface))
+            .background(RoundedRectangle(cornerRadius: theme.nested(16)).fill(theme.surface))
           } else {
             Text("Nothing yet. It appears once you’re connected.").font(theme.caption).foregroundStyle(theme.tertiary)
           }
@@ -94,6 +94,7 @@ struct ProfileView: View {
         .font(theme.font(12))
         .padding(16)
       }
+      .edgeFade(10)
     }
   }
 

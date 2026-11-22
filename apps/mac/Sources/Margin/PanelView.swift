@@ -90,7 +90,7 @@ struct PanelView: View {
           Spacer()
           Text(model.me?.handle.map { "@\($0)" } ?? "").font(theme.caption).foregroundStyle(theme.secondary)
             .lineLimit(1)
-          Image(systemName: "chevron.right").font(theme.font(10, bold: true)).foregroundStyle(theme.tertiary)
+          Image(systemName: "chevron.right").font(theme.font(10)).foregroundStyle(theme.tertiary)
         }
         .contentShape(Rectangle())
       }

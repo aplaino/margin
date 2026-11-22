@@ -61,6 +61,10 @@ struct Theme {
     if let fontName { return .custom(fontName, size: size).weight(bold ? strong : weight) }
     return .system(size: size, weight: bold ? strong : weight, design: heading ? headingDesign : design)
   }
+  // A corner nested inside the panel follows its curve: the panel's radius minus how far in
+  // it sits, never sharper than a small minimum.
+  func nested(_ inset: CGFloat) -> CGFloat { max(radius - inset, 4) }
+
   var body: Font { font(13) }
   var bodyBold: Font { font(13, bold: true, heading: true) }
   var small: Font { font(11.5) }
@@ -139,7 +143,7 @@ enum ThemeStyle: String, CaseIterable, Identifiable {
       return Theme(
         background: rgb(247, 243, 234).opacity(0.98), surface: .black.opacity(0.05), hover: .black.opacity(0.04),
         text: rgb(43, 39, 34), secondary: rgb(102, 94, 84), tertiary: rgb(117, 108, 96),
-        divider: .black.opacity(0.08), border: rgb(217, 208, 191), accent: accent,
+        divider: .black.opacity(0.08), border: .black.opacity(0.13), accent: accent,
         inTool: rgb(52, 125, 68), idle: rgb(150, 100, 20), offline: rgb(117, 108, 96),
         unread: rgb(150, 100, 20), onUnread: .white, danger: rgb(179, 38, 30),
         headingDesign: .serif, radius: 10, rowRadius: 6)
@@ -321,6 +325,20 @@ extension View {
             LinearGradient(
               colors: [.white.opacity(0.75), .black.opacity(0.22)], startPoint: .topLeading, endPoint: .bottomTrailing),
             lineWidth: 1)
+      }
+    }
+  }
+}
+
+extension View {
+  // Scrolling content fades out softly at the top and bottom instead of being cut off. Keep
+  // `height` within the content's own padding, so nothing is faded when scrolled to an end.
+  func edgeFade(_ height: CGFloat = 8) -> some View {
+    mask {
+      VStack(spacing: 0) {
+        LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: height)
+        Rectangle()
+        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: height)
       }
     }
   }

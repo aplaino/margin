@@ -43,7 +43,8 @@ struct CustomTheme: Codable, Equatable {
       t.divider = c.opacity(0.1)
       t.hover = c.opacity(0.07)
     }
-    if let c = Color(hex: border) { t.border = c }
+    // Partly transparent, so a border blends into whatever is behind it.
+    if let c = Color(hex: border) { t.border = c.opacity(0.45) }
     if let c = Color(hex: accent) {
       t.accent = c
       t.onAccent = c.readableText

@@ -31,6 +31,7 @@ struct FriendsView: View {
         }
         .padding(8)
       }
+      .edgeFade(8)
       .onChange(of: model.selected) {
         if let selected = model.selected { proxy.scrollTo(selected) }
       }
@@ -69,7 +70,7 @@ struct FriendRow: View {
               Text(Format.tokens(tokens)).font(theme.mono).foregroundStyle(theme.secondary)
             }
             if friend.unread > 0 {
-              Text("\(friend.unread)").font(theme.font(10, bold: true))
+              Text("\(friend.unread)").contentTransition(.numericText(value: Double(friend.unread))).animation(.smooth, value: friend.unread).font(theme.font(10, bold: true))
                 .foregroundStyle(theme.onUnread)
                 .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16)
                 .background(Capsule().fill(theme.unread))
@@ -84,8 +85,8 @@ struct FriendRow: View {
       }
       .padding(.horizontal, 8).padding(.vertical, 7)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(RoundedRectangle(cornerRadius: theme.rowRadius).fill(hovering || selected ? theme.hover : .clear))
-      .overlay(RoundedRectangle(cornerRadius: theme.rowRadius).strokeBorder(selected ? theme.accent : .clear, lineWidth: 1.5))
+      .background(RoundedRectangle(cornerRadius: theme.nested(8)).fill(hovering || selected ? theme.hover : .clear))
+      .overlay(RoundedRectangle(cornerRadius: theme.nested(8)).strokeBorder(selected ? theme.accent : .clear, lineWidth: 1.5))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -118,7 +119,7 @@ struct OfflineRow: View {
         let ago = Format.ago(friend.lastSeenAt, now: now)
         if !ago.isEmpty { Text("· \(ago)").font(theme.caption) }
         if friend.unread > 0 {
-          Text("\(friend.unread)").font(theme.font(10, bold: true)).foregroundStyle(theme.onUnread)
+          Text("\(friend.unread)").contentTransition(.numericText(value: Double(friend.unread))).animation(.smooth, value: friend.unread).font(theme.font(10, bold: true)).foregroundStyle(theme.onUnread)
             .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16).background(Capsule().fill(theme.unread))
         }
       }
@@ -126,7 +127,7 @@ struct OfflineRow: View {
       .foregroundStyle(theme.secondary)
       .padding(.horizontal, 8).padding(.vertical, 4)
       .background(
-        RoundedRectangle(cornerRadius: theme.rowRadius)
+        RoundedRectangle(cornerRadius: theme.nested(8))
           .strokeBorder(model.selected == friend.handle ? theme.accent : .clear, lineWidth: 1.5))
       .contentShape(Rectangle())
     }

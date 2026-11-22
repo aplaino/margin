@@ -111,6 +111,7 @@ struct CustomThemeView: View {
         .font(theme.font(12))
         .padding(16)
       }
+      .edgeFade(10)
     }
   }
 
@@ -127,7 +128,7 @@ struct CustomThemeView: View {
       Text("Aa").font(theme.title)
     }
     .padding(10)
-    .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.surface))
+    .background(RoundedRectangle(cornerRadius: theme.nested(16)).fill(theme.surface))
   }
 
   private var roundness: Double { Double((theme.radius - 2) / 20).clamped(to: 0...1) }

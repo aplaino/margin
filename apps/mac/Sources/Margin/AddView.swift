@@ -55,6 +55,7 @@ struct AddView: View {
       }
       .padding(16)
     }
+    .edgeFade(10)
   }
 }
 
@@ -72,8 +73,8 @@ struct HandleField: View {
         TextField("GitHub handle", text: $handle)
           .textFieldStyle(.plain)
           .padding(.horizontal, 10).padding(.vertical, 7)
-          .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.surface))
-          .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
+          .background(RoundedRectangle(cornerRadius: theme.nested(16)).fill(theme.surface))
+          .overlay(RoundedRectangle(cornerRadius: theme.nested(16)).strokeBorder(theme.border, lineWidth: theme.borderWidth))
           .focused($focused)
           .onSubmit(send)
           .control("handle") { focused = true }
@@ -111,8 +112,8 @@ struct FindFriends: View {
       TextField("Search people on Margin", text: $query)
         .textFieldStyle(.plain)
         .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.surface))
-        .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
+        .background(RoundedRectangle(cornerRadius: theme.nested(16)).fill(theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: theme.nested(16)).strokeBorder(theme.border, lineWidth: theme.borderWidth))
       if model.directory.isEmpty {
         Text(query.isEmpty ? "Nobody else to show yet." : "Nobody matches.")
           .font(theme.caption).foregroundStyle(theme.tertiary)
@@ -126,12 +127,16 @@ struct FindFriends: View {
             }
           }
           Spacer()
-          if person.requested {
-            Text("Requested").font(theme.caption).foregroundStyle(theme.tertiary)
-          } else {
-            Button("Add") { add(person) }.buttonStyle(.link)
-              .control("find:\(person.handle)") { add(person) }
+          Group {
+            if person.requested {
+              Text("Requested").font(theme.caption).foregroundStyle(theme.tertiary)
+            } else {
+              Button("Add") { add(person) }.buttonStyle(.link)
+                .control("find:\(person.handle)") { add(person) }
+            }
           }
+          .transition(.blurReplace)
+          .animation(.smooth(duration: 0.25), value: person.requested)
         }
       }
       Text("People appear here unless they’ve switched it off in Settings → Privacy.")

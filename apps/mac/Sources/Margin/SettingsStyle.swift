@@ -20,7 +20,7 @@ struct SettingsGroup<Content: View>: View {
       VStack(alignment: .leading, spacing: 0) { content() }
         .padding(.horizontal, 10).padding(.vertical, 3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: theme.controlRadius + 2).fill(theme.surface))
+        .background(RoundedRectangle(cornerRadius: theme.nested(14)).fill(theme.surface))
     }
     .padding(.top, 6)
   }

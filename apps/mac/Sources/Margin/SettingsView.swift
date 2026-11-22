@@ -58,25 +58,31 @@ struct SettingsView: View {
     ScrollViewReader { proxy in
       ScrollView {
         VStack(alignment: .leading, spacing: 4) {
+          // Pages and the list swap with a soft blur rather than a cut.
           if let page = model.settingsPage {
-            pageHeader(page)
-            switch page {
-            case .account: account
-            case .general: general
-            case .appearance: appearance
-            case .placement: placement
-            case .notifications: notifications
-            case .privacy: if let settings = model.settings { privacy(settings) }
-            case .tools: tools
+            VStack(alignment: .leading, spacing: 4) {
+              pageHeader(page)
+              switch page {
+              case .account: account
+              case .general: general
+              case .appearance: appearance
+              case .placement: placement
+              case .notifications: notifications
+              case .privacy: if let settings = model.settings { privacy(settings) }
+              case .tools: tools
+              }
             }
+            .transition(.blurReplace)
           } else {
-            list
+            list.transition(.blurReplace)
           }
         }
+        .animation(.smooth(duration: 0.22), value: model.settingsPage)
         .controlSize(.small)
         .font(theme.font(12))
         .padding(.horizontal, 14).padding(.vertical, 10)
       }
+      .edgeFade(8)
       .onChange(of: model.cursor) {
         if let cursor = model.cursor { proxy.scrollTo(cursor) }
       }
@@ -106,7 +112,7 @@ struct SettingsView: View {
           chevron
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: theme.controlRadius + 2).fill(theme.surface))
+        .background(RoundedRectangle(cornerRadius: theme.nested(14)).fill(theme.surface))
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -156,7 +162,7 @@ struct SettingsView: View {
   }
 
   private var chevron: some View {
-    Image(systemName: "chevron.right").font(theme.font(10, bold: true)).foregroundStyle(theme.tertiary)
+    Image(systemName: "chevron.right").font(theme.font(10)).foregroundStyle(theme.tertiary)
   }
 
   private func pageHeader(_ page: SettingsPage) -> some View {
