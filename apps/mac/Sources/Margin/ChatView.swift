@@ -33,7 +33,7 @@ struct ChatView: View {
                 Text("offline · last seen \(ago)")
               }
             }
-            .font(theme.caption).foregroundStyle(theme.secondary).lineLimit(1)
+            .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
             if let tokens = friend.presence.tokens {
               Text("\(Format.tokens(tokens)) tokens").font(theme.mono).foregroundStyle(theme.tertiary)
             }

@@ -78,10 +78,12 @@ struct FriendRow: View {
                 .background(Capsule().fill(theme.unread))
             }
           }
-          Text(Format.what(friend.presence)).font(theme.small).foregroundStyle(theme.secondary).lineLimit(1)
+          Text(Format.what(friend.presence)).font(theme.small).foregroundStyle(theme.secondary)
+            .fixedSize(horizontal: false, vertical: true)
           let detail = Format.detail(friend.presence, now: now)
           if !detail.isEmpty {
-            Text(detail).font(theme.mono).foregroundStyle(theme.tertiary).lineLimit(1)
+            Text(detail).font(theme.mono).foregroundStyle(theme.tertiary)
+              .fixedSize(horizontal: false, vertical: true)
           }
         }
       }
