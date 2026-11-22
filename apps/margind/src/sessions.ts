@@ -54,11 +54,12 @@ export class Sessions {
     return [...this.sessions.values()];
   }
 
+  // True when this is a session not seen before.
   onEvent(event: ReporterEvent, now = Date.now()) {
     const key = `${event.tool}:${event.sessionId}`;
     if (event.event === 'end') {
       this.sessions.delete(key);
-      return;
+      return false;
     }
     const existing = this.sessions.get(key);
     this.sessions.set(key, {
@@ -71,6 +72,7 @@ export class Sessions {
       lastEventAt: now,
       order: ++this.events,
     });
+    return !existing;
   }
 
   // Drops sessions whose tool exited or went quiet. Returns true if any ended.

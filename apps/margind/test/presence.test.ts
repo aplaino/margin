@@ -299,31 +299,55 @@ describe('what friends see', () => {
     expect(hidden.full).toEqual({ status: 'idle', at: 5 });
   });
 
-  test('stats follow the tokens and time switches, and only token stats reach everyone', () => {
-    const stats = { today: 10, week: 70, minutes: 840, days: 9 };
+  test('each stat follows its switch, and only token and prompt counts reach everyone', () => {
+    const tokens = { today: 10, week: 70, daily: [0, 10] };
+    const prompts = { promptsToday: 3, promptsWeek: 21, prompts: 400 };
+    const time = { minutes: 840, days: 9, sessions: 6, longest: 192 };
+    const stats = { ...tokens, ...prompts, ...time, tool: 'codex' as const, model: 'gpt-6.1-sol' };
+    const off = (...keys: (keyof Settings['share'])[]) => ({
+      share: { ...DEFAULT_SETTINGS.share, ...Object.fromEntries(keys.map((k) => [k, false])) },
+    });
     const view = (s: Partial<Settings>) =>
       buildView({ status: 'online', tokens: 42, stats, settings: settings(s), now: 5 });
     expect(view({}).full.stats).toEqual(stats);
-    expect(view({ share: { ...DEFAULT_SETTINGS.share, tokens: false } }).full.stats).toEqual({
-      minutes: 840,
-      days: 9,
+    expect(view(off('tokens')).full.stats).toEqual({
+      ...prompts,
+      ...time,
+      tool: 'codex',
+      model: 'gpt-6.1-sol',
     });
-    expect(view({ share: { ...DEFAULT_SETTINGS.share, time: false } }).full.stats).toEqual({
-      today: 10,
-      week: 70,
+    expect(view(off('prompts')).full.stats).toEqual({
+      ...tokens,
+      ...time,
+      tool: 'codex',
+      model: 'gpt-6.1-sol',
     });
-    expect(
-      view({ share: { ...DEFAULT_SETTINGS.share, tokens: false, time: false } }).full.stats,
-    ).toBeUndefined();
+    expect(view(off('time', 'tool', 'model')).full.stats).toEqual({ ...tokens, ...prompts });
+    expect(view(off('tokens', 'prompts', 'time', 'tool', 'model')).full.stats).toBeUndefined();
     const close = view({ audience: 'close', closeFriends: ['leo'] });
     expect(close.full.stats).toEqual(stats);
     expect(close.basic).toEqual({
       status: 'online',
       tokens: 42,
-      stats: { today: 10, week: 70 },
+      stats: { ...tokens, ...prompts },
       at: 5,
     });
     expect(view({ invisible: true }).full.stats).toBeUndefined();
+  });
+
+  test('a most-used model named like a local folder is dropped, not sent', () => {
+    const presence: PublicPresence = {
+      status: 'online',
+      at: 1,
+      stats: { model: 'acme-secret-v2', today: 1 },
+    };
+    const secrets = ['acme-secret'];
+    expect(() => assertPublic(presence, secrets)).toThrow(LeakError);
+    expect(withoutLocalDetails(presence, secrets)).toEqual({
+      status: 'online',
+      at: 1,
+      stats: { today: 1 },
+    });
   });
 
   test('nothing from a private project leaves the machine', () => {

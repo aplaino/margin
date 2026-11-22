@@ -87,7 +87,7 @@ export function buildView(input: {
   status: Status;
   activity?: PublicActivity;
   tokens: number;
-  stats?: Required<PublicStats>;
+  stats?: PublicStats;
   settings: Settings;
   now?: number;
 }): PresenceView {
@@ -99,10 +99,22 @@ export function buildView(input: {
     return { full: offline, basic: offline, close: [] };
   }
   const tokens = settings.share.tokens ? { tokens: input.tokens } : {};
-  const tokenStats = stats && settings.share.tokens ? { today: stats.today, week: stats.week } : {};
-  const timeStats =
-    stats && settings.share.time ? { minutes: stats.minutes, days: stats.days } : {};
-  const all = { ...tokenStats, ...timeStats };
+  const pick = (on: boolean, keys: (keyof PublicStats)[]): PublicStats =>
+    stats && on
+      ? Object.fromEntries(keys.filter((k) => stats[k] !== undefined).map((k) => [k, stats[k]]))
+      : {};
+  // Token and prompt numbers reach everyone who sees your token total; the rest says more
+  // about how you work, so it goes only where activity does.
+  const counts = {
+    ...pick(settings.share.tokens, ['today', 'week', 'daily']),
+    ...pick(settings.share.prompts, ['promptsToday', 'promptsWeek', 'prompts']),
+  };
+  const all = {
+    ...counts,
+    ...pick(settings.share.time, ['minutes', 'days', 'sessions', 'longest']),
+    ...pick(settings.share.tool, ['tool']),
+    ...pick(settings.share.model, ['model']),
+  };
   const full: PublicPresence = {
     status: input.status,
     ...(input.activity ? { activity: input.activity } : {}),
@@ -115,7 +127,7 @@ export function buildView(input: {
   const basic: PublicPresence = {
     status: input.status,
     ...tokens,
-    ...(Object.keys(tokenStats).length ? { stats: tokenStats } : {}),
+    ...(Object.keys(counts).length ? { stats: counts } : {}),
     at,
   };
   return { full, basic, close: settings.closeFriends };
@@ -138,17 +150,27 @@ export function assertPublic(presence: PublicPresence, secrets: string[]) {
   if (!parsed.success || !Bun.deepEquals(parsed.output, presence, true)) {
     throw new LeakError('presence is not exactly the public shape');
   }
-  const model = presence.activity?.model?.toLowerCase() ?? '';
-  const leaked = secrets.filter((s) => model.includes(s.toLowerCase()));
-  if (leaked.length) throw new LeakError(`model name contains local details: ${leaked.length}`);
+  for (const model of [presence.activity?.model, presence.stats?.model]) {
+    const name = model?.toLowerCase() ?? '';
+    const leaked = secrets.filter((s) => name.includes(s.toLowerCase()));
+    if (leaked.length) throw new LeakError(`model name contains local details: ${leaked.length}`);
+  }
 }
+
+const isLocal = (model: string | undefined, secrets: string[]) =>
+  !!model && secrets.some((s) => model.toLowerCase().includes(s.toLowerCase()));
 
 // A model name that happens to match a local folder name loses the model, not the
 // whole activity: a folder called "claude" shouldn't hide what you're doing.
 export function withoutLocalDetails(presence: PublicPresence, secrets: string[]): PublicPresence {
-  const model = presence.activity?.model?.toLowerCase();
-  if (!model || !secrets.some((s) => model.includes(s.toLowerCase())) || !presence.activity)
-    return presence;
-  const { model: _dropped, ...activity } = presence.activity;
-  return { ...presence, activity };
+  let out = presence;
+  if (out.activity && isLocal(out.activity.model, secrets)) {
+    const { model: _dropped, ...activity } = out.activity;
+    out = { ...out, activity };
+  }
+  if (out.stats && isLocal(out.stats.model, secrets)) {
+    const { model: _dropped, ...stats } = out.stats;
+    out = { ...out, stats };
+  }
+  return out;
 }

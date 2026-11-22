@@ -35,6 +35,7 @@ export const Settings = v.object({
     repo: v.boolean(),
     time: v.boolean(),
     tokens: v.boolean(),
+    prompts: v.boolean(),
   }),
   repos: v.record(Repo, v.picklist(['hidden', 'private'])),
   // "close": only closeFriends see activity; everyone else sees online/idle.
@@ -49,7 +50,7 @@ export type Settings = v.InferOutput<typeof Settings>;
 
 export const DEFAULT_SETTINGS: Settings = {
   invisible: false,
-  share: { tool: true, model: true, repo: true, time: true, tokens: true },
+  share: { tool: true, model: true, repo: true, time: true, tokens: true, prompts: true },
   repos: {},
   audience: 'everyone',
   closeFriends: [],
@@ -101,7 +102,13 @@ export const Request = v.variant('op', [
     handle: Handle,
     reason: v.pipe(v.string(), v.maxLength(500)),
   }),
-  v.object({ op: v.literal('settings.set'), settings: v.partial(Settings) }),
+  // Any subset, down to single sharing switches; an app older than a switch leaves it alone.
+  v.object({
+    op: v.literal('settings.set'),
+    settings: v.partial(
+      v.object({ ...Settings.entries, share: v.partial(Settings.entries.share) }),
+    ),
+  }),
   v.object({ op: v.literal('tools.connect'), tool: Tool }),
   v.object({ op: v.literal('tools.disconnect'), tool: Tool }),
   v.object({ op: v.literal('account.export') }),

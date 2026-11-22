@@ -69,15 +69,28 @@ export const PublicActivity = v.object({
 });
 export type PublicActivity = v.InferOutput<typeof PublicActivity>;
 
-// Recent totals, worked out on the sender's Mac by its local day. Tokens follow the tokens
-// switch; minutes and days follow the time switch.
+// Recent totals, worked out on the sender's Mac by its local day. Each group follows its
+// sharing switch: tokens (today, week, daily), prompts, time (minutes, days, sessions,
+// longest), tool and model.
 export const PublicStats = v.object({
   today: v.optional(Count),
   week: v.optional(Count),
+  // Tokens on each of the last 14 days, oldest first.
+  daily: v.optional(v.pipe(v.array(Count), v.maxLength(14))),
   // Minutes in a tool, not idle, over the last 7 days.
   minutes: v.optional(Count),
   // Days with any tool use among the last 14.
   days: v.optional(v.pipe(Count, v.maxValue(14))),
+  // Prompts sent to coding tools: today, over the last 7 days, and since counting began.
+  promptsToday: v.optional(Count),
+  promptsWeek: v.optional(Count),
+  prompts: v.optional(Count),
+  // Coding sessions started over the last 7 days, and the longest one's minutes in a tool.
+  sessions: v.optional(Count),
+  longest: v.optional(Count),
+  // The tool and model with the most time over the last 7 days.
+  tool: v.optional(v.fallback(v.optional(Tool), undefined)),
+  model: v.optional(Model),
 });
 export type PublicStats = v.InferOutput<typeof PublicStats>;
 

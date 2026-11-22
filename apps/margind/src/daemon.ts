@@ -15,6 +15,7 @@ import {
   PeerBundle,
   PROTOCOL,
   type PublicPresence,
+  type PublicStats,
   type Push,
   ReporterEvent,
   Request,
@@ -42,7 +43,7 @@ import {
 } from './presence';
 import { type FetchRepo, originRepo, repoClassifier } from './repo';
 import { Reports, stackOf } from './reports';
-import { Sessions } from './sessions';
+import { type LocalSession, Sessions } from './sessions';
 import { changedKey, healable, PREKEY_BATCH, Signal } from './signal';
 import { Stats } from './stats';
 import { Store } from './store';
@@ -153,8 +154,9 @@ export async function startDaemon(options: DaemonOptions) {
   let view: PresenceView | undefined;
   let tokens = store.tokenTotal();
   const stats = new Stats(store);
-  // In a tool and not idle, as of the last recompute; the heartbeat counts it as time.
-  let working = false;
+  // The session you're working in (not idle), as of the last recompute; the heartbeat
+  // counts it as time.
+  let working: LocalSession | undefined;
   let stopped = false;
 
   const account = () => store.account();
@@ -208,24 +210,25 @@ export async function startDaemon(options: DaemonOptions) {
   };
 
   const savedTokens = () => store.getJson<Record<string, number>>('friendTokens') ?? {};
+  const savedStats = () => store.getJson<Record<string, PublicStats>>('friendStats') ?? {};
 
   function roster(): Friend[] {
     const now = Date.now();
     const lastTokens = savedTokens();
+    const lastStats = savedStats();
     return store.friends().map((f) => {
       const seen = friendPresence.get(f.handle);
       const fresh = seen && now - seen.receivedAt < STALE_MS;
       const known = seen?.presence.tokens ?? lastTokens[f.handle];
+      const stats = lastStats[f.handle];
+      // Offline, their last token total and stats stay (the profile says as of when).
+      const kept = {
+        ...(known !== undefined ? { tokens: known } : {}),
+        ...(stats ? { stats } : {}),
+      };
       const presence: PublicPresence = fresh
-        ? {
-            ...seen.presence,
-            ...(seen.presence.status === 'offline' && known !== undefined ? { tokens: known } : {}),
-          }
-        : {
-            status: 'offline',
-            at: seen?.presence.at ?? 0,
-            ...(known !== undefined ? { tokens: known } : {}),
-          };
+        ? { ...seen.presence, ...(seen.presence.status === 'offline' ? kept : {}) }
+        : { status: 'offline', at: seen?.presence.at ?? 0, ...kept };
       return {
         handle: f.handle,
         ...(f.name ? { name: f.name } : {}),
@@ -279,18 +282,21 @@ export async function startDaemon(options: DaemonOptions) {
       session && !settings.invisible
         ? shareable(session, await classify(remote), remote, settings)
         : undefined;
-    working = !!session && status === 'online';
-    let next = buildView({ status, activity, tokens, stats: stats.view(tokens), settings });
+    working = status === 'online' ? session : undefined;
+    const recent = stats.view(tokens);
+    let next = buildView({ status, activity, tokens, stats: recent, settings });
     const secrets = localSecrets(sessions.list());
     const full = withoutLocalDetails(next.full, secrets);
+    const basic = withoutLocalDetails(next.basic, secrets);
     try {
       assertPublic(full, secrets);
-      assertPublic(next.basic, secrets);
-      next = { ...next, full };
+      assertPublic(basic, secrets);
+      next = { ...next, full, basic };
     } catch {
-      // Fail closed: status (and tokens) only.
+      // Fail closed: status, tokens and counts only.
       problem('withheld activity that failed the privacy check');
-      next = buildView({ status, tokens, stats: stats.view(tokens), settings });
+      const { model: _model, tool: _tool, ...counts } = recent;
+      next = buildView({ status, tokens, stats: counts, settings });
     }
     if (mine !== generation) return;
     view = next;
@@ -416,6 +422,11 @@ export async function startDaemon(options: DaemonOptions) {
       store.setJson(
         'friendTokens',
         presence.tokens === undefined ? others : { ...others, [from]: presence.tokens },
+      );
+      const { [from]: _stats, ...otherStats } = savedStats();
+      store.setJson(
+        'friendStats',
+        presence.stats === undefined ? otherStats : { ...otherStats, [from]: presence.stats },
       );
     }
     push({ type: 'roster', friends: roster() });
@@ -756,7 +767,7 @@ export async function startDaemon(options: DaemonOptions) {
     void request.catch((e) => log('could not update Find friends', e));
   }
 
-  function updateSettings(patch: Partial<Settings>) {
+  function updateSettings(patch: Extract<Request, { op: 'settings.set' }>['settings']) {
     const current = store.settings();
     const next = { ...current, ...patch, share: { ...current.share, ...patch.share } };
     const { damaged: _, ...settings } = next as Settings & { damaged?: true };
@@ -770,7 +781,7 @@ export async function startDaemon(options: DaemonOptions) {
   async function handle(request: Request, socket: Socket): Promise<unknown> {
     switch (request.op) {
       case 'event':
-        sessions.onEvent(request.event);
+        stats.event(request.event, sessions.onEvent(request.event));
         if (request.event.event === 'stop') setTimeout(() => void refreshTokens(), 2000);
         void recompute();
         return undefined;
