@@ -174,6 +174,7 @@ final class DrawerController {
   private var hiddenTimer: Timer?
   private var lastPlacement = ""
   private var welcome: WelcomeWindow?
+  private var strandedCheck: Timer?
 
   private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
@@ -248,6 +249,14 @@ final class DrawerController {
 
     place()
     if !model.prefs.welcomed && !model.prefs.setupDone { showWelcome() }
+    // The strip was once found far off the only screen, out of reach, with no display having
+    // come or gone; if it's ever on no screen at all, put it back.
+    strandedCheck = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self, self.strip.isVisible, !self.model.expanded else { return }
+        if !NSScreen.screens.contains(where: { $0.frame.intersects(self.strip.frame) }) { self.place() }
+      }
+    }
   }
 
   // First launch: say where Margin lives, then open the drawer there with the strip or menu
