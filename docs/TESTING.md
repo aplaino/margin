@@ -8,20 +8,20 @@ Each row needs two kinds of evidence:
 
 ## Status
 
-As of 2026-11-22, commit `676e0fa`, Margin 0.1.82. Automated: **178 tests pass, 0 fail** (567 checks, 15 files).
+As of 2026-11-22, commit `676e0fa`, Margin 0.1.82. Automated: **178 tests pass, 0 fail** (567 checks, 15 files). **Every row passes on two Macs, both ways: Phase 2 is done.**
 
 | Area | Automated | Two Macs | Status |
 |---|---|---|---|
 | Sign-in | Pass | **Pass** both ways | Done |
-| Friends | Pass | Request, decline, accept (A→B), mutual, unknown handle, safety number pass | Checklist §2: B→A, remove, block and unblock, report, Find friends, Account; safety number once more in the new 60-digit format |
-| Presence | Pass | Seen working | Checklist §3 for Claude Code, Codex and the shell, plus last seen |
-| Privacy | Pass | Not yet run | Checklist §4 |
-| Chat | Pass | Seen working (both ways) | Checklist §5 (offline delivery, restarts, Chats tab, pause alerts) |
-| Tokens | Pass | Not yet compared | Checklist §6 |
-| Drawer | n/a (UI) | Seen working | Checklist §7 (incl. language) |
-| Tools | Pass | Not yet run | Checklist §8 for Claude Code, Codex and the shell |
-| Versions | Pass | n/a | Passes on the automated test; a real old build is optional (§9) |
-| Leaks | Pass | Not yet run | Checklist §10 |
+| Friends | Pass | **Pass** (every §2 step, both ways, on 0.1.82) | Done |
+| Presence | Pass | **Pass** (Claude Code, Codex and the shell, both ways, on 0.1.82) | Done |
+| Privacy | Pass | **Pass** (both ways, on 0.1.82) | Done |
+| Chat | Pass | **Pass** (every §5 step, both ways, on 0.1.82) | Done |
+| Tokens | Pass | **Pass** (both ways, on 0.1.82) | Done |
+| Drawer | n/a (UI) | **Pass** (both ways, on 0.1.82) | Done |
+| Tools | Pass | **Pass** (both ways, on 0.1.82) | Done |
+| Versions | Pass | n/a | Done (automated; §9 is optional) |
+| Leaks | Pass | **Pass** (both ways, on 0.1.82) | Done |
 
 "Seen working" means it worked during the three-person test on 2026-11-21 but wasn't run step by step; it passes once the checklist row is ticked on both Macs.
 
@@ -30,6 +30,7 @@ As of 2026-11-22, commit `676e0fa`, Margin 0.1.82. Automated: **178 tests pass, 
 1. ~~No remove, block or report in the app.~~ Built: the chat header's ⋯ menu, and Unblock in Settings → Privacy.
 2. ~~No safety-number verification in the app.~~ Built: ⋯ → Safety Number; the e2e test checks both Macs show the same number. Since 0.1.81 it's Signal's 60-digit format.
 3. ~~One message to the owner was dropped as undecryptable after switching between the dev and live servers.~~ Fixed in 0.1.80: the receiver asks for it again and the sender resends it on a new session. Since 0.1.81 a friend's changed identity key heals the same way, in the background (DESIGN.md). Still watch for lost messages in §5.
+4. **Open, not a matrix row:** on the tester's M2 in menu bar placement, Margin once stopped responding to clicks and ⌥M (it flashed when switching desktops), then recovered by itself. No crash report, nothing captured. Candidates: an update relaunching, or a hidden crash-report alert blocking the app; freeze detection would catch it next time.
 
 ## Automated evidence
 
@@ -53,60 +54,60 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.82 or later (
 - [PASS] A→B [PASS] B→A — Settings → Account → **Sign out**. The drawer shows sign-in. Sign in with GitHub again. Your friends, chat history and token total come back.
 
 ### 2. Friends
-- [PASS] A→B [ ] B→A — B sends A a request from **Add**; A sees it under Requests with ✓ and ✕. A **declines**: it disappears on both sides. B sends again, A **accepts**: each appears in the other's Friends list within a few seconds.
+- [PASS] A→B [PASS] B→A — B sends A a request from **Add**; A sees it under Requests with ✓ and ✕. A **declines**: it disappears on both sides. B sends again, A **accepts**: each appears in the other's Friends list within a few seconds.
 - [PASS] Mutual — with a third person C who isn't a friend of A: A and C each send the other a request at about the same time. They become friends straight away, no accept needed.
 - [PASS] Unknown handle — A sends a request to a GitHub handle that has never used Margin: "No Margin user called …".
-- [PASS] Safety number — A and B each open the other's chat → ⋯ → **Safety Number**. Read them out: they're identical. (Passed with the old 20-character number; on 0.1.82 it's 60 digits in three lines, so read it out once more.)
-- [ ] Remove — A: ⋯ → **Remove Friend…** → Remove. Each disappears from the other's Friends list; the chat closes. Add each other again.
-- [ ] Block and unblock — A: ⋯ → **Block…** → Block. B: A is gone from Friends, a request to A says "No Margin user called …", and A isn't in B's Find friends. A: Settings → Privacy → Blocked → **Unblock**; B can find and add A again.
-- [ ] Report — A: ⋯ → **Report…** with a reason. It confirms without error (reports reach the server's `reports` table).
-- [ ] Find friends — B opens **Add**: A (not yet a friend) is listed and searchable by handle or name; **Add** turns into "Requested". A turns off **Show me in Find friends** (Settings → Privacy): A disappears from B's list.
-- [ ] Account — each: open Settings → Account. Your name, handle, status, tokens and friends are right, and the status matches what the other person sees on your row. The drawer's token total counts up as you use a tool.
+- [PASS] Safety number — A and B each open the other's chat → ⋯ → **Safety Number**. Read them out: they're identical. (Passed again on 0.1.82 with the 60-digit number.)
+- [PASS] Remove — A: ⋯ → **Remove Friend…** → Remove. Each disappears from the other's Friends list; the chat closes. Add each other again.
+- [PASS] Block and unblock — A: ⋯ → **Block…** → Block. B: A is gone from Friends, a request to A says "No Margin user called …", and A isn't in B's Find friends. A: Settings → Privacy → Blocked → **Unblock**; B can find and add A again.
+- [PASS] Report — A: ⋯ → **Report…** with a reason. It confirms without error (reports reach the server's `reports` table).
+- [PASS] Find friends — B opens **Add**: A (not yet a friend) is listed and searchable by handle or name; **Add** turns into "Requested". A turns off **Show me in Find friends** (Settings → Privacy): A disappears from B's list.
+- [PASS] Account — each: open Settings → Account. Your name, handle, status, tokens and friends are right, and the status matches what the other person sees on your row. The drawer's token total counts up as you use a tool.
 
 ### 3. Presence (Claude Code, Codex and the shell; the other tools are covered by the automated tests)
-- [ ] A→B [ ] B→A — A starts the tool and sends a prompt in a **public** GitHub repo. Within 5 seconds B's strip shows A's dot and B's drawer shows A's tool, model, repo name and time.
-- [ ] Ending — A quits the tool (or leaves it alone). B sees the activity go: Claude Code at once, others after their quiet time (15 minutes; the shell 10; Ollama and LM Studio 10).
-- [ ] Idle — A leaves the Mac alone for 5 minutes. B sees A as idle (◐).
-- [ ] Last seen — A quits Margin. B's Friends list shows A as offline with when A was last online, and A's chat header says "offline · last seen …" (never online).
+- [PASS] A→B [PASS] B→A — A starts the tool and sends a prompt in a **public** GitHub repo. Within 5 seconds B's strip shows A's dot and B's drawer shows A's tool, model, repo name and time.
+- [PASS] Ending — A quits the tool (or leaves it alone). B sees the activity go: Claude Code at once, others after their quiet time (15 minutes; the shell 10; Ollama and LM Studio 10).
+- [PASS] Idle — A leaves the Mac alone for 5 minutes. B sees A as idle (◐).
+- [PASS] Last seen — A quits Margin. B's Friends list shows A as offline with when A was last online, and A's chat header says "offline · last seen …" (never online).
 
 ### 4. Privacy (A changes the setting; B watches A's row)
-- [ ] A→B [ ] B→A — **Invisible** on: A disappears from B's online list, as if offline. Off again: back within seconds.
-- [ ] Friends see: untick **tool**, **model**, **repo**, **time** and **tokens** one at a time; each disappears from A's row on B's Mac.
-- [ ] **Close friends only** on, without B ticked: B sees only online/idle, no activity. Tick B: B sees everything again.
-- [ ] **Repo overrides**: add the repo A is working in as **Hide**: B sees A online with no activity. As **Private**: B sees "private project", never the name.
+- [PASS] A→B [PASS] B→A — **Invisible** on: A disappears from B's online list, as if offline. Off again: back within seconds.
+- [PASS] Friends see: untick **tool**, **model**, **repo**, **time** and **tokens** one at a time; each disappears from A's row on B's Mac.
+- [PASS] **Close friends only** on, without B ticked: B sees only online/idle, no activity. Tick B: B sees everything again.
+- [PASS] **Repo overrides**: add the repo A is working in as **Hide**: B sees A online with no activity. As **Private**: B sees "private project", never the name.
 
 ### 5. Chat
-- [ ] A→B [ ] B→A — A sends B a message. B sees the tab slide out (or the strip glow), the unread badge, and the message in the chat. Opening the chat clears the badge.
-- [ ] Offline — B quits Margin. A sends two messages. B opens Margin: both arrive, in order.
-- [ ] Restarts — both quit and reopen Margin: the chat history is still there.
-- [ ] Chats tab — B opens **Chats**: every conversation, most recent first, with the last message and its time; the tab reads "Chats (n)" while anything is unread.
-- [ ] Pause alerts — B: Settings → Notifications → **Pause alerts** → For 1 hour. A sends a message: no tab, no glow, no macOS notification, but the unread count goes up. B presses **Resume**: the next message alerts as usual.
-- [ ] No message lost — note anything sent that never arrived (Gaps §3).
+- [PASS] A→B [PASS] B→A — A sends B a message. B sees the tab slide out (or the strip glow), the unread badge, and the message in the chat. Opening the chat clears the badge.
+- [PASS] Offline — B quits Margin. A sends two messages. B opens Margin: both arrive, in order.
+- [PASS] Restarts — both quit and reopen Margin: the chat history is still there.
+- [PASS] Chats tab — B opens **Chats**: every conversation, most recent first, with the last message and its time; the tab reads "Chats (n)" while anything is unread.
+- [PASS] Pause alerts — B: Settings → Notifications → **Pause alerts** → For 1 hour. A sends a message: no tab, no glow, no macOS notification, but the unread count goes up. B presses **Resume**: the next message alerts as usual.
+- [PASS] No message lost — note anything sent that never arrived (Gaps §3).
 
 ### 6. Tokens
-- [ ] A→B [ ] B→A — A's header shows A's total. B's drawer shows the same number on A's row (within a minute of a change). With **tokens** unticked under Friends see, it disappears from B's view.
-- [ ] Sanity — A's total is in the right ballpark for A's Claude Code, Codex and OpenCode use (it excludes cache reads, so it's lower than tools that count them).
+- [PASS] A→B [PASS] B→A — A's header shows A's total. B's drawer shows the same number on A's row (within a minute of a change). With **tokens** unticked under Friends see, it disappears from B's view.
+- [PASS] Sanity — A's total is in the right ballpark for A's Claude Code, Codex and OpenCode use (it excludes cache reads, so it's lower than tools that count them).
 
 ### 7. Drawer
-- [ ] Each Mac — the dots on the strip (or menu bar) match who's online, and the unread count matches.
-- [ ] Opening: hover, click and ⌥M each open it; untick each in Settings → Open Margin with, and it no longer opens that way.
-- [ ] Focus: hovering or clicking the edge strip doesn't take the keyboard from the app you're typing in; ⌥M and the menu bar item do; Esc gives it back.
-- [ ] Settings: after launching, the first click on ⚙ shows the Settings list, not Account (fixed in 0.1.82).
-- [ ] Language: Settings → General → Language → Español (or 中文, 日本語, Ελληνικά), **Relaunch Now**: the drawer and Settings are in that language. Back to the Mac's language afterwards.
+- [PASS] Each Mac — the dots on the strip (or menu bar) match who's online, and the unread count matches.
+- [PASS] Opening: hover, click and ⌥M each open it; untick each in Settings → Open Margin with, and it no longer opens that way.
+- [PASS] Focus: hovering or clicking the edge strip doesn't take the keyboard from the app you're typing in; ⌥M and the menu bar item do; Esc gives it back.
+- [PASS] Settings: after launching, the first click on ⚙ shows the Settings list, not Account (fixed in 0.1.82).
+- [PASS] Language: Settings → General → Language → Español (or 中文, 日本語, Ελληνικά), **Relaunch Now**: the drawer and Settings are in that language. Back to the Mac's language afterwards.
 
 ### 8. Tools
-- [ ] Each Mac, for Claude Code, Codex and the shell — Settings → Connected tools: untick it. Its config file loses only Margin's entry (others' hooks stay), and a `.margin-backup-…` copy exists beside it. Tick it again: the hook is back and presence works again (§3).
+- [PASS] Each Mac, for Claude Code, Codex and the shell — Settings → Connected tools: untick it. Its config file loses only Margin's entry (others' hooks stay), and a `.margin-backup-…` copy exists beside it. Tick it again: the hook is back and presence works again (§3).
 
 ### 9. Versions (optional)
 - Covered by the automated test. To see it for real you'd need a build with an older protocol; skip unless the protocol changes.
 
 ### 10. Leaks
-- [ ] A→B [ ] B→A — A works in a **private** repo with a distinctive folder name and branch name. B sees "private project" only; nothing on B's screen names the folder, branch, files or prompt.
-- [ ] Server — after the session, the owner runs `bun run crashes 1`: no report contains a path, handle, repo or message text.
+- [PASS] A→B [PASS] B→A — A works in a **private** repo with a distinctive folder name and branch name. B sees "private project" only; nothing on B's screen names the folder, branch, files or prompt.
+- [PASS] Server — after the session, the owner runs `bun run crashes 1`: no report contains a path, handle, repo or message text.
 
 ## Results
 
 | Date | Macs and versions | People | Rows ticked | Notes |
 |---|---|---|---|---|
 | 2026-11-21 | Owner's MacBook Pro (M5 Pro) and two testers' Macs incl. an M2 (testers' versions not recorded) | 3 | None formally; sign-in, friends (request/accept), presence, chat and updates seen working | One stall with high CPU on the M2, traced to multiplying menu bar observers and fixed in 0.1.61. One message dropped as undecryptable after switching servers (fixed in 0.1.80). |
-| 2026-11-22 | Owner's MacBook Pro and a tester's Mac (versions not recorded) | 2–3 | §1 both ways; §2 request, decline and accept (A→B), mutual, unknown handle, safety number | First click on ⚙ after launch opened Account (fixed in 0.1.82). |
+| 2026-11-22 | Owner's MacBook Pro and a tester's Mac (both 0.1.82 for the second session) | 2–3 | §1 both ways; §2 all steps both ways (safety number in the 60-digit format); every step of §1–§8 and §10 both ways (§3 and §8 for Claude Code, Codex and the shell); no message lost. §8 and §10 also checked from the owner's Mac: only Margin's hook entries, others' hooks kept, backups present; no crash reports on the server | First click on ⚙ after launch opened Account (fixed in 0.1.82). |

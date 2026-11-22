@@ -59,7 +59,7 @@ Prototype servers stopped; its hooks, links and status-line lines removed with b
 ### Phase 1 — Design ✓ (2026-11-21)
 Where Margin lives and how it behaves: [DESIGN.md](DESIGN.md), with a visual mockup at https://claude.ai/artifact/EFDoG2nu21M53kM8xAhuYr. Signed off by the owner on 2026-11-21, on condition that themes changing fonts and colours come after Phase 2.
 
-### Phase 2 — Functionality
+### Phase 2 — Functionality ✓ (2026-11-22)
 Build the core against DESIGN.md and prove it **between two different users on two different machines**, each with their own margind, through a staging server that runs on neither machine (Fly.io + Neon).
 
 Kickoff decisions (2026-11-21):
@@ -73,8 +73,8 @@ Build order:
 3. ✓ api: GitHub device sign-in, friends, key directory, presence fan-out, ciphertext queue; Postgres + SQLite.
 4. ✓ margind: encrypted store, Signal sessions, transport, tool hooks, token totals, redaction.
 5. ✓ Two-daemon end-to-end tests on one machine (`apps/margind/test/e2e.test.ts`).
-6. Margin.app: the drawer, built against the mockup (`apps/mac`, a Swift package; `bun run dev` runs it locally with simulated friends).
-7. Server on Fly.io + Neon (live at https://margin-api.fly.dev), real GitHub sign-in, self-contained Margin.app with automatic updates (Sparkle, served by the server); run the matrix between this Mac and the friend's Mac; record in `docs/TESTING.md`.
+6. ✓ Margin.app: the drawer, built against the mockup (`apps/mac`, a Swift package; `bun run dev` runs it locally with simulated friends).
+7. ✓ Server on Fly.io + Neon (live at https://margin-api.fly.dev), real GitHub sign-in, self-contained Margin.app with automatic updates (Sparkle, served by the server); run the matrix between this Mac and the friend's Mac; record in `docs/TESTING.md`.
 
 Scope: sign-in, friends, presence from each v1 tool, token totals, privacy settings, chat, the drawer (collapsed, expanded, chat, Add, Settings incl. five themes with light and dark plus accent, first launch, connecting tools). Every colour, font, size and shape comes from one theme definition.
 
@@ -93,7 +93,7 @@ Test matrix — each row run on both machines, in both directions:
 | Versions | An older app gets an "Update Margin" state, not a crash |
 | Leaks | No path, branch, file name, prompt or private repo name leaves either machine (leak harness + server inspection) |
 
-Results are recorded in `docs/TESTING.md`. **Done when** every row passes.
+Results are recorded in `docs/TESTING.md`. **Done when** every row passes. Every row passed on two Macs, both ways, on 2026-11-22 (Margin 0.1.82).
 
 ### Review
 What worked, what felt wrong, and what comes next, then production (signed app, Homebrew, monitoring, backups) and a private beta. Crash and error reports already reach the server (DESIGN.md, Settings → Crash reports); read them with `bun run crashes [days]`.
