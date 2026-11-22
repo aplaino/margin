@@ -455,12 +455,7 @@ export async function startDaemon(options: DaemonOptions) {
     ack();
     push({ type: 'message', message });
     push({ type: 'roster', friends: roster() });
-    // Invisible looks exactly like offline, so nothing says this Mac is here to receive it.
-    if (!store.settings().invisible) {
-      sendControl(frame.from, { t: 'delivered', id: frame.id }).catch((e) =>
-        problem('could not send a delivery receipt', e),
-      );
-    }
+    sendReceipt(frame.from, { t: 'delivered', id: frame.id });
   }
 
   // A control from a friend: an Undo Send is honoured for their own message, if it was
@@ -495,6 +490,13 @@ export async function startDaemon(options: DaemonOptions) {
       chatChanged(frame.from, control.id);
     }
     ack();
+  }
+
+  // Receipts go out on their own, so none is sent while invisible: invisible looks exactly
+  // like offline, and a receipt would say this Mac is here.
+  function sendReceipt(to: string, control: Extract<Control, { t: 'delivered' | 'read' }>) {
+    if (store.settings().invisible) return;
+    sendControl(to, control).catch((e) => problem(`could not send a ${control.t} receipt`, e));
   }
 
   // An encrypted instruction for a friend's margind, kept in the outbox like a message until
@@ -831,9 +833,7 @@ export async function startDaemon(options: DaemonOptions) {
         const newest = store.markRead(request.handle);
         push({ type: 'roster', friends: roster() });
         if (newest && store.settings().readReceipts && store.friend(request.handle)) {
-          sendControl(request.handle, { t: 'read', id: newest }).catch((e) =>
-            problem('could not send a read receipt', e),
-          );
+          sendReceipt(request.handle, { t: 'read', id: newest });
         }
         return undefined;
       }
