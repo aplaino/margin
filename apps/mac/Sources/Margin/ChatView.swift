@@ -206,7 +206,7 @@ struct ChatView: View {
         .frame(maxWidth: .infinity)
         .overlay {
           RoundedRectangle(cornerRadius: theme.controlRadius + 3)
-            .strokeBorder(model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
+            .strokeBorder(model.keyboardNav && model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
         }
         .contextMenu {
           Button("Delete…") { model.delete(message) }
@@ -246,7 +246,7 @@ struct ChatView: View {
           .fill(message.incoming ? theme.surface : theme.accent))
         .overlay {
           RoundedRectangle(cornerRadius: theme.bubbleRadius + 3)
-            .strokeBorder(model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
+            .strokeBorder(model.keyboardNav && model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
             .padding(-3)
         }
         .contextMenu {

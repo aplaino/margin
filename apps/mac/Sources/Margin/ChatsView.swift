@@ -47,7 +47,7 @@ struct ChatRow: View {
   @Environment(AppModel.self) private var model
   @Environment(\.theme) private var theme
   @State private var hovering = false
-  private var selected: Bool { model.selected == friend.handle }
+  private var selected: Bool { model.keyboardNav && model.selected == friend.handle }
 
   var body: some View {
     Button {

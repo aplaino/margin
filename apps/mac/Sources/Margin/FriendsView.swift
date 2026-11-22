@@ -56,7 +56,7 @@ struct FriendRow: View {
   @Environment(AppModel.self) private var model
   @Environment(\.theme) private var theme
   @State private var hovering = false
-  private var selected: Bool { model.selected == friend.handle }
+  private var selected: Bool { model.keyboardNav && model.selected == friend.handle }
 
   var body: some View {
     Button {
@@ -137,7 +137,7 @@ struct OfflineRow: View {
       .padding(.horizontal, 8).padding(.vertical, 4)
       .background(
         RoundedRectangle(cornerRadius: theme.nested(8))
-          .strokeBorder(model.selected == friend.handle ? theme.accent : .clear, lineWidth: 1.5))
+          .strokeBorder(model.keyboardNav && model.selected == friend.handle ? theme.accent : .clear, lineWidth: 1.5))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

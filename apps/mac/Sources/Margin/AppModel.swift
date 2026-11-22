@@ -61,6 +61,9 @@ final class AppModel {
   @ObservationIgnored private var avatarLoads: Set<String> = []
   // The friend picked with ↑/↓, highlighted in the list.
   var selected: String?
+  // True while you're moving around with the keyboard: outlines show only then, like focus
+  // rings. Clicking, scrolling or moving the pointer over the drawer turns it off.
+  var keyboardNav = false
   // The control (Add, Settings) or message (chat) outlined with ↑/↓.
   var cursor: String?
   // What ↑/↓ can reach on the Add or Settings tab, as the views last reported it.
@@ -221,6 +224,12 @@ final class AppModel {
   func moveSelection(_ delta: Int) {
     let handles = (tab == .chats ? chats : onlineFriends + offlineFriends).map(\.handle)
     guard !handles.isEmpty else { return }
+    // The first press after using the mouse shows where you are rather than moving on.
+    if !keyboardNav, let selected, handles.contains(selected) {
+      keyboardNav = true
+      return
+    }
+    keyboardNav = true
     let current = selected.flatMap { handles.firstIndex(of: $0) } ?? (delta > 0 ? -1 : handles.count)
     selected = handles[min(max(current + delta, 0), handles.count - 1)]
   }
@@ -228,6 +237,7 @@ final class AppModel {
   func moveCursor(_ delta: Int) {
     let ids = controls.map(\.id)
     guard !ids.isEmpty else { return }
+    keyboardNav = true
     let current = cursor.flatMap { ids.firstIndex(of: $0) } ?? (delta > 0 ? -1 : ids.count)
     cursor = ids[min(max(current + delta, 0), ids.count - 1)]
   }
@@ -291,6 +301,14 @@ final class AppModel {
     let tabs: [Tab] = [.friends, .chats, .add, .settings]
     let index = tabs.firstIndex(of: tab) ?? 0
     showTab(tabs[(index + delta + tabs.count) % tabs.count])
+  }
+
+  // The pointer moved, clicked or scrolled over the drawer: outlines go, and nothing stays
+  // outlined for Return or Space to press unseen.
+  func pointerUsed() {
+    guard keyboardNav else { return }
+    keyboardNav = false
+    cursor = nil
   }
 
   func openProfile(_ handle: String) {

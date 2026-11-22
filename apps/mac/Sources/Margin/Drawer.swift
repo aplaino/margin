@@ -9,9 +9,12 @@ final class DrawerPanel: NSPanel {
   // Keys for moving around the drawer; true when handled. They're seen before any control
   // or field, which decide for themselves through onKey whether to let them through.
   var onKey: ((NSEvent) -> Bool)?
+  // The pointer moved, clicked or scrolled inside the drawer.
+  var onPointer: (() -> Void)?
 
   override func sendEvent(_ event: NSEvent) {
     if event.type == .keyDown, onKey?(event) == true { return }
+    if [.mouseMoved, .leftMouseDown, .rightMouseDown, .scrollWheel].contains(event.type) { onPointer?() }
     super.sendEvent(event)
   }
 
@@ -27,6 +30,7 @@ final class DrawerPanel: NSPanel {
     hidesOnDeactivate = false
     becomesKeyOnlyIfNeeded = true
     isMovable = false
+    acceptsMouseMovedEvents = true
     contentView = content
   }
 
@@ -207,6 +211,7 @@ final class DrawerController {
     panelView.onHover = { [weak self] inside in self?.panelHover(inside) }
     panel.onEscape = { [weak self] in self?.escape() }
     panel.onKey = { [weak self] event in self?.key(event) ?? false }
+    panel.onPointer = { [weak self] in self?.model.pointerUsed() }
 
     hotKey = HotKey { [weak self] in self?.hotKeyPressed() }
     observePrefs()
@@ -746,7 +751,7 @@ final class DrawerController {
     case kVK_DownArrow where list:
       model.moveSelection(1)
     case kVK_Return where list, kVK_ANSI_KeypadEnter where list:
-      guard let handle = model.selected else { return false }
+      guard model.keyboardNav, let handle = model.selected else { return false }
       model.openChat(handle)
     case kVK_UpArrow:
       model.moveCursor(-1)
@@ -774,6 +779,7 @@ final class DrawerController {
     if let field {
       guard event.keyCode == kVK_UpArrow, field.string.isEmpty, let last = ids.last else { return false }
       model.cursor = last
+      model.keyboardNav = true
       panel.makeFirstResponder(nil)
       return true
     }

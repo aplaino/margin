@@ -47,7 +47,7 @@ private struct Outlined: ViewModifier {
     content
       .overlay {
         RoundedRectangle(cornerRadius: theme.controlRadius + 3)
-          .strokeBorder(model.cursor == control.id ? theme.accent : .clear, lineWidth: 1.5)
+          .strokeBorder(model.keyboardNav && model.cursor == control.id ? theme.accent : .clear, lineWidth: 1.5)
           .padding(-3)
           .allowsHitTesting(false)
       }
