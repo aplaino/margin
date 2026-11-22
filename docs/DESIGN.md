@@ -60,7 +60,7 @@ Each trigger is switchable in settings, and the hotkey can be changed.
 
 **Focus:** opening Margin doesn't take keyboard focus from your work. It takes focus when you click into it, click its menu bar item (as any menu would), or open it with the hotkey; hovering or clicking the edge strip doesn't. Esc returns focus to the app you were in.
 
-**Keyboard (when the drawer has focus — opened with ⌥M or from the menu bar item, or once you click into it):** ↑/↓ move through friends (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Add and Settings, ⌘1/⌘2/⌘3 jump to them, Esc goes back one level (chat → list → collapsed). On Add and Settings, ↑/↓ outline each control in turn, Space or Return toggles or presses it (or puts you in a text field), and ←/→ change a choice (appearance, theme, accent, new-message alert); Esc leaves a text field. While typing in a field, keys stay with the field.
+**Keyboard (when the drawer has focus — opened with ⌥M or from the menu bar item, or once you click into it):** ↑/↓ move through friends or chats (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Chats, Add and Settings, ⌘1–⌘4 jump to them, Esc goes back one level (chat → list → collapsed). On Add and Settings, ↑/↓ outline each control in turn, Space or Return toggles or presses it (or puts you in a text field), and ←/→ change a choice (appearance, theme, accent, new-message alert); Esc leaves a text field. While typing in a field, keys stay with the field.
 
 ## 5. Expanded panel
 
@@ -70,7 +70,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 ```
 ┌──────────────────────────────┐
 │ 118.7M tokens · all time     │  ← your total tokens across connected tools
-│ Friends    Add (1)    ⚙      │  ← (1) = incoming requests
+│ Friends  Chats (2)  Add (1) ⚙│  ← (2) = unread messages, (1) = incoming requests
 ├──────────────────────────────┤
 ```
 
@@ -115,6 +115,20 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 - Enter sends; Esc goes back to the list. Opening a chat marks it read.
 - Copying: right-click a message → Copy, or with the field empty press ↑ to outline your last message, ↑/↓ to pick another, and ⌘C to copy the whole message. ↓ past the last message, Esc, or typing returns to the field. Text inside a message can still be selected with the pointer.
 - Friend-written text is displayed as plain text (control characters stripped).
+
+### Chats tab (agreed with the owner 2026-11-22)
+```
+┌──────────────────────────────┐
+│ ● Maya Chen         just now │
+│   2x on the big fixtures   1 │  ← unread from Maya
+│ ○ Jules Martin        3d ago │
+│   You: see you tomorrow      │
+└──────────────────────────────┘
+```
+- Every chat with a current friend, most recent first: their dot, name, when the last message was sent, and that message on one line ("You: …" for yours). Unread chats show the count and a brighter preview.
+- Click (or Enter on) a chat to open it; Esc comes back here. Friends stays about who's around; this is where an old chat with someone offline is easy to find.
+- Previews are decrypted on this Mac from its own store, like the chat itself.
+- Empty state: "No chats yet" with a link to Friends.
 
 ### Add tab
 ```

@@ -700,7 +700,7 @@ final class DrawerController {
     model.expanded ? collapse() : expand(byHover: false, focus: true)
   }
 
-  // ↑/↓ through friends, Return to chat, Tab or ⌘1–3 between tabs. On Add and Settings ↑/↓
+  // ↑/↓ through friends or chats, Return to chat, Tab or ⌘1–4 between tabs. On Add and Settings ↑/↓
   // outline a control, Space or Return presses it and ←/→ change it. In a chat, ↑ from an
   // empty field outlines your last message and ⌘C copies it. While you're typing in a field,
   // keys stay with the field.
@@ -713,8 +713,8 @@ final class DrawerController {
         model.copy(message)
         return true
       }
-      guard let digit = key.flatMap(Int.init), (1...3).contains(digit) else { return false }
-      model.showTab([.friends, .add, .settings][digit - 1])
+      guard let digit = key.flatMap(Int.init), (1...4).contains(digit) else { return false }
+      model.showTab([.friends, .chats, .add, .settings][digit - 1])
       return true
     }
     guard !model.needsSetup, !model.showGuide else { return false }
@@ -726,12 +726,13 @@ final class DrawerController {
       return true
     }
     let control = model.control
+    let list = model.tab == .friends || model.tab == .chats
     switch Int(event.keyCode) {
-    case kVK_UpArrow where model.tab == .friends:
+    case kVK_UpArrow where list:
       model.moveSelection(-1)
-    case kVK_DownArrow where model.tab == .friends:
+    case kVK_DownArrow where list:
       model.moveSelection(1)
-    case kVK_Return where model.tab == .friends, kVK_ANSI_KeypadEnter where model.tab == .friends:
+    case kVK_Return where list, kVK_ANSI_KeypadEnter where list:
       guard let handle = model.selected else { return false }
       model.openChat(handle)
     case kVK_UpArrow:

@@ -154,6 +154,8 @@ export const Push = v.variant('type', [
   v.object({ type: v.literal('requests'), requests: Requests }),
   v.object({ type: v.literal('message'), message: ChatMessage }),
   v.object({ type: v.literal('history'), with: Handle, messages: v.array(ChatMessage) }),
+  // The newest message in each chat, most recent first.
+  v.object({ type: v.literal('chats'), chats: v.array(ChatMessage) }),
   v.object({
     type: v.literal('result'),
     op: v.string(),

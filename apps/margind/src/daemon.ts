@@ -241,12 +241,20 @@ export async function startDaemon(options: DaemonOptions) {
     };
   }
 
+  // The latest message in each chat with a current friend, for the Chats tab; the app keeps
+  // it current from message pushes.
+  const chats = (): Push => ({
+    type: 'chats',
+    chats: store.latest().filter((m) => store.friend(m.peer)),
+  });
+
   const pushAll = () => {
     push(selfPush());
     push({ type: 'settings', settings: store.settings() });
     push({ type: 'tools', tools: toolStatus(options.tools) });
     push({ type: 'roster', friends: roster() });
     push({ type: 'requests', requests });
+    push(chats());
   };
 
   // What friends see, recomputed from sessions, settings, idle time and tokens.
@@ -613,6 +621,7 @@ export async function startDaemon(options: DaemonOptions) {
         write(socket, { type: 'tools', tools: toolStatus(options.tools) });
         write(socket, { type: 'roster', friends: roster() });
         write(socket, { type: 'requests', requests });
+        write(socket, chats());
         if (reports.state().count) write(socket, { type: 'reports', ...reports.state() });
         return undefined;
       case 'ping':

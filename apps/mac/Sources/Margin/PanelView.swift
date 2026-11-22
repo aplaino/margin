@@ -51,6 +51,7 @@ struct PanelView: View {
         Group {
           switch model.tab {
           case .friends: FriendsView()
+          case .chats: ChatsView()
           case .add: AddView()
           case .settings: SettingsView(onQuit: { NSApp.terminate(nil) })
           }
@@ -94,6 +95,7 @@ struct PanelView: View {
       }
       HStack(spacing: 16) {
         tab("Friends", .friends)
+        tab(model.unreadTotal == 0 ? "Chats" : "Chats (\(model.unreadTotal))", .chats)
         tab(model.requests.incoming.isEmpty ? "Add" : "Add (\(model.requests.incoming.count))", .add)
         Spacer()
         Button {
@@ -118,6 +120,7 @@ struct PanelView: View {
       model.tab = value
     } label: {
       Text(title)
+        .lineLimit(1).minimumScaleFactor(0.8)
         .fontWeight(model.tab == value ? .semibold : .regular)
         .foregroundStyle(model.tab == value ? theme.text : theme.secondary)
         .padding(.bottom, 8)

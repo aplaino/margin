@@ -118,6 +118,8 @@ enum Push {
   case requests(Requests)
   case message(ChatMessage)
   case history(with: String, messages: [ChatMessage])
+  // The newest message in each chat, most recent first.
+  case chats([ChatMessage])
   case result(op: String, ok: Bool, data: ResultData?, error: String?)
   // Your account export, pretty-printed for saving to a file.
   case export(Data)
@@ -138,6 +140,7 @@ enum Push {
   private struct RosterPayload: Decodable { var friends: [Friend] }
   private struct RequestsPayload: Decodable { var requests: Requests }
   private struct MessagePayload: Decodable { var message: ChatMessage }
+  private struct ChatsPayload: Decodable { var chats: [ChatMessage] }
   private struct HistoryPayload: Decodable {
     var with: String
     var messages: [ChatMessage]
@@ -169,6 +172,7 @@ enum Push {
     case "requests": return payload(RequestsPayload.self).map { .requests($0.requests) }
     case "message": return payload(MessagePayload.self).map { .message($0.message) }
     case "history": return payload(HistoryPayload.self).map { .history(with: $0.with, messages: $0.messages) }
+    case "chats": return payload(ChatsPayload.self).map { .chats($0.chats) }
     case "reports": return payload(ReportsPayload.self).map { .reports(count: $0.count, crash: $0.crash) }
     case "result":
       if envelope.op == "account.export", envelope.ok == true,

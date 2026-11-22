@@ -98,6 +98,19 @@ describe('store', () => {
     expect(store.history('leo', 4, 2).map((m) => m.text)).toEqual(['m2', 'm3']);
   });
 
+  test('the newest message in each chat, most recent chat first', () => {
+    const store = new Store(':memory:', keys('l'));
+    const save = (peer: string, direction: 'in' | 'out', text: string, sentAt: number) =>
+      store.saveMessage({ id: crypto.randomUUID(), peer, direction, text, sentAt });
+    save('leo', 'in', 'hi', 1);
+    save('sam', 'out', 'lunch?', 2);
+    save('leo', 'out', 'hey leo', 3);
+    expect(store.latest().map((m) => [m.peer, m.text])).toEqual([
+      ['leo', 'hey leo'],
+      ['sam', 'lunch?'],
+    ]);
+  });
+
   test('a saved message id is never stored twice', () => {
     const store = new Store(':memory:', keys('d'));
     const id = crypto.randomUUID();

@@ -57,7 +57,7 @@ struct GuideView: View {
     case 0:
       "A dot for each friend who’s coding right now: solid when they’re in a tool, half-filled when they’re idle. The number underneath is your unread messages, and the strip glows once when one arrives."
     case 1:
-      "\(openWays) Click a friend to chat. With the keyboard: ↑ and ↓ pick a friend or a setting, Return opens or presses it, ← and → change a choice, Tab or ⌘1–3 switch tabs, and Esc steps back. In a chat, ↑ picks a message and ⌘C copies it. It never takes focus from your work unless you open it with ⌥M or start typing."
+      "\(openWays) Click a friend to chat. With the keyboard: ↑ and ↓ pick a friend or a setting, Return opens or presses it, ← and → change a choice, Tab or ⌘1–4 switch tabs, and Esc steps back. In a chat, ↑ picks a message and ⌘C copies it. It never takes focus from your work unless you open it with ⌥M or start typing."
     case 2:
       "Drag the strip up or down the edge, or across the screen to the other side. It stays where you leave it, on every Space and over full-screen apps."
     default:

@@ -13,30 +13,30 @@
     "%@": {
       "shouldTranslate": false
     },
-    "%@ Click a friend to chat. With the keyboard: ↑ and ↓ pick a friend or a setting, Return opens or presses it, ← and → change a choice, Tab or ⌘1–3 switch tabs, and Esc steps back. In a chat, ↑ picks a message and ⌘C copies it. It never takes focus from your work unless you open it with ⌥M or start typing.": {
+    "%@ Click a friend to chat. With the keyboard: ↑ and ↓ pick a friend or a setting, Return opens or presses it, ← and → change a choice, Tab or ⌘1–4 switch tabs, and Esc steps back. In a chat, ↑ picks a message and ⌘C copies it. It never takes focus from your work unless you open it with ⌥M or start typing.": {
       "localizations": {
         "el": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ Κάντε κλικ σε έναν φίλο για συνομιλία. Με το πληκτρολόγιο: τα ↑ και ↓ επιλέγουν φίλο ή ρύθμιση, το Return το ανοίγει ή το πατά, τα ← και → αλλάζουν μια επιλογή, το Tab ή τα ⌘1–3 αλλάζουν καρτέλα και το Esc πηγαίνει ένα βήμα πίσω. Σε μια συνομιλία, το ↑ επιλέγει ένα μήνυμα και το ⌘C το αντιγράφει. Δεν παίρνει ποτέ την εστίαση από την εργασία σας, εκτός αν το ανοίξετε με ⌥M ή αρχίσετε να πληκτρολογείτε."
+            "value": "%@ Κάντε κλικ σε έναν φίλο για συνομιλία. Με το πληκτρολόγιο: τα ↑ και ↓ επιλέγουν φίλο ή ρύθμιση, το Return το ανοίγει ή το πατά, τα ← και → αλλάζουν μια επιλογή, το Tab ή τα ⌘1–4 αλλάζουν καρτέλα και το Esc πηγαίνει ένα βήμα πίσω. Σε μια συνομιλία, το ↑ επιλέγει ένα μήνυμα και το ⌘C το αντιγράφει. Δεν παίρνει ποτέ την εστίαση από την εργασία σας, εκτός αν το ανοίξετε με ⌥M ή αρχίσετε να πληκτρολογείτε."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ Haz clic en un amigo para chatear. Con el teclado: ↑ y ↓ seleccionan un amigo o un ajuste, Return lo abre o lo pulsa, ← y → cambian una opción, Tab o ⌘1–3 cambian de pestaña y Esc retrocede. En un chat, ↑ selecciona un mensaje y ⌘C lo copia. Nunca te quita el foco de tu trabajo, salvo que lo abras con ⌥M o empieces a escribir."
+            "value": "%@ Haz clic en un amigo para chatear. Con el teclado: ↑ y ↓ seleccionan un amigo o un ajuste, Return lo abre o lo pulsa, ← y → cambian una opción, Tab o ⌘1–4 cambian de pestaña y Esc retrocede. En un chat, ↑ selecciona un mensaje y ⌘C lo copia. Nunca te quita el foco de tu trabajo, salvo que lo abras con ⌥M o empieces a escribir."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 友達をクリックするとチャットできます。キーボードでは、↑と↓で友達や設定を選び、Returnで開くか押し、←と→で選択を変更し、Tabまたは⌘1–3でタブを切り替え、Escで戻ります。チャットでは、↑でメッセージを選び、⌘Cでコピーします。⌥Mで開くか入力を始めない限り、作業中のフォーカスを奪うことはありません。"
+            "value": "%@ 友達をクリックするとチャットできます。キーボードでは、↑と↓で友達や設定を選び、Returnで開くか押し、←と→で選択を変更し、Tabまたは⌘1–4でタブを切り替え、Escで戻ります。チャットでは、↑でメッセージを選び、⌘Cでコピーします。⌥Mで開くか入力を始めない限り、作業中のフォーカスを奪うことはありません。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@点按朋友即可聊天。使用键盘时：↑ 和 ↓ 选择朋友或设置，Return 打开或按下，← 和 → 更改选项，Tab 或 ⌘1–3 切换标签页，Esc 返回上一步。在聊天中，↑ 选择消息，⌘C 拷贝消息。除非你用 ⌥M 打开它或开始输入，否则它绝不会抢走你工作中的焦点。"
+            "value": "%@点按朋友即可聊天。使用键盘时：↑ 和 ↓ 选择朋友或设置，Return 打开或按下，← 和 → 更改选项，Tab 或 ⌘1–4 切换标签页，Esc 返回上一步。在聊天中，↑ 选择消息，⌘C 拷贝消息。除非你用 ⌥M 打开它或开始输入，否则它绝不会抢走你工作中的焦点。"
           }
         }
       }
@@ -1441,6 +1441,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        }
+      }
+    },
+    "Chats": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Συνομιλίες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャット"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天"
+          }
+        }
+      }
+    },
+    "Chats (%lld)": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Συνομιλίες (%lld)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats (%lld)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャット (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天 (%lld)"
           }
         }
       }
@@ -4679,6 +4735,34 @@
         }
       }
     },
+    "No chats yet": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν υπάρχουν ακόμη συνομιλίες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay chats"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャットはまだありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有聊天"
+          }
+        }
+      }
+    },
     "No friends yet": {
       "localizations": {
         "el": {
@@ -5123,6 +5207,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "除非对方在“设置”→“隐私”中关闭了此选项，否则都会显示在这里。"
+          }
+        }
+      }
+    },
+    "Pick a friend to send them a message": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Επιλέξτε έναν φίλο για να του στείλετε μήνυμα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige a un amigo para enviarle un mensaje"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友達を選んでメッセージを送信"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一位朋友给对方发消息"
           }
         }
       }
@@ -7954,6 +8066,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "你可以随时在“设置”中更改。"
+          }
+        }
+      }
+    },
+    "You: %@": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Εσείς: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tú: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你：%@"
           }
         }
       }

@@ -3,7 +3,7 @@ import Foundation
 import Observation
 import UserNotifications
 
-enum Tab { case friends, add, settings }
+enum Tab { case friends, chats, add, settings }
 enum SetupStep { case welcome, guide, signIn, tools, addFriend }
 
 @Observable @MainActor
@@ -21,6 +21,8 @@ final class AppModel {
   var friends: [Friend] = []
   var requests = Requests(incoming: [], outgoing: [])
   var conversations: [String: [ChatMessage]] = [:]
+  // The newest message with each friend, for the Chats tab.
+  var latest: [String: ChatMessage] = [:]
   var loginCode: (code: String, uri: String)?
   var loginError: String?
   var signingIn = false
@@ -74,6 +76,11 @@ final class AppModel {
   var signedIn: Bool { daemonUp && me != nil && me?.connection != "signed-out" }
   var needsSetup: Bool { daemonUp && (!signedIn || !prefs.setupDone) }
   var unreadTotal: Int { friends.reduce(0) { $0 + $1.unread } }
+
+  // Friends you've talked to, most recent conversation first.
+  var chats: [Friend] {
+    friends.filter { latest[$0.handle] != nil }.sorted { latest[$0.handle]!.sentAt > latest[$1.handle]!.sentAt }
+  }
 
   // In a tool first, then online, then idle; offline listed apart.
   var onlineFriends: [Friend] {
@@ -148,9 +155,17 @@ final class AppModel {
         if message.incoming { received(message) }
       }
       conversations[message.peer] = list.sorted { $0.sentAt < $1.sentAt }
+      // Newer than what the Chats tab shows, or a state change to the same message.
+      let shown = latest[message.peer]
+      if shown == nil || shown?.id == message.id || message.sentAt >= shown?.sentAt ?? 0 {
+        latest[message.peer] = message
+      }
       if message.incoming, expanded, chatWith == message.peer { request("read", ["handle": message.peer]) }
     case .history(let with, let messages):
       conversations[with] = messages
+      if let last = messages.last, last.sentAt >= latest[with]?.sentAt ?? 0 { latest[with] = last }
+    case .chats(let list):
+      latest = Dictionary(list.map { ($0.peer, $0) }, uniquingKeysWith: { first, _ in first })
     case .result(let op, let ok, let data, let error):
       results[op] = (ok, ok ? data?.note : error)
       if ok, let people = data?.people { directory = people }
@@ -192,8 +207,9 @@ final class AppModel {
       UNNotificationRequest(identifier: message.id, content: content, trigger: nil))
   }
 
+  // ↑/↓ through the list on screen: friends, or chats.
   func moveSelection(_ delta: Int) {
-    let handles = (onlineFriends + offlineFriends).map(\.handle)
+    let handles = (tab == .chats ? chats : onlineFriends + offlineFriends).map(\.handle)
     guard !handles.isEmpty else { return }
     let current = selected.flatMap { handles.firstIndex(of: $0) } ?? (delta > 0 ? -1 : handles.count)
     selected = handles[min(max(current + delta, 0), handles.count - 1)]
@@ -227,7 +243,7 @@ final class AppModel {
   }
 
   func cycleTab(_ delta: Int) {
-    let tabs: [Tab] = [.friends, .add, .settings]
+    let tabs: [Tab] = [.friends, .chats, .add, .settings]
     let index = tabs.firstIndex(of: tab) ?? 0
     showTab(tabs[(index + delta + tabs.count) % tabs.count])
   }

@@ -267,6 +267,21 @@ export class Store {
       .map((r) => this.toMessage(r));
   }
 
+  // The newest message with each person, most recent conversation first.
+  latest(): ChatMessage[] {
+    const seen = new Set<string>();
+    return this.db
+      .query<MessageRow, []>(
+        `SELECT m.* FROM messages m
+         JOIN (SELECT peer, MAX(sent_at) AS at FROM messages GROUP BY peer) l
+           ON m.peer = l.peer AND m.sent_at = l.at
+         ORDER BY m.sent_at DESC`,
+      )
+      .all()
+      .filter((r) => !seen.has(r.peer) && seen.add(r.peer))
+      .map((r) => this.toMessage(r));
+  }
+
   private toMessage(r: MessageRow): ChatMessage {
     return {
       id: r.id,
