@@ -210,6 +210,20 @@ struct ChatView: View {
     }
   }
 
+  // "Sending…" on anything still waiting to leave this Mac; "Delivered" or "Read 2:14 PM"
+  // under your latest message while it's the last in the chat, as in Messages. With read
+  // receipts off, theirs show as delivered.
+  private func status(_ message: ChatMessage) -> LocalizedStringResource? {
+    if message.state == "queued" { return "Sending…" }
+    guard !message.incoming, message.id == (model.conversations[handle] ?? []).last?.id else { return nil }
+    switch message.state {
+    case "read" where model.settings?.readReceipts ?? true:
+      return "Read \(Format.readTime(message.readAt ?? message.sentAt))"
+    case "read", "delivered": return "Delivered"
+    default: return nil
+    }
+  }
+
   private func sentBubble(_ message: ChatMessage) -> some View {
     VStack(alignment: message.incoming ? .leading : .trailing, spacing: 2) {
       Text(message.text)
@@ -237,8 +251,8 @@ struct ChatView: View {
           Divider()
           Button("Delete…") { model.delete(message) }
         }
-      if message.state == "queued" {
-        Text("Sending…").font(theme.font(10)).foregroundStyle(theme.tertiary)
+      if let status = status(message) {
+        Text(status).font(theme.font(10)).foregroundStyle(theme.tertiary)
       }
     }
     .frame(maxWidth: 190, alignment: message.incoming ? .leading : .trailing)

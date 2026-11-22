@@ -135,5 +135,8 @@ export type ServerFrame = v.InferOutput<typeof ServerFrame>;
 export const Control = v.variant('t', [
   // Undo Send: remove a message you sent, for both of you.
   v.object({ t: v.literal('unsend'), id: MessageId }),
+  // Read receipts: your message `id` reached their Mac; or they've read up to and including it.
+  v.object({ t: v.literal('delivered'), id: MessageId }),
+  v.object({ t: v.literal('read'), id: MessageId }),
 ]);
 export type Control = v.InferOutput<typeof Control>;

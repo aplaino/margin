@@ -47,6 +47,7 @@ struct ChatMessage: Codable, Equatable, Identifiable {
   var text: String
   var sentAt: Double
   var state: String?
+  var readAt: Double?
   var incoming: Bool { direction == "in" }
   var unsent: Bool { state == "unsent" }
   // Your own, not yet unsent, and sent within the last day.
@@ -69,6 +70,7 @@ struct PrivacySettings: Codable, Equatable {
   var closeFriends: [String]
   // Missing from an older margind, which means on.
   var findable: Bool?
+  var readReceipts: Bool?
 }
 
 struct ToolState: Codable, Equatable, Identifiable {

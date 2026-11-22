@@ -500,9 +500,15 @@ struct SettingsView: View {
         "Show me in Find friends",
         Binding(
           get: { model.settings?.findable ?? true },
-          set: { on in model.updateSettings { $0.findable = on } }),
+          set: { on in model.updateSettings { $0.findable = on } }))
+      switchRow(
+        "Send read receipts",
+        Binding(
+          get: { model.settings?.readReceipts ?? true },
+          set: { on in model.updateSettings { $0.readReceipts = on } }),
         last: true)
     }
+    note("With read receipts off, you also won’t see when friends have read yours.")
     SettingsGroup("Friends see") {
       switchRow("Tool", bind(\.share.tool))
       switchRow("Model", bind(\.share.model))

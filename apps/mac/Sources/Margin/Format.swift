@@ -167,6 +167,17 @@ enum Format {
     return parts.isEmpty ? state : parts.joined(separator: " · ")
   }
 
+  // When a friend read your message: "2:14 PM" today, otherwise "Yesterday" or the date.
+  static func readTime(_ ms: Double) -> String {
+    let date = Date(timeIntervalSince1970: ms / 1000)
+    let formatter = DateFormatter()
+    formatter.doesRelativeDateFormatting = true
+    let today = Calendar.current.isDateInToday(date)
+    formatter.dateStyle = today ? .none : .short
+    formatter.timeStyle = today ? .short : .none
+    return formatter.string(from: date)
+  }
+
   // "1.2M · 8.4M wk · 14h · 9/14d": tokens today and this week, time in a tool this week,
   // active days of the last 14. Each part only if they share it.
   static func stats(_ presence: Presence) -> String {

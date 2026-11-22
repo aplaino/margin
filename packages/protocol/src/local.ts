@@ -42,6 +42,8 @@ export const Settings = v.object({
   closeFriends: v.array(Handle),
   // Others on Margin can find you in Find friends.
   findable: v.boolean(),
+  // Tell friends when you've read their messages; off also hides when they've read yours.
+  readReceipts: v.boolean(),
 });
 export type Settings = v.InferOutput<typeof Settings>;
 
@@ -52,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   audience: 'everyone',
   closeFriends: [],
   findable: true,
+  readReceipts: true,
 };
 
 export const ChatText = v.pipe(v.string(), v.minLength(1), v.maxLength(4000), NoControlText);
@@ -122,8 +125,11 @@ export const ChatMessage = v.object({
   // Empty once unsent.
   text: v.union([ChatText, v.literal('')]),
   sentAt: Timestamp,
-  // Outgoing: "queued" until the server has it. Either way: "unsent" once Undo Send removed it.
-  state: v.optional(v.picklist(['queued', 'sent', 'unsent'])),
+  // Outgoing: "queued" until the server has it, "delivered" once it's on their Mac, "read"
+  // once they've opened the chat (if they send read receipts). Either way: "unsent" once Undo
+  // Send removed it.
+  state: v.optional(v.picklist(['queued', 'sent', 'delivered', 'read', 'unsent'])),
+  readAt: v.optional(Timestamp),
 });
 export type ChatMessage = v.InferOutput<typeof ChatMessage>;
 

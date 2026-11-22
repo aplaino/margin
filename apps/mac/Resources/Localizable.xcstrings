@@ -2593,6 +2593,34 @@
         }
       }
     },
+    "Delivered": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Παραδόθηκε"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entregado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已送达"
+          }
+        }
+      }
+    },
     "Diamond": {
       "localizations": {
         "el": {
@@ -5942,6 +5970,34 @@
     "RRGGBB": {
       "shouldTranslate": false
     },
+    "Read %@": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαβάστηκε %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leído %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既読 %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已读 %@"
+          }
+        }
+      }
+    },
     "Red": {
       "localizations": {
         "el": {
@@ -6862,6 +6918,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "要发送报告以便修复此问题吗？报告包含 App 和 macOS 版本、出错内容以及近期的后台日志行。路径、名称、仓库和消息会先被移除；报告绝不会包含你的代码、提示词或聊天内容。"
+          }
+        }
+      }
+    },
+    "Send read receipts": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αποστολή αποδείξεων ανάγνωσης"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar confirmaciones de lectura"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開封証明を送信"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送已读回执"
           }
         }
       }
@@ -8486,6 +8570,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "要放在哪里？"
+          }
+        }
+      }
+    },
+    "With read receipts off, you also won’t see when friends have read yours.": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Με τις αποδείξεις ανάγνωσης απενεργοποιημένες, δεν θα βλέπεις ούτε πότε οι φίλοι σου διάβασαν τα δικά σου."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si desactivas las confirmaciones de lectura, tampoco verás cuándo tus amigos han leído las tuyas."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開封証明をオフにすると、友達があなたのメッセージを読んだかどうかも表示されません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭已读回执后，你也看不到好友何时读了你的消息。"
           }
         }
       }

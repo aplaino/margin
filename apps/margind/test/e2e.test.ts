@@ -373,8 +373,13 @@ describe('two users, two daemons, one server', () => {
       'yes, back now',
       'see you tomorrow',
     ]);
-    const [{ n }] = await sql`SELECT COUNT(*) AS n FROM queued_messages`;
-    expect(Number(n)).toBe(0);
+    // Once Maya's Mac has acknowledged the delivery receipt, nothing is left on the server.
+    await maya.app.until(
+      (p) => p.type === 'message' && p.message.id === sent.id && p.message.state === 'delivered',
+    );
+    const queued = async () => Number((await sql`SELECT COUNT(*) AS n FROM queued_messages`)[0].n);
+    for (let i = 0; i < 40 && (await queued()) > 0; i++) await Bun.sleep(25);
+    expect(await queued()).toBe(0);
   });
 
   test('when a friend was last online survives a restart', async () => {
@@ -475,6 +480,44 @@ describe('two users, two daemons, one server', () => {
     await leo.app.request({ op: 'chat.delete', handle: 'maya' });
     expect(leo.daemon.store.history('maya')).toEqual([]);
     expect(maya.daemon.store.history('leo').length).toBeGreaterThan(0);
+  });
+
+  test('read receipts: delivered, then read once they open the chat, unless they turn them off', async () => {
+    const sent = (await maya.app.request({
+      op: 'send',
+      to: 'leo',
+      text: 'did you see the PR?',
+    })) as {
+      id: string;
+    };
+    await maya.app.until(
+      (p) => p.type === 'message' && p.message.id === sent.id && p.message.state === 'delivered',
+    );
+    await leo.app.request({ op: 'read', handle: 'maya' });
+    await maya.app.until(
+      (p) =>
+        p.type === 'history' &&
+        p.with === 'leo' &&
+        p.messages.some((m) => m.id === sent.id && m.state === 'read'),
+    );
+    expect(maya.daemon.store.message(sent.id)?.readAt).toBeGreaterThan(0);
+
+    // Off: Leo's Mac still says delivered, never read.
+    await leo.app.request({ op: 'settings.set', settings: { readReceipts: false } });
+    const quiet = (await maya.app.request({ op: 'send', to: 'leo', text: 'no rush' })) as {
+      id: string;
+    };
+    await maya.app.until(
+      (p) => p.type === 'message' && p.message.id === quiet.id && p.message.state === 'delivered',
+    );
+    await leo.app.request({ op: 'read', handle: 'maya' });
+    // Anything Leo sends after reading arrives after a receipt would have.
+    const reply = (await leo.app.request({ op: 'send', to: 'maya', text: 'looking now' })) as {
+      id: string;
+    };
+    await maya.app.until((p) => p.type === 'message' && p.message.id === reply.id);
+    expect(maya.daemon.store.message(quiet.id)?.state).toBe('delivered');
+    await leo.app.request({ op: 'settings.set', settings: { readReceipts: true } });
   });
 
   test('removing a friend clears them on both sides', async () => {

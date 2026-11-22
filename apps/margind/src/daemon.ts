@@ -455,10 +455,14 @@ export async function startDaemon(options: DaemonOptions) {
     ack();
     push({ type: 'message', message });
     push({ type: 'roster', friends: roster() });
+    sendControl(frame.from, { t: 'delivered', id: frame.id }).catch((e) =>
+      problem('could not send a delivery receipt', e),
+    );
   }
 
   // A control from a friend: an Undo Send is honoured for their own message, if it was
-  // asked for within a day of sending (a little longer, for clocks and slow delivery).
+  // asked for within a day of sending (a little longer, for clocks and slow delivery);
+  // receipts mark your messages to them delivered or read, at the server's time.
   async function onControl(frame: Extract<ServerFrame, { t: 'control' }>) {
     const ack = () => connection?.send({ t: 'ack', id: frame.id });
     if (!store.friend(frame.from)) return ack();
@@ -467,6 +471,14 @@ export async function startDaemon(options: DaemonOptions) {
       control = v.parse(Control, JSON.parse(await signal.decrypt(frame.from, frame.ciphertext)));
     } catch (e) {
       problem('dropped a control that could not be read', e);
+      return ack();
+    }
+    if (control.t === 'delivered') {
+      if (store.delivered(frame.from, control.id)) chatChanged(frame.from, control.id);
+      return ack();
+    }
+    if (control.t === 'read') {
+      if (store.readUpTo(frame.from, control.id, frame.sentAt)) chatChanged(frame.from);
       return ack();
     }
     const original = store.message(control.id);
@@ -480,6 +492,25 @@ export async function startDaemon(options: DaemonOptions) {
       chatChanged(frame.from, control.id);
     }
     ack();
+  }
+
+  // An encrypted instruction for a friend's margind, kept in the outbox like a message until
+  // the server has it. `alongside` runs in the same transaction as queueing it.
+  async function sendControl(to: string, control: Control, alongside?: () => void) {
+    if (!signal.hasSession(to) && !store.bundle(to)) await fetchBundle(to);
+    const ciphertext = await signal.encrypt(to, JSON.stringify(control), store.bundle(to));
+    const frame: ClientFrame = {
+      t: 'send',
+      id: crypto.randomUUID(),
+      to,
+      ciphertext,
+      control: true,
+    };
+    store.transaction(() => {
+      alongside?.();
+      store.enqueue(frame.id, to, frame);
+    });
+    connection?.send(frame);
   }
 
   // The app redraws a changed message in place; the Chats tab and unread counts follow.
@@ -504,22 +535,8 @@ export async function startDaemon(options: DaemonOptions) {
     const to = message.peer;
     if (!store.friend(to)) throw new DaemonError(`${to} isn’t your friend`);
     store.dequeue(id);
-    if (!signal.hasSession(to) && !store.bundle(to)) await fetchBundle(to);
-    const control: Control = { t: 'unsend', id };
-    const ciphertext = await signal.encrypt(to, JSON.stringify(control), store.bundle(to));
-    const frame: ClientFrame = {
-      t: 'send',
-      id: crypto.randomUUID(),
-      to,
-      ciphertext,
-      control: true,
-    };
-    store.transaction(() => {
-      store.unsend(id);
-      store.enqueue(frame.id, to, frame);
-    });
+    await sendControl(to, { t: 'unsend', id }, () => store.unsend(id));
     chatChanged(to, id);
-    connection?.send(frame);
   }
 
   // At most 20 resend requests a minute to each friend.
@@ -807,10 +824,16 @@ export async function startDaemon(options: DaemonOptions) {
         store.deleteChat(request.handle);
         chatChanged(request.handle);
         return undefined;
-      case 'read':
-        store.markRead(request.handle);
+      case 'read': {
+        const newest = store.markRead(request.handle);
         push({ type: 'roster', friends: roster() });
+        if (newest && store.settings().readReceipts && store.friend(request.handle)) {
+          sendControl(request.handle, { t: 'read', id: newest }).catch((e) =>
+            problem('could not send a read receipt', e),
+          );
+        }
         return undefined;
+      }
       case 'friend.request':
         return api().call(null, 'POST', '/friends/requests', { handle: request.handle });
       case 'friend.accept':

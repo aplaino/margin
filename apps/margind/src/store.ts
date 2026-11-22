@@ -28,6 +28,8 @@ const MIGRATIONS = [
    -- Token bookkeeping. Sources are keyed by a hash of their path, so no project names are stored.
    CREATE TABLE token_sources (key TEXT PRIMARY KEY, tokens INTEGER NOT NULL, cursor TEXT);
    CREATE TABLE token_seen (id TEXT PRIMARY KEY);`,
+  // Read receipts: when a friend read your message.
+  `ALTER TABLE messages ADD COLUMN read_at INTEGER;`,
 ];
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
@@ -259,11 +261,45 @@ export class Store {
       );
   }
 
-  // An unsent message stays unsent, whatever the server says about it afterwards.
+  // An unsent message stays unsent, and a delivered or read one doesn't go back, whatever
+  // the server says about it afterwards.
   setMessageState(id: string, state: 'queued' | 'sent') {
     this.db
-      .query("UPDATE messages SET state = ? WHERE id = ? AND state IS NOT 'unsent'")
+      .query(
+        "UPDATE messages SET state = ? WHERE id = ? AND state NOT IN ('unsent', 'delivered', 'read')",
+      )
       .run(state, id);
+  }
+
+  // A friend's Mac has your message `id`. True if that changed anything.
+  delivered(peer: string, id: string) {
+    return (
+      this.db
+        .query(
+          `UPDATE messages SET state = 'delivered'
+           WHERE id = ? AND peer = ? AND direction = 'out' AND state IN ('queued', 'sent')`,
+        )
+        .run(id, peer).changes > 0
+    );
+  }
+
+  // A friend has read up to your message `id`: it and everything you sent them before it.
+  readUpTo(peer: string, id: string, at: number) {
+    const row = this.db
+      .query<{ sent_at: number }, [string, string]>(
+        "SELECT sent_at FROM messages WHERE id = ? AND peer = ? AND direction = 'out'",
+      )
+      .get(id, peer);
+    if (!row) return false;
+    return (
+      this.db
+        .query(
+          `UPDATE messages SET state = 'read', read_at = ?
+           WHERE peer = ? AND direction = 'out' AND sent_at <= ?
+             AND state IN ('queued', 'sent', 'delivered')`,
+        )
+        .run(at, peer, row.sent_at).changes > 0
+    );
   }
 
   // Undo Send: the text is gone, a marker stays in its place.
@@ -321,6 +357,7 @@ export class Store {
       text: this.open(r.body).toString(),
       sentAt: r.sent_at,
       ...(r.state ? { state: r.state } : {}),
+      ...(r.read_at ? { readAt: r.read_at } : {}),
     };
   }
 
@@ -335,15 +372,19 @@ export class Store {
     return row?.n ?? 0;
   }
 
-  // Everything received from this friend so far counts as read.
-  markRead(peer: string) {
+  // Everything received from this friend so far counts as read. Returns the newest message
+  // if that's newly read, for a read receipt.
+  markRead(peer: string): string | undefined {
     const row = this.db
-      .query<{ at: number | null }, [string]>(
-        `SELECT MAX(sent_at) AS at FROM messages WHERE peer = ? AND direction = 'in'`,
+      .query<{ id: string; sent_at: number; before: number | null }, [string, string]>(
+        `SELECT id, sent_at, (SELECT at FROM reads WHERE peer = ?) AS before FROM messages
+         WHERE peer = ? AND direction = 'in' AND state IS NOT 'unsent'
+         ORDER BY sent_at DESC LIMIT 1`,
       )
-      .get(peer);
-    if (row?.at)
-      this.db.query('INSERT OR REPLACE INTO reads (peer, at) VALUES (?, ?)').run(peer, row.at);
+      .get(peer, peer);
+    if (!row || (row.before !== null && row.sent_at <= row.before)) return undefined;
+    this.db.query('INSERT OR REPLACE INTO reads (peer, at) VALUES (?, ?)').run(peer, row.sent_at);
+    return row.id;
   }
 
   enqueue(id: string, peer: string, frame: unknown) {
@@ -406,5 +447,6 @@ type MessageRow = {
   direction: 'in' | 'out';
   body: Uint8Array;
   sent_at: number;
-  state: 'queued' | 'sent' | 'unsent' | null;
+  state: 'queued' | 'sent' | 'delivered' | 'read' | 'unsent' | null;
+  read_at: number | null;
 };
