@@ -214,6 +214,26 @@ describe('two users, two daemons, one server', () => {
     });
   });
 
+  test('a prompt in a repo you have hidden is not counted in stats', async () => {
+    const total = () => maya.daemon.store.getJson<number>('promptsTotal') ?? 0;
+    const start = total();
+    await maya.app.request({
+      op: 'settings.set',
+      settings: { repos: { 'acme/stealth-launch': 'hidden' } },
+    });
+    const prompt = (sessionId: string, cwd: string) =>
+      maya.app.notify({
+        op: 'event',
+        event: { tool: 'claude-code', event: 'prompt', sessionId, cwd },
+      });
+    prompt('hidden', project('maya', 'stealth', 'acme/stealth-launch'));
+    prompt('abc', project('maya', 'tidepool-ui', 'maya/tidepool-ui'));
+    for (let i = 0; i < 40 && total() === start; i++) await Bun.sleep(25);
+    await Bun.sleep(150);
+    expect(total()).toBe(start + 1);
+    await maya.app.request({ op: 'settings.set', settings: { repos: {} } });
+  });
+
   test('a private project shows as "private project" and nothing from it leaks', async () => {
     const secret = project('maya', 'acme-secret-client', 'acme/stealth-launch');
     maya.app.notify({

@@ -269,6 +269,18 @@ export async function startDaemon(options: DaemonOptions) {
     push(chats());
   };
 
+  // A prompt or new session counts toward stats unless you're invisible or it's in a repo
+  // you've hidden, like time in a tool.
+  async function countEvent(event: ReporterEvent, newSession: boolean) {
+    const session = sessions
+      .list()
+      .find((s) => s.tool === event.tool && s.sessionId === event.sessionId);
+    const remote = session?.cwd ? originRepo(session.cwd) : null;
+    const settings = store.settings();
+    if (settings.invisible || hiddenRepo(await classify(remote), remote, settings)) return;
+    stats.event(event, newSession);
+  }
+
   // What friends see, recomputed from sessions, settings, idle time and tokens.
   // Recalculations overlap (a heartbeat and a tool event, say); one that a newer one has
   // overtaken is dropped, so stale activity never overwrites fresh.
@@ -797,7 +809,9 @@ export async function startDaemon(options: DaemonOptions) {
   async function handle(request: Request, socket: Socket): Promise<unknown> {
     switch (request.op) {
       case 'event':
-        stats.event(request.event, sessions.onEvent(request.event));
+        countEvent(request.event, sessions.onEvent(request.event)).catch((e) =>
+          problem('could not count a tool event', e),
+        );
         if (request.event.event === 'stop') setTimeout(() => void refreshTokens(), 2000);
         void recompute();
         return undefined;
