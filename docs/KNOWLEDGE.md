@@ -89,6 +89,33 @@ Rule: **whitelist fields at the reporter**, so raw payloads (prompts, replies, b
 - The extension is symlinked into `~/.vscode/extensions/<publisher>.<name>`; Cursor/Windsurf use `~/.cursor/extensions`, `~/.windsurf/extensions`. Changing the extension id changes view ids and requires a window reload.
 - **Embedding the TUI**: a webview with xterm.js (`@xterm/xterm` 5.5 + `@xterm/addon-fit`, loaded from the extension folder via `asWebviewUri`, CSP `script-src ${cspSource} 'nonce-…'`) running `margin tui --embedded` over pipes. Embedded mode skips raw mode and takes size from env + an in-band resize sequence (`ESC ] margin-resize;<cols>;<rows> BEL`). One UI codebase for terminal and editor.
 
+### Tools that copied Claude Code's hooks (checked 2026-11-21)
+Qwen Code 0.28.3, CodeBuddy 2.185.0, Qoder 1.1.95 and Factory Droid 1.17.1 take Claude Code's hook commands and payloads (`hook_event_name`, `session_id`, `cwd`, JSON on stdin) with `SessionStart`, `UserPromptSubmit`, `Stop`, `SessionEnd`. None asks you to approve user-level hooks (only project hooks).
+- **Where**: `~/.qwen/settings.json`, `~/.codebuddy/settings.json`, `~/.qoder/settings.json` under `hooks`; Factory reads `~/.factory/hooks.json` with the **events at the top level** (no `hooks` key), and an event there replaces the same event in `~/.factory/settings.json`, so write `hooks.json`. Droid reloads hooks when the file changes; the others need a restart.
+- **Seen firing without signing in** (a stand-in `margind` on PATH logging stdin): Qwen `SessionStart`; CodeBuddy `SessionStart`, `UserPromptSubmit`, `Stop`; Factory `SessionStart`, `SessionEnd`. Qoder asks for login before any hook runs.
+- Qwen's `SessionStart` carries `model`; CodeBuddy's `SessionStart` has **no `cwd`** (its later events do). Qwen reads command-hook `timeout` in seconds, but a value of 1000 or more as milliseconds (older configs).
+
+### Gemini CLI (0.70.0)
+- Hooks in `~/.gemini/settings.json` under `hooks`, on by default, no approval for user hooks (project hooks are fingerprinted). Events: `SessionStart`, `BeforeAgent` (a prompt), `AfterAgent` (end of a turn), `SessionEnd`. Base payload has `session_id`, `cwd`, `hook_event_name`; no model.
+- **`timeout` is in milliseconds** (default 60000). Claude Code's `timeout: 5` would kill the hook after 5 ms.
+- stdout must be empty or JSON. Asks for auth before running any hook, so live payloads need a signed-in account. `~/.gemini` is shared with Antigravity's config.
+
+### Cursor (cursor-agent 2026.11.19)
+- `~/.cursor/hooks.json`: `{"version": 1, "hooks": {"<event>": [{"command": "...", "timeout": 5}]}}` — commands listed directly, no groups. Applies to the IDE's agent and `cursor-agent`, not cloud agents.
+- Events: `sessionStart`, `beforeSubmitPrompt`, `stop`, `sessionEnd`. The session is `conversation_id` (`session_id` only on session events), the folder is `workspace_roots[0]`, and every payload carries `model` and **`user_email`** (drop it).
+- `cursor-agent` asks for login before hooks run. Install with `brew install --cask cursor-cli`.
+
+### Kimi Code (2.7.2)
+- The Python `kimi-cli` (`~/.kimi`) is unmaintained and says so; Kimi Code is the npm package `@moonshot-ai/kimi-code` (also `kimi`), with config in `~/.kimi-code/config.toml` (or `$KIMI_CODE_HOME`).
+- Hooks are `[[hooks]]` tables with exactly `event`, `command`, optional `matcher`, `timeout` (seconds, 1–600) — a strict schema, so an extra key breaks the config. Payload: `hook_event_name`, `session_id`, `cwd`.
+- Margin cuts its own tables out by header and appends new ones, parsing the file with `Bun.TOML.parse` before and after. Kimi checks the model before hooks, so nothing fires until signed in.
+
+### Ollama and LM Studio (presence only)
+- No hooks: margind polls every 10 s, only on this Mac, and never starts either one (running `lms` starts LM Studio's background service, so it's never used).
+- **Ollama** `GET 127.0.0.1:11434/api/ps` lists loaded models with `expires_at`, which each request pushes forward: a changed `expires_at` (or a model appearing after the first look) is activity. A model kept loaded forever (`keep_alive: -1`) has a fixed expiry and isn't seen.
+- **LM Studio** logs to `~/.lmstudio/server-logs/YYYY-MM/YYYY-MM-DD.N.log` as `[time][DEBUG] Received request: GET to /api/v1/models`. Only `POST` to a chat, completions, responses or messages endpoint counts; other apps poll `/v1/models` constantly. Chats inside the app change `~/.lmstudio/conversations`. The loaded model comes from `GET 127.0.0.1:1234/api/v0/models` (`state: "loaded"`) when the server is on.
+- No tokens: neither keeps usage records. No project either: they have no folder.
+
 ### Shell
 - zsh: `zsocket` (zsh/net/socket) writes to the daemon directly from `precmd`; throttle to directory changes or once per 60 s. `zsocket` fails on socket paths over 104 characters.
 - bash 3.2 (macOS default) lacks `printf '%(%s)T'`; use `${EPOCHSECONDS:-$(date +%s)}` and background a tiny reporter.

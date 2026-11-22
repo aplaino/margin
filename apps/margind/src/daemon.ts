@@ -25,6 +25,7 @@ import { Connection, type ConnectionState } from './connection';
 import { type DeviceLogin, GitHubError, githubDeviceLogin } from './github';
 import { idleSeconds } from './idle';
 import type { KeyProvider } from './keychain';
+import { defaultLocalModels, type LocalModelSources, LocalModels } from './local-models';
 import { onLines, sendOnce, write } from './net';
 import type { Paths } from './paths';
 import {
@@ -66,6 +67,8 @@ export type DaemonOptions = {
   isAlive?: (pid: number) => boolean;
   heartbeatMs?: number;
   tokenScanMs?: number;
+  localModels?: LocalModelSources;
+  localModelMs?: number;
 };
 
 const KeyCount = v.object({ remaining: Count });
@@ -641,6 +644,16 @@ export async function startDaemon(options: DaemonOptions) {
     push({ type: 'roster', friends: roster() });
   }, options.heartbeatMs ?? 30_000);
   const tokenTimer = setInterval(() => void refreshTokens(), options.tokenScanMs ?? 60_000);
+  const localModels = new LocalModels(
+    options.localModels ?? defaultLocalModels(options.tools.home),
+  );
+  const localModelTimer = setInterval(async () => {
+    const watched = toolStatus(options.tools);
+    const on = (tool: string) => watched.some((t) => t.tool === tool && t.connected);
+    const events = await localModels.poll({ ollama: on('ollama'), lmStudio: on('lm-studio') });
+    for (const event of events) sessions.onEvent(event);
+    if (events.length) void recompute();
+  }, options.localModelMs ?? 10_000);
 
   return {
     store,
@@ -649,6 +662,7 @@ export async function startDaemon(options: DaemonOptions) {
       stopped = true;
       clearInterval(heartbeat);
       clearInterval(tokenTimer);
+      clearInterval(localModelTimer);
       // Tell friends straight away rather than waiting for the server to notice.
       if (connection?.connected)
         connection.send({ t: 'presence', presence: { status: 'offline', at: Date.now() } });

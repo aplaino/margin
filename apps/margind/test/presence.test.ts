@@ -152,6 +152,28 @@ describe('sessions', () => {
 describe('what friends see', () => {
   const publicRepo = { visibility: 'public' as const, repo: 'maya/open' };
 
+  test('a local model shows its name and no project, and ranks between a coding tool and a shell', () => {
+    const model: LocalSession = {
+      tool: 'lm-studio',
+      sessionId: 'lm-studio',
+      model: 'qwen/qwen3-coder-30b',
+      startedAt: 0,
+      lastEventAt: 0,
+      order: 1,
+    };
+    expect(shareable(model, { visibility: 'private' }, null, settings())).toEqual({
+      tool: 'lm-studio',
+      model: 'qwen3-coder-30b',
+      since: 0,
+    });
+    const sessions = new Sessions(() => true);
+    sessions.onEvent({ tool: 'ollama', event: 'prompt', sessionId: 'ollama' }, 1000);
+    sessions.onEvent({ tool: 'shell', event: 'prompt', sessionId: 'z' }, 2000);
+    expect(sessions.current()?.tool).toBe('ollama');
+    sessions.onEvent({ tool: 'gemini-cli', event: 'start', sessionId: 'g' }, 500);
+    expect(sessions.current()?.tool).toBe('gemini-cli');
+  });
+
   test('a public repo is named; a private one never is', () => {
     expect(shareable(session(), publicRepo, 'maya/open', settings())?.project).toEqual({
       visibility: 'public',

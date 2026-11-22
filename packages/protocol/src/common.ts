@@ -28,7 +28,7 @@ export const Tool = v.picklist([
   'factory',
   'codebuddy',
   'qoder',
-  'kimi-cli',
+  'kimi-code',
   'cursor',
   'ollama',
   'lm-studio',

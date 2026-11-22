@@ -25,7 +25,7 @@ const QUIET_MS: Record<Tool, number> = {
   factory: 15 * 60_000,
   codebuddy: 15 * 60_000,
   qoder: 15 * 60_000,
-  'kimi-cli': 15 * 60_000,
+  'kimi-code': 15 * 60_000,
   cursor: 15 * 60_000,
   ollama: 10 * 60_000,
   'lm-studio': 10 * 60_000,

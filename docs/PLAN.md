@@ -8,7 +8,7 @@ The rebuild runs in **phases**. Each phase ends with a review, and the next star
 
 **One line:** see what your friends are building, from one spot at the edge of your screen.
 
-**For:** developers who work in terminals and AI coding tools (Claude Code, Codex, OpenCode), on macOS first.
+**For:** developers who work in terminals and AI coding tools (Claude Code, Codex, OpenCode, Gemini CLI, Cursor and others), on macOS first.
 
 **Core loop:**
 1. You work as usual. Margin's strip at the screen edge shows which friends are coding.
@@ -18,12 +18,12 @@ The rebuild runs in **phases**. Each phase ends with a review, and the next star
 **v1 includes**
 - One home: the **screen-edge drawer** described in DESIGN.md (collapsed strip of dots + unread; expanded Friends / Add / Settings; chat inside the drawer; first-launch flow).
 - Sign in with GitHub; invite-only friends (requests, accept, decline, remove, block, report).
-- Live presence from Claude Code, Codex, OpenCode and the shell, with privacy controls (invisible, per-field, close friends, per-repo overrides).
+- Live presence from Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor (its agent hooks, not an editor surface), Ollama and LM Studio (presence only) and the shell, with privacy controls (invisible, per-field, close friends, per-repo overrides).
 - End-to-end encrypted 1:1 chat with offline delivery and safety-number verification.
 - Connecting tools from the drawer's settings (installs/removes hooks with consent and backups); account export and deletion; privacy policy.
 - Token totals (input + output + cache writes, all connected tools) in the header and on every friend; theme setting (System/Light/Dark + accent). No XP or levels.
 
-**Not in v1:** VS Code/Cursor, a TUI, the Claude Code status line, a menu bar icon, other surfaces; duels and goals, stuck/help requests, cosmetics, group chat, multi-device, Linux/Windows apps, tmux pane, terminal-native notifications, git push hook.
+**Not in v1:** VS Code and Cursor as editor surfaces, Antigravity (until its hooks fire reliably), a TUI, the Claude Code status line, a menu bar icon, other surfaces; duels and goals, stuck/help requests, cosmetics, group chat, multi-device, Linux/Windows apps, tmux pane, terminal-native notifications, git push hook.
 
 ## 2. Principles
 
@@ -35,7 +35,7 @@ The rebuild runs in **phases**. Each phase ends with a review, and the next star
 ## 3. Architecture
 
 ```
-reporters (Claude Code + Codex hooks, OpenCode plugin, shell) ─▶ margind ─▶ api server ─▶ friend's margind ─▶ friend's drawer
+reporters (tool hooks, OpenCode plugin, shell, local model polling) ─▶ margind ─▶ api server ─▶ friend's margind ─▶ friend's drawer
                                                                    ▲
                                               Margin.app (drawer) ─┘ local socket
 ```
@@ -84,7 +84,7 @@ Test matrix — each row run on both machines, in both directions:
 |---|---|
 | Sign-in | GitHub sign-in from the drawer; sign out and back in |
 | Friends | Request, accept, decline, remove; mutual request auto-accepts; block makes the blocker indistinguishable from an unknown handle |
-| Presence | Claude Code, Codex, OpenCode and shell activity show up on the other machine within 5 s; sessions end when the tool exits or goes idle |
+| Presence | Activity from each connected tool (Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor, Ollama, LM Studio, shell) shows up on the other machine within 5 s; sessions end when the tool exits or goes idle |
 | Privacy | Invisible, hidden fields, close friends and repo overrides take effect on the other machine |
 | Chat | Both directions; delivered after the receiver was offline; history survives app and daemon restarts; forged sender rejected |
 | Tokens | Each machine's total matches its tools' own usage records; the friend sees the same number within 5 s; hidden when the tokens field is off |

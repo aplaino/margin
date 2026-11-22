@@ -24,7 +24,7 @@ Margin shows what your friends are building, from one fixed spot at the edge of 
 ```
   screen edge ─▶ │
                  ▐   ← top of strip
-                 ●   in a tool (Claude Code, Codex, OpenCode, shell)
+                 ●   in a tool (Claude Code, Codex, Cursor, a local model, shell…)
                  ●
                  ●
                  ◐   idle (online, no recent activity)
@@ -146,7 +146,9 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │ Accent  ● ● ● ● ●            │
 │ CONNECTED TOOLS              │
 │ ☑ Claude Code   ☑ Codex      │
-│ ☑ OpenCode      ☐ Shell (zsh)│
+│ ☑ OpenCode      ☑ Cursor     │
+│ ☐ Gemini CLI    ☑ Ollama     │
+│ …               ☐ Shell (zsh)│
 │ PRIVACY                      │
 │ ☐ Invisible                  │
 │ Friends see: ☑ tool ☑ model  │
@@ -161,7 +163,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │ Quit Margin                  │
 └──────────────────────────────┘
 ```
-- **Connected tools:** turning one on explains what will change ("adds a hook to ~/.claude/settings.json"), asks, backs the file up, then installs. Turning it off removes only Margin's entry. Margin's hooks print nothing into Claude's context.
+- **Connected tools:** Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor, Ollama, LM Studio and the shell; tools that aren't installed are marked "not found". Ollama and LM Studio install nothing: margind watches their local servers while they're ticked (on by default when installed) and shows the model, never a project or tokens. For the rest, turning one on explains what will change ("adds a hook to ~/.claude/settings.json"), asks, backs the file up, then installs. Turning it off removes only Margin's entry. Margin's hooks print nothing into Claude's context.
 - **Theme:** a gallery of five themes, each shown as a miniature drawer, like the Appearance tiles in System Settings. A theme sets colours, fonts and weights, corner shapes and the panel material (solid or frosted glass); each has a light and a dark version, picked by **Appearance** (System, Light, Dark).
   - **Graphite** (default): SF Pro, neutral greys, near-solid panel.
   - **Glass**: frosted material that blurs what's behind, like Control Center.
@@ -200,7 +202,7 @@ here at the edge.   │ ABCD-1234│              ☐ Shell (zsh)
 
 ## 8. Activity sources (v1)
 
-Claude Code, Codex, OpenCode and the shell (zsh/bash) report activity through hooks/plugins, as documented in KNOWLEDGE.md §3. **Not in v1:** VS Code, a TUI, the Claude Code status line, a menu bar icon. A `margin` CLI exists only for diagnostics (`margin doctor`).
+Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor and the shell (zsh/bash) report activity through hooks/plugins; Ollama and LM Studio are watched through their local servers (KNOWLEDGE.md §3). When several are active, friends see a coding tool first, then a local model, then the shell. **Not in v1:** VS Code, a TUI, the Claude Code status line, a menu bar icon. A `margin` CLI exists only for diagnostics (`margin doctor`).
 
 ## 9. Defaults
 

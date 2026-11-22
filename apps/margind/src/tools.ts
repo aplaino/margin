@@ -34,6 +34,83 @@ export type ToolEnv = {
 const CLAUDE_EVENTS = ['SessionStart', 'UserPromptSubmit', 'Stop', 'SessionEnd', 'PostModelSwitch'];
 // Codex fires SessionEnd only when the next session starts, so it's not used.
 const CODEX_EVENTS = ['SessionStart', 'UserPromptSubmit', 'Stop'];
+// The tools that copied Claude Code's hooks, without its model-switch event.
+const CLAUDE_STYLE = ['SessionStart', 'UserPromptSubmit', 'Stop', 'SessionEnd'];
+
+// Tools with JSON hook files. Most use Claude Code's layout (events under `hooks`, each a list
+// of groups holding commands); Factory's hooks.json has the events at the top level, and
+// Cursor lists commands directly under each event.
+type Layout = 'claude' | 'top-level' | 'cursor';
+type JsonHooks = {
+  file: string[];
+  events: string[];
+  layout: Layout;
+  timeout: number;
+  note?: string;
+};
+
+const restart = (name: string) => `Restart ${name} to load Margin’s hooks.`;
+
+const JSON_HOOKS: Partial<Record<Tool, JsonHooks>> = {
+  'claude-code': {
+    file: ['.claude', 'settings.json'],
+    events: CLAUDE_EVENTS,
+    layout: 'claude',
+    timeout: 5,
+  },
+  codex: {
+    file: ['.codex', 'hooks.json'],
+    events: CODEX_EVENTS,
+    layout: 'claude',
+    timeout: 5,
+    note: 'Open Codex and approve Margin’s hooks in /hooks.',
+  },
+  'gemini-cli': {
+    file: ['.gemini', 'settings.json'],
+    events: ['SessionStart', 'BeforeAgent', 'AfterAgent', 'SessionEnd'],
+    layout: 'claude',
+    // Gemini CLI counts hook timeouts in milliseconds.
+    timeout: 5000,
+    note: restart('Gemini CLI'),
+  },
+  'qwen-code': {
+    file: ['.qwen', 'settings.json'],
+    events: CLAUDE_STYLE,
+    layout: 'claude',
+    timeout: 5,
+    note: restart('Qwen Code'),
+  },
+  // Droid reloads its hooks when the file changes.
+  factory: {
+    file: ['.factory', 'hooks.json'],
+    events: CLAUDE_STYLE,
+    layout: 'top-level',
+    timeout: 5,
+  },
+  codebuddy: {
+    file: ['.codebuddy', 'settings.json'],
+    events: CLAUDE_STYLE,
+    layout: 'claude',
+    timeout: 5,
+    note: restart('CodeBuddy'),
+  },
+  qoder: {
+    file: ['.qoder', 'settings.json'],
+    events: CLAUDE_STYLE,
+    layout: 'claude',
+    timeout: 5,
+    note: restart('Qoder'),
+  },
+  cursor: {
+    file: ['.cursor', 'hooks.json'],
+    events: ['sessionStart', 'beforeSubmitPrompt', 'stop', 'sessionEnd'],
+    layout: 'cursor',
+    timeout: 5,
+    note: restart('Cursor'),
+  },
+};
+
+const KIMI_EVENTS = CLAUDE_STYLE;
 
 const quote = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
 const stamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 14);
@@ -55,11 +132,13 @@ function writeAtomic(path: string, text: string) {
   renameSync(temp, path);
 }
 
-type HookGroup = {
+type HookEntry = {
   matcher?: string;
+  command?: string;
+  timeout?: number;
   hooks?: { type?: string; command?: string; timeout?: number }[];
 };
-type HookConfig = { hooks?: Record<string, HookGroup[]>; [key: string]: unknown };
+type HookConfig = { [key: string]: unknown };
 
 function readConfig(path: string): HookConfig {
   if (!existsSync(path)) return {};
@@ -71,37 +150,103 @@ function readConfig(path: string): HookConfig {
   return parsed;
 }
 
-const ours = (group: HookGroup) => group.hooks?.some((h) => h.command?.includes(MARKER)) ?? false;
+// The object holding the events: the file itself, or its `hooks` key.
+function eventMap(config: HookConfig, layout: Layout): Record<string, unknown> {
+  if (layout === 'top-level') return config;
+  const hooks = config.hooks;
+  return hooks && typeof hooks === 'object' && !Array.isArray(hooks)
+    ? (hooks as Record<string, unknown>)
+    : {};
+}
 
-function hooksInstalled(path: string, events: string[]) {
+const entriesOf = (value: unknown): HookEntry[] => (Array.isArray(value) ? value : []);
+const commandsOf = (entry: HookEntry) => [
+  entry.command,
+  ...(entry.hooks ?? []).map((h) => h.command),
+];
+const ours = (entry: HookEntry) => commandsOf(entry).some((c) => c?.includes(MARKER));
+
+function readEvents(path: string, layout: Layout) {
   try {
-    const hooks = readConfig(path).hooks ?? {};
-    return events.every((event) => (hooks[event] ?? []).some(ours));
+    return eventMap(readConfig(path), layout);
   } catch {
-    return false;
+    return {};
   }
 }
 
-function setHooks(path: string, events: string[], command: string | null) {
+function hooksInstalled(path: string, spec: JsonHooks) {
+  const events = readEvents(path, spec.layout);
+  return spec.events.every((event) => entriesOf(events[event]).some(ours));
+}
+
+function setHooks(path: string, spec: JsonHooks, command: string | null) {
   const config = readConfig(path);
-  const hooks = config.hooks ?? {};
-  for (const event of Object.keys(hooks)) {
-    const kept = (hooks[event] ?? []).filter((group) => !ours(group));
-    if (kept.length) hooks[event] = kept;
-    else delete hooks[event];
+  const events = eventMap(config, spec.layout);
+  for (const [event, value] of Object.entries(events)) {
+    if (!Array.isArray(value)) continue;
+    const kept = entriesOf(value).filter((entry) => !ours(entry));
+    if (kept.length) events[event] = kept;
+    else delete events[event];
   }
   if (command) {
-    for (const event of events) {
-      hooks[event] = [
-        ...(hooks[event] ?? []),
-        { hooks: [{ type: 'command', command, timeout: 5 }] },
-      ];
-    }
+    const entry: HookEntry =
+      spec.layout === 'cursor'
+        ? { command, timeout: spec.timeout }
+        : { hooks: [{ type: 'command', command, timeout: spec.timeout }] };
+    for (const event of spec.events) events[event] = [...entriesOf(events[event]), entry];
+    if (spec.layout === 'cursor') config.version ??= 1;
   }
-  if (Object.keys(hooks).length) config.hooks = hooks;
-  else delete config.hooks;
+  if (spec.layout !== 'top-level') {
+    if (Object.keys(events).length) config.hooks = events;
+    else delete config.hooks;
+  }
   backup(path);
   writeAtomic(path, `${JSON.stringify(config, null, 2)}\n`);
+}
+
+// Kimi Code keeps hooks as [[hooks]] tables in config.toml, each with exactly event, command,
+// matcher and timeout (anything else and Kimi won't start). Margin's tables are cut out whole
+// and appended at the end; the file must parse before and after.
+type KimiHook = { event?: string; command?: string };
+
+function kimiHooks(path: string): KimiHook[] {
+  try {
+    const parsed = Bun.TOML.parse(readFileSync(path, 'utf8')) as { hooks?: unknown };
+    return Array.isArray(parsed.hooks) ? parsed.hooks : [];
+  } catch {
+    return [];
+  }
+}
+
+const kimiInstalled = (path: string) =>
+  KIMI_EVENTS.every((event) =>
+    kimiHooks(path).some((h) => h.event === event && h.command?.includes(MARKER)),
+  );
+
+function setKimiHooks(path: string, command: string | null) {
+  const text = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  Bun.TOML.parse(text);
+  // Split at table headers and drop the [[hooks]] tables that run Margin.
+  const blocks: string[][] = [[]];
+  for (const line of text.split('\n')) {
+    if (/^\s*\[\[?[\w."' -]+\]\]?\s*(#.*)?$/.test(line)) blocks.push([]);
+    blocks.at(-1)?.push(line);
+  }
+  const kept = blocks
+    .filter((b) => !(b[0]?.trim() === '[[hooks]]' && b.some((line) => line.includes(MARKER))))
+    .flat()
+    .join('\n')
+    .replace(/\n*$/, '\n');
+  const added = command
+    ? KIMI_EVENTS.map(
+        (event) =>
+          `\n[[hooks]]\nevent = "${event}"\ncommand = ${JSON.stringify(command)}\ntimeout = 5\n`,
+      ).join('')
+    : '';
+  const next = (kept.trim() ? kept : '') + added;
+  Bun.TOML.parse(next);
+  backup(path);
+  writeAtomic(path, next);
 }
 
 function opencodePlugin(socket: string) {
@@ -172,34 +317,70 @@ autoload -Uz add-zsh-hook && add-zsh-hook precmd _margin_report
 
 function files(env: ToolEnv) {
   return {
-    claude: join(env.home, '.claude', 'settings.json'),
-    codex: join(env.home, '.codex', 'hooks.json'),
     opencodeDir: join(env.home, '.config', 'opencode'),
     opencode: join(env.home, '.config', 'opencode', 'plugins', 'margin.js'),
+    kimi: join(env.home, '.kimi-code', 'config.toml'),
     zshrc: join(env.home, '.zshrc'),
     zshInit: join(env.dataHome, 'init.zsh'),
+    // Created on Ollama's first run, whether from the app or Homebrew.
+    ollama: join(env.home, '.ollama'),
+    lmStudio: join(env.home, '.lmstudio'),
   };
 }
+
+// Ollama and LM Studio need nothing installed: margind watches them while they're on, and
+// turning one off leaves a note in its data folder.
+const LOCAL_MODELS: Partial<Record<Tool, string>> = { ollama: 'ollama', 'lm-studio': 'lm-studio' };
+const watchOff = (env: ToolEnv, tool: Tool) => join(env.dataHome, `${LOCAL_MODELS[tool]}.off`);
+
+const jsonFile = (env: ToolEnv, spec: JsonHooks) => join(env.home, ...spec.file);
 
 const contains = (path: string, text: string) =>
   existsSync(path) && readFileSync(path, 'utf8').includes(text);
 
-export function toolStatus(env: ToolEnv): { tool: Tool; found: boolean; connected: boolean }[] {
+// In the order Settings lists them.
+const TOOLS: Tool[] = [
+  'claude-code',
+  'codex',
+  'opencode',
+  'gemini-cli',
+  'qwen-code',
+  'factory',
+  'codebuddy',
+  'qoder',
+  'kimi-code',
+  'cursor',
+  'ollama',
+  'lm-studio',
+  'shell',
+];
+
+function status(env: ToolEnv, tool: Tool): { found: boolean; connected: boolean } {
   const f = files(env);
-  return [
-    {
-      tool: 'claude-code',
-      found: existsSync(dirname(f.claude)),
-      connected: hooksInstalled(f.claude, CLAUDE_EVENTS),
-    },
-    {
-      tool: 'codex',
-      found: existsSync(dirname(f.codex)),
-      connected: hooksInstalled(f.codex, CODEX_EVENTS),
-    },
-    { tool: 'opencode', found: existsSync(f.opencodeDir), connected: contains(f.opencode, MARKER) },
-    { tool: 'shell', found: existsSync(f.zshrc), connected: contains(f.zshrc, MARKER) },
-  ];
+  const spec = JSON_HOOKS[tool];
+  if (spec) {
+    const path = jsonFile(env, spec);
+    return { found: existsSync(dirname(path)), connected: hooksInstalled(path, spec) };
+  }
+  switch (tool) {
+    case 'opencode':
+      return { found: existsSync(f.opencodeDir), connected: contains(f.opencode, MARKER) };
+    case 'kimi-code':
+      return { found: existsSync(dirname(f.kimi)), connected: kimiInstalled(f.kimi) };
+    case 'ollama':
+    case 'lm-studio': {
+      const found = existsSync(tool === 'ollama' ? f.ollama : f.lmStudio);
+      return { found, connected: found && !existsSync(watchOff(env, tool)) };
+    }
+    case 'shell':
+      return { found: existsSync(f.zshrc), connected: contains(f.zshrc, MARKER) };
+    default:
+      return { found: false, connected: false };
+  }
+}
+
+export function toolStatus(env: ToolEnv): { tool: Tool; found: boolean; connected: boolean }[] {
+  return TOOLS.map((tool) => ({ tool, ...status(env, tool) }));
 }
 
 // macOS runs a downloaded app that hasn't been moved from a temporary copy that vanishes
@@ -246,39 +427,36 @@ const safe = (stat: Stats) =>
 const belongsHere = (env: ToolEnv, command: string | undefined) =>
   !!command?.includes(MARKER) && command.includes(`MARGIN_HOME=${quote(env.dataHome)} `);
 
-function hooksCurrent(path: string, events: string[], command: string) {
-  try {
-    const hooks = readConfig(path).hooks ?? {};
-    return events.every((event) =>
-      (hooks[event] ?? []).some((g) => g.hooks?.some((h) => h.command === command)),
-    );
-  } catch {
-    return false;
-  }
-}
-
-// After Margin moves (say, from Downloads into Applications), points its existing Claude Code
-// and Codex hooks at where it is now. Returns the tools it changed.
+// After Margin moves (say, from Downloads into Applications), points its existing hooks at
+// where it is now. Returns the tools it changed.
 export function repointTools(env: ToolEnv): Tool[] {
   if (!installed(env)) return [];
-  const f = files(env);
   const changed: Tool[] = [];
-  for (const [tool, path, events] of [
-    ['claude-code', f.claude, CLAUDE_EVENTS],
-    ['codex', f.codex, CODEX_EVENTS],
-  ] as const) {
+  for (const [tool, spec] of Object.entries(JSON_HOOKS) as [Tool, JsonHooks][]) {
+    const path = jsonFile(env, spec);
     const command = hookCommand(env, tool);
-    let mine = false;
-    try {
-      const hooks = readConfig(path).hooks ?? {};
-      mine = Object.values(hooks).some((groups) =>
-        groups.some((g) => g.hooks?.some((h) => belongsHere(env, h.command))),
-      );
-    } catch {}
-    if (mine && hooksInstalled(path, events) && !hooksCurrent(path, events, command)) {
-      setHooks(path, events, command);
+    const commands = Object.values(readEvents(path, spec.layout))
+      .flatMap(entriesOf)
+      .flatMap(commandsOf);
+    const mine = commands.some((c) => belongsHere(env, c));
+    const current = spec.events.every((event) =>
+      entriesOf(readEvents(path, spec.layout)[event]).some((e) => commandsOf(e).includes(command)),
+    );
+    if (mine && hooksInstalled(path, spec) && !current) {
+      setHooks(path, spec, command);
       changed.push(tool);
     }
+  }
+  const kimi = files(env).kimi;
+  const command = hookCommand(env, 'kimi-code');
+  const hooks = kimiHooks(kimi);
+  if (
+    hooks.some((h) => belongsHere(env, h.command)) &&
+    kimiInstalled(kimi) &&
+    !KIMI_EVENTS.every((event) => hooks.some((h) => h.event === event && h.command === command))
+  ) {
+    setKimiHooks(kimi, command);
+    changed.push('kimi-code');
   }
   return changed;
 }
@@ -286,23 +464,29 @@ export function repointTools(env: ToolEnv): Tool[] {
 // Returns a note for the user when the tool needs a step of its own.
 export function connectTool(env: ToolEnv, tool: Tool): string | undefined {
   const f = files(env);
+  if (LOCAL_MODELS[tool]) {
+    if (!status(env, tool).found) throw new ToolError(`${tool} isn’t installed`);
+    if (existsSync(watchOff(env, tool))) unlinkSync(watchOff(env, tool));
+    return undefined;
+  }
   if (temporary(env) || (!development(env) && !installed(env))) {
     throw new ToolError(
       'Move Margin to Applications first. It’s running from a temporary copy, and hooks would stop working when it quits.',
     );
   }
-  if (!toolStatus(env).find((t) => t.tool === tool)?.found)
-    throw new ToolError(`${tool} isn’t installed`);
+  if (!status(env, tool).found) throw new ToolError(`${tool} isn’t installed`);
+  const spec = JSON_HOOKS[tool];
+  if (spec) {
+    setHooks(jsonFile(env, spec), spec, hookCommand(env, tool));
+    return spec.note;
+  }
   switch (tool) {
-    case 'claude-code':
-      setHooks(f.claude, CLAUDE_EVENTS, hookCommand(env, tool));
-      return undefined;
-    case 'codex':
-      setHooks(f.codex, CODEX_EVENTS, hookCommand(env, tool));
-      return 'Open Codex and approve Margin’s hooks in /hooks.';
     case 'opencode':
       writeAtomic(f.opencode, opencodePlugin(env.socket));
       return 'Restart OpenCode to load the plugin.';
+    case 'kimi-code':
+      setKimiHooks(f.kimi, hookCommand(env, tool));
+      return restart('Kimi Code');
     case 'shell': {
       writeAtomic(f.zshInit, zshInit(env.socket));
       if (!contains(f.zshrc, MARKER)) {
@@ -315,20 +499,29 @@ export function connectTool(env: ToolEnv, tool: Tool): string | undefined {
       }
       return 'Open a new terminal window.';
     }
+    default:
+      return undefined;
   }
 }
 
 export function disconnectTool(env: ToolEnv, tool: Tool) {
   const f = files(env);
+  if (LOCAL_MODELS[tool]) {
+    writeAtomic(watchOff(env, tool), '');
+    return;
+  }
+  const spec = JSON_HOOKS[tool];
+  if (spec) {
+    const path = jsonFile(env, spec);
+    if (existsSync(path)) setHooks(path, spec, null);
+    return;
+  }
   switch (tool) {
-    case 'claude-code':
-      if (existsSync(f.claude)) setHooks(f.claude, [], null);
-      return;
-    case 'codex':
-      if (existsSync(f.codex)) setHooks(f.codex, [], null);
-      return;
     case 'opencode':
       if (contains(f.opencode, MARKER)) unlinkSync(f.opencode);
+      return;
+    case 'kimi-code':
+      if (contains(f.kimi, MARKER)) setKimiHooks(f.kimi, null);
       return;
     case 'shell':
       if (contains(f.zshrc, MARKER)) {

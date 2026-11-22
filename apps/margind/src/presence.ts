@@ -70,7 +70,9 @@ export function shareable(
   if (settings.share.tool) activity.tool = session.tool;
   const model = publicModel(session.model);
   if (settings.share.model && model) activity.model = model;
-  if (settings.share.repo) {
+  // A local model server has no folder, so there's no project to show.
+  const local = session.tool === 'ollama' || session.tool === 'lm-studio';
+  if (settings.share.repo && !local) {
     activity.project =
       override !== 'private' && repo.visibility === 'public'
         ? { visibility: 'public', repo: repo.repo }
