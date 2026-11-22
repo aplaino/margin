@@ -78,6 +78,8 @@ export type DaemonOptions = {
   tokenScanMs?: number;
   localModels?: LocalModelSources;
   localModelMs?: number;
+  // How long a message the server turned away for being too many waits before going again.
+  retryMs?: number;
   // The app's version, for crash reports, and where macOS keeps crash reports (tests).
   version?: string;
   crashLogs?: string;
@@ -450,6 +452,15 @@ export async function startDaemon(options: DaemonOptions) {
     if (preKeys.length) await client.call(null, 'POST', '/keys/prekeys', { preKeys });
   }
 
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  function retryOutboxSoon() {
+    if (retryTimer) return;
+    retryTimer = setTimeout(() => {
+      retryTimer = undefined;
+      flushOutbox();
+    }, options.retryMs ?? 30_000);
+  }
+
   function flushOutbox() {
     for (const item of store.outbox()) {
       if (!connection?.send(item.frame as ClientFrame)) return;
@@ -713,6 +724,12 @@ export async function startDaemon(options: DaemonOptions) {
           return;
         }
         case 'rejected':
+          // Too many at once, or a friend's queue is full while they're away: it stays in the
+          // outbox and goes again shortly. Anything else won't succeed by retrying.
+          if (frame.error === 'rate limited' || frame.error === 'queue full') {
+            retryOutboxSoon();
+            return;
+          }
           store.dequeue(frame.id);
           log('the server refused a message');
           return;
@@ -1092,6 +1109,7 @@ export async function startDaemon(options: DaemonOptions) {
       clearInterval(heartbeat);
       clearInterval(tokenTimer);
       clearInterval(localModelTimer);
+      clearTimeout(retryTimer);
       // Tell friends straight away rather than waiting for the server to notice.
       if (connection?.connected)
         connection.send({ t: 'presence', presence: { status: 'offline', at: Date.now() } });

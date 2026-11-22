@@ -426,6 +426,56 @@ describe('messages', () => {
     expect(await third.unexpected(messageFrom('maya'))).toEqual([]);
   });
 
+  test('a flood of messages is cut off at 60 a minute, while receipts keep their own budget', async () => {
+    const maya = await api.user('maya');
+    const leo = await api.user('leo');
+    await api.befriend(maya, leo);
+    const m = await maya.connect();
+    for (let i = 0; i < 60; i++) {
+      const id = uuid();
+      m.send({ t: 'send', id, to: 'leo', ciphertext });
+      await m.next((f) => f.t === 'accepted' && f.id === id);
+    }
+    const over = uuid();
+    m.send({ t: 'send', id: over, to: 'leo', ciphertext });
+    expect(await m.next((f) => f.t === 'rejected' && f.id === over)).toMatchObject({
+      error: 'rate limited',
+    });
+    const receipt = uuid();
+    m.send({ t: 'send', id: receipt, to: 'leo', ciphertext, control: true });
+    expect(await m.next((f) => f.t === 'accepted' && f.id === receipt)).toBeTruthy();
+  });
+
+  test('a friend can only queue so much while you are away', async () => {
+    const maya = await api.user('maya');
+    const leo = await api.user('leo');
+    await api.befriend(maya, leo);
+    const [{ id: from }] = await api.sql`SELECT id FROM accounts WHERE handle = 'maya'`;
+    const [{ id: to }] = await api.sql`SELECT id FROM accounts WHERE handle = 'leo'`;
+    for (let i = 0; i < 500; i++) {
+      await api.sql`INSERT INTO queued_messages ${api.sql({
+        id: uuid(),
+        to_id: to,
+        from_id: from,
+        sent_at: Date.now(),
+        ciphertext: JSON.stringify(ciphertext),
+        control: false,
+      })}`;
+    }
+    const m = await maya.connect();
+    const id = uuid();
+    m.send({ t: 'send', id, to: 'leo', ciphertext });
+    expect(await m.next((f) => f.t === 'rejected' && f.id === id)).toMatchObject({
+      error: 'queue full',
+    });
+  });
+
+  test('an account can hold only so many connections at once', async () => {
+    const maya = await api.user('maya');
+    for (let i = 0; i < 10; i++) await maya.connect();
+    await expect(maya.connect()).rejects.toBeDefined();
+  });
+
   test('a control is delivered as its own frame, live and from the queue', async () => {
     const maya = await api.user('maya');
     const leo = await api.user('leo');

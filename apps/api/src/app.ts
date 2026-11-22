@@ -53,6 +53,12 @@ type Online = {
 const PREKEY_CAP = 200;
 const PREKEY_LOW = 20;
 const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+// While you're offline, a friend can't fill the server for you: at most this many messages
+// wait from each friend, and this many in all.
+const QUEUE_PER_FRIEND = 500;
+const QUEUE_PER_ACCOUNT = 5000;
+// Open connections per account (each Mac has one; a few more for restarts overlapping).
+const SOCKETS_PER_ACCOUNT = 10;
 
 const AuthGithub = v.object({ accessToken: v.pipe(v.string(), v.minLength(1), v.maxLength(512)) });
 const AuthDev = v.object({ handle: Handle, name: v.optional(Name) });
@@ -116,6 +122,13 @@ export function createApp(sql: SQL, options: Options = {}) {
   const online = new Map<string, Online>();
   const limits = {
     message: limiter(60, 60_000),
+    // Receipts, previews and Undo Send, on their own budget so a friend's flood of messages
+    // (each answered with a delivery receipt) can't use up yours.
+    control: limiter(240, 60_000),
+    // Each sign-in asks GitHub who you are; per address, since there's no account yet.
+    signIn: limiter(30, 60 * 60_000),
+    // Each fetch uses up one of a friend's one-time prekeys.
+    keys: limiter(60, 60 * 60_000),
     reset: limiter(30, 60_000),
     presence: limiter(60, 60_000),
     request: limiter(20, 60 * 60_000),
@@ -327,6 +340,9 @@ export function createApp(sql: SQL, options: Options = {}) {
       return json(config);
     }
     if (method === 'POST' && path === '/auth/github') {
+      if (!limits.signIn(req.headers.get('fly-client-ip') ?? 'unknown')) {
+        throw new HttpError(429, 'rate limited');
+      }
       const { accessToken } = await parseBody(AuthGithub, req);
       // The GitHub token is used once to learn who you are, then discarded.
       const user = await fetchGithubUser(accessToken);
@@ -412,6 +428,7 @@ export function createApp(sql: SQL, options: Options = {}) {
     }
     const keysFor = param(/^\/keys\/([^/]+)$/);
     if (method === 'GET' && keysFor !== null) {
+      if (!limits.keys(me.id)) throw new HttpError(429, 'rate limited');
       const peer = await accountByHandle(keysFor);
       // Only friends get prekeys, so strangers can't drain them.
       if (!peer || !(await areFriends(me.id, peer.id))) throw notFound();
@@ -628,9 +645,20 @@ export function createApp(sql: SQL, options: Options = {}) {
     if (frame.t === 'send') {
       const reject = (error: string) =>
         ws.send(JSON.stringify({ t: 'rejected', id: frame.id, error } satisfies ServerFrame));
-      if (!limits.message(me.id)) return reject('rate limited');
+      if (!(frame.control ? limits.control(me.id) : limits.message(me.id))) {
+        return reject('rate limited');
+      }
       const peer = await accountByHandle(frame.to);
       if (!peer || !(await areFriends(me.id, peer.id))) return reject('not a friend');
+      const [waiting] = await sql`
+        SELECT COUNT(*) AS total, SUM(CASE WHEN from_id = ${me.id} THEN 1 ELSE 0 END) AS mine
+        FROM queued_messages WHERE to_id = ${peer.id}`;
+      if (
+        Number(waiting?.mine ?? 0) >= QUEUE_PER_FRIEND ||
+        Number(waiting?.total ?? 0) >= QUEUE_PER_ACCOUNT
+      ) {
+        return reject('queue full');
+      }
       const sentAt = Date.now();
       const [inserted] = await sql`
         INSERT INTO queued_messages ${sql({
@@ -753,6 +781,9 @@ export function createApp(sql: SQL, options: Options = {}) {
       if (url.pathname === '/ws') {
         const auth = await authenticate(req);
         if (!auth) return json({ error: 'unauthorized' }, 401);
+        if ((online.get(auth.id)?.sockets.size ?? 0) >= SOCKETS_PER_ACCOUNT) {
+          return json({ error: 'too many connections' }, 429);
+        }
         return server.upgrade(req, { data: auth })
           ? undefined
           : json({ error: 'upgrade failed' }, 400);

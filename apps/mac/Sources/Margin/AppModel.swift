@@ -32,6 +32,7 @@ final class AppModel {
   var pulse = 0
   // The message tab beside the strip, while it's out.
   var peek: Peek?
+  @ObservationIgnored private var lastAlert: [String: Date] = [:]
   var moveError: String?
   // The how-it-works pages, opened again from Settings.
   var showGuide = false
@@ -201,6 +202,10 @@ final class AppModel {
     // Paused: it still counts as unread, it just doesn't call for attention.
     if prefs.alertsPaused { return }
     let reading = expanded && chatWith == message.peer
+    // A burst from one friend alerts once; the rest still count as unread.
+    let now = Date.now
+    if !reading, let last = lastAlert[message.peer], now.timeIntervalSince(last) < 30 { return }
+    if !reading { lastAlert[message.peer] = now }
     if !reading {
       pulse += 1
       if prefs.alert != "glow", !expanded {
