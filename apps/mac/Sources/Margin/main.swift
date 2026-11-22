@@ -15,6 +15,10 @@ MainActor.assumeIsolated {
   terminate.setEventHandler { NSApp.terminate(nil) }
   terminate.resume()
   let model = AppModel()
+  // Give whatever stopped (say, `bun run dev`) a moment to come back before starting our own.
+  model.onDaemonLost = {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MainActor.assumeIsolated { launcher.ensureRunning() } }
+  }
   let drawer = DrawerController(model: model)
   withExtendedLifetime((drawer, launcher, terminate)) { app.run() }
 }

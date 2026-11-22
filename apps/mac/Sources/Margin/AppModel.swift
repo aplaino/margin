@@ -11,6 +11,8 @@ final class AppModel {
   let prefs = Prefs()
   let client = DaemonClient(path: DaemonClient.defaultPath())
   let updates = Updates()
+  // Called when the connection to margind drops, so a new one can be started.
+  var onDaemonLost: (() -> Void)?
 
   var daemonUp = false
   var me: SelfInfo?
@@ -81,7 +83,10 @@ final class AppModel {
     updates.model = self
     client.onConnected = { [weak self] up in
       self?.daemonUp = up
-      if !up { self?.me = nil }
+      if !up {
+        self?.me = nil
+        self?.onDaemonLost?()
+      }
     }
     client.onPush = { [weak self] push in self?.handle(push) }
     client.start()

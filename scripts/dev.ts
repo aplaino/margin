@@ -165,7 +165,15 @@ try {
 log(`server on ${SERVER}`);
 
 // --- your margind
+// An open Margin (installed or an earlier dev build) runs a margind of its own on the same
+// socket, which would answer for this one and talk to its own server. Quit it first; its
+// margind follows it out.
 const mine = paths();
+if (Bun.spawnSync(['pkill', '-TERM', '-f', 'Margin.app/Contents/MacOS/Margin$']).exitCode === 0) {
+  log('quit the Margin that was open, so this run uses its own margind');
+  for (let i = 0; i < 25 && (await sendOnce(mine.socket, { op: 'ping' }, 200)); i++)
+    await Bun.sleep(200);
+}
 let margind: ReturnType<typeof Bun.spawn> | undefined;
 if (await sendOnce(mine.socket, { op: 'ping' }, 500)) {
   log('your margind is already running; using it');

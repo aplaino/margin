@@ -28,6 +28,14 @@ final class Launcher {
     launch()
   }
 
+  // Starts margind if the one Margin was using went away (`bun run dev`'s, after Ctrl-C) and
+  // nothing else has taken its place. One Margin started itself is restarted by exited().
+  func ensureRunning() {
+    guard process == nil, !stopping, !DaemonClient.isRunning(path: DaemonClient.defaultPath()) else { return }
+    restarts = 0
+    launch()
+  }
+
   private func launch() {
     guard !stopping, let url = Bundle.main.url(forAuxiliaryExecutable: "margind") else { return }
     try? FileManager.default.createDirectory(
