@@ -518,6 +518,19 @@ describe('two users, two daemons, one server', () => {
     await maya.app.until((p) => p.type === 'message' && p.message.id === reply.id);
     expect(maya.daemon.store.message(quiet.id)?.state).toBe('delivered');
     await leo.app.request({ op: 'settings.set', settings: { readReceipts: true } });
+
+    // Invisible: no delivery receipt says Leo's Mac is here.
+    await leo.app.request({ op: 'settings.set', settings: { invisible: true } });
+    const hidden = (await maya.app.request({ op: 'send', to: 'leo', text: 'you there?' })) as {
+      id: string;
+    };
+    await leo.app.until((p) => p.type === 'message' && p.message.id === hidden.id);
+    const after = (await leo.app.request({ op: 'send', to: 'maya', text: 'brb' })) as {
+      id: string;
+    };
+    await maya.app.until((p) => p.type === 'message' && p.message.id === after.id);
+    expect(maya.daemon.store.message(hidden.id)?.state).toBe('sent');
+    await leo.app.request({ op: 'settings.set', settings: { invisible: false } });
   });
 
   test('removing a friend clears them on both sides', async () => {

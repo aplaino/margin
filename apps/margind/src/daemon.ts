@@ -455,9 +455,12 @@ export async function startDaemon(options: DaemonOptions) {
     ack();
     push({ type: 'message', message });
     push({ type: 'roster', friends: roster() });
-    sendControl(frame.from, { t: 'delivered', id: frame.id }).catch((e) =>
-      problem('could not send a delivery receipt', e),
-    );
+    // Invisible looks exactly like offline, so nothing says this Mac is here to receive it.
+    if (!store.settings().invisible) {
+      sendControl(frame.from, { t: 'delivered', id: frame.id }).catch((e) =>
+        problem('could not send a delivery receipt', e),
+      );
+    }
   }
 
   // A control from a friend: an Undo Send is honoured for their own message, if it was

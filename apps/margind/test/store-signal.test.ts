@@ -98,6 +98,25 @@ describe('store', () => {
     expect(store.history('leo', 4, 2).map((m) => m.text)).toEqual(['m2', 'm3']);
   });
 
+  test('a read receipt never marks what is still waiting to leave, or a time still to come', () => {
+    const store = new Store(':memory:', keys('r'));
+    const out = (id: string, sentAt: number, state: 'queued' | 'sent' | 'delivered') =>
+      store.saveMessage({ id, peer: 'leo', direction: 'out', text: id, sentAt, state });
+    out('waiting', 1, 'queued');
+    out('sent', 2, 'sent');
+    out('seen', 3, 'delivered');
+    out('later', 4, 'sent');
+    expect(store.readUpTo('maya', 'seen', 10)).toBe(false);
+    expect(store.readUpTo('leo', 'seen', Date.now() + 60 * 60_000)).toBe(true);
+    expect(store.history('leo').map((m) => [m.id, m.state])).toEqual([
+      ['waiting', 'queued'],
+      ['sent', 'read'],
+      ['seen', 'read'],
+      ['later', 'sent'],
+    ]);
+    expect(store.message('seen')?.readAt).toBeLessThanOrEqual(Date.now());
+  });
+
   test('removing a friend ends the session, unless only switching servers', () => {
     const store = new Store(':memory:', keys('k'));
     store.upsertFriend('leo');
@@ -184,7 +203,12 @@ describe('store', () => {
       audience: 'the whole internet',
       repos: { 'acme/secret': 'hidden' },
     });
-    expect(store.settings()).toMatchObject({ invisible: true, findable: false, damaged: true });
+    expect(store.settings()).toMatchObject({
+      invisible: true,
+      findable: false,
+      readReceipts: false,
+      damaged: true,
+    });
   });
 
   test('database files are readable only by you', () => {

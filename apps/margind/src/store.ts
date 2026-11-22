@@ -127,7 +127,13 @@ export class Store {
     const parsed = v.safeParse(Settings, merged);
     return parsed.success
       ? parsed.output
-      : { ...DEFAULT_SETTINGS, invisible: true, findable: false, damaged: true };
+      : {
+          ...DEFAULT_SETTINGS,
+          invisible: true,
+          findable: false,
+          readReceipts: false,
+          damaged: true,
+        };
   }
 
   saveSettings(settings: Settings) {
@@ -283,7 +289,8 @@ export class Store {
     );
   }
 
-  // A friend has read up to your message `id`: it and everything you sent them before it.
+  // A friend has read up to your message `id`: it and everything you sent them before it
+  // that has left this Mac. Never later than this Mac's clock.
   readUpTo(peer: string, id: string, at: number) {
     const row = this.db
       .query<{ sent_at: number }, [string, string]>(
@@ -296,9 +303,9 @@ export class Store {
         .query(
           `UPDATE messages SET state = 'read', read_at = ?
            WHERE peer = ? AND direction = 'out' AND sent_at <= ?
-             AND state IN ('queued', 'sent', 'delivered')`,
+             AND state IN ('sent', 'delivered')`,
         )
-        .run(at, peer, row.sent_at).changes > 0
+        .run(Math.min(at, Date.now()), peer, row.sent_at).changes > 0
     );
   }
 
