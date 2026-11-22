@@ -26,6 +26,7 @@ struct AddView: View {
                   .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.inTool))
               }
               .buttonStyle(.plain).accessibilityLabel("Accept \(handle)")
+              .control("accept:\(handle)") { model.request("friend.accept", ["handle": handle]) }
               Button {
                 model.request("friend.decline", ["handle": handle])
               } label: {
@@ -34,6 +35,7 @@ struct AddView: View {
                   .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
               }
               .buttonStyle(.plain).accessibilityLabel("Decline \(handle)")
+              .control("decline:\(handle)") { model.request("friend.decline", ["handle": handle]) }
             }
           }
         }
@@ -60,6 +62,7 @@ struct HandleField: View {
   @Environment(\.theme) private var theme
   @State private var handle = ""
   @State private var sent: String?
+  @FocusState private var focused: Bool
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -69,11 +72,14 @@ struct HandleField: View {
           .padding(.horizontal, 10).padding(.vertical, 7)
           .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.surface))
           .overlay(RoundedRectangle(cornerRadius: theme.controlRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
+          .focused($focused)
           .onSubmit(send)
+          .control("handle") { focused = true }
         Button("Send", action: send)
           .buttonStyle(.plain).fontWeight(.semibold).foregroundStyle(theme.onAccent)
           .padding(.horizontal, 12).padding(.vertical, 7)
           .background(RoundedRectangle(cornerRadius: theme.controlRadius).fill(theme.accent))
+          .control("send", press: send)
       }
       if let sent, let result = model.results["friend.request"] {
         Text(result.ok ? "Request sent to \(sent)." : (result.message == "not found" ? "No Margin user called \(sent)." : result.message ?? "Couldn’t send"))

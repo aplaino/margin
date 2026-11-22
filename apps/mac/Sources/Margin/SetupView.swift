@@ -112,8 +112,8 @@ struct ToolToggles: View {
     VStack(alignment: .leading, spacing: 6) {
       ForEach(model.tools) { tool in
         HStack {
-          Toggle(Format.tool(tool.tool) == "terminal" ? "Shell (zsh)" : Format.tool(tool.tool), isOn: Binding(
-            get: { tool.connected },
+          Check(Format.tool(tool.tool) == "terminal" ? "Shell (zsh)" : Format.tool(tool.tool), isOn: Binding(
+            get: { model.tools.first { $0.tool == tool.tool }?.connected == true },
             set: { model.request($0 ? "tools.connect" : "tools.disconnect", ["tool": tool.tool]) }
           ))
           .toggleStyle(.checkbox)

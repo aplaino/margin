@@ -51,6 +51,9 @@ struct ChatView: View {
         .onChange(of: messages.count) {
           if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
         }
+        .onChange(of: model.cursor) {
+          if let cursor = model.cursor { proxy.scrollTo(cursor) }
+        }
       }
 
       Divider().overlay(theme.divider)
@@ -94,6 +97,14 @@ struct ChatView: View {
             topTrailingRadius: theme.bubbleRadius
           )
           .fill(message.incoming ? theme.surface : theme.accent))
+        .overlay {
+          RoundedRectangle(cornerRadius: theme.bubbleRadius + 3)
+            .strokeBorder(model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
+            .padding(-3)
+        }
+        .contextMenu {
+          Button("Copy") { model.copy(message) }
+        }
       if message.state == "queued" {
         Text("Sending…").font(theme.font(10)).foregroundStyle(theme.tertiary)
       }

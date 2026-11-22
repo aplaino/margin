@@ -46,10 +46,15 @@ struct PanelView: View {
           Text("Offline · reconnecting").font(theme.caption).foregroundStyle(theme.secondary)
             .frame(maxWidth: .infinity).padding(.vertical, 6).background(theme.surface)
         }
-        switch model.tab {
-        case .friends: FriendsView()
-        case .add: AddView()
-        case .settings: SettingsView(onQuit: { NSApp.terminate(nil) })
+        Group {
+          switch model.tab {
+          case .friends: FriendsView()
+          case .add: AddView()
+          case .settings: SettingsView(onQuit: { NSApp.terminate(nil) })
+          }
+        }
+        .onPreferenceChange(Controls.self) { controls in
+          MainActor.assumeIsolated { model.controls = controls }
         }
       }
     }

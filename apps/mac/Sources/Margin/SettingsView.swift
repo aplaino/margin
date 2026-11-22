@@ -8,16 +8,18 @@ struct SettingsView: View {
   @State private var newRepo = ""
   @State private var newRepoMode = "hidden"
   @State private var opensAtLogin = Launcher.opensAtLogin
+  @FocusState private var repoFocused: Bool
 
   var body: some View {
     @Bindable var prefs = model.prefs
+    ScrollViewReader { proxy in
     ScrollView {
       VStack(alignment: .leading, spacing: 7) {
         SectionLabel("Open Margin with").padding(.top, 4)
         HStack(spacing: 12) {
-          Toggle("Hover", isOn: $prefs.openOnHover)
-          Toggle("Click", isOn: $prefs.openOnClick)
-          Toggle("⌥M", isOn: $prefs.openOnHotkey)
+          Check("Hover", isOn: $prefs.openOnHover)
+          Check("Click", isOn: $prefs.openOnClick)
+          Check("⌥M", isOn: $prefs.openOnHotkey)
         }
 
         SectionLabel("Position").padding(.top, 6)
@@ -25,6 +27,7 @@ struct SettingsView: View {
           .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
         if prefs.position != nil || prefs.edge != "right" {
           Button("Reset position") { prefs.resetPosition() }.buttonStyle(.link)
+            .control("Reset position") { prefs.resetPosition() }
         } else if Prefs.dockEdge == prefs.edge {
           Text("Near the top for now, because your Dock is on the \(prefs.edge).")
             .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
@@ -37,11 +40,13 @@ struct SettingsView: View {
           Text("Dark").tag("dark")
         }
         .pickerStyle(.segmented).labelsHidden()
+        .control("Appearance", choice: $prefs.appearance, from: ["system", "light", "dark"])
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
           ForEach(ThemeStyle.allCases) { style in
             ThemeTile(style: style, selected: prefs.style == style) { prefs.style = style }
           }
         }
+        .control("Theme", choice: $prefs.style, from: Array(ThemeStyle.allCases))
         .padding(.vertical, 4)
         HStack(spacing: 8) {
           Text("Accent")
@@ -57,6 +62,7 @@ struct SettingsView: View {
             .accessibilityLabel("\(accent.rawValue.capitalized) accent")
           }
         }
+        .control("Accent", choice: $prefs.accent, from: Array(Accent.allCases))
 
         SectionLabel("Connected tools").padding(.top, 6)
         ToolToggles()
@@ -66,7 +72,7 @@ struct SettingsView: View {
         }
 
         SectionLabel("General").padding(.top, 6)
-        Toggle(
+        Check(
           "Open Margin at login",
           isOn: Binding(get: { opensAtLogin }, set: { on in Launcher.setOpensAtLogin(on); opensAtLogin = Launcher.opensAtLogin }))
 
@@ -76,6 +82,7 @@ struct SettingsView: View {
               .foregroundStyle(theme.secondary)
             Spacer()
             Button("Check for updates") { model.updates.checkNow() }.buttonStyle(.link)
+              .control("Check for updates") { model.updates.checkNow() }
           }
         }
 
@@ -86,61 +93,72 @@ struct SettingsView: View {
           Text("Glow only").tag("glow")
         }
         .labelsHidden()
+        .control("New messages", choice: $prefs.alert, from: ["preview", "name", "glow"])
         if prefs.alert == "preview" {
           Text("The first words show beside the strip, where anyone looking at your screen can see them.")
             .font(theme.caption).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
         }
-        Toggle("macOS notifications", isOn: Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }))
+        Check("macOS notifications", isOn: Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }))
 
         SectionLabel("Account").padding(.top, 6)
         HStack {
           Text("@\(model.me?.handle ?? "")")
           Spacer()
           Button("Sign out") { model.request("logout") }.buttonStyle(.link)
+            .control("Sign out") { model.request("logout") }
         }
         HStack(spacing: 12) {
           Button("Export data") { model.request("account.export") }.buttonStyle(.link)
+            .control("Export data") { model.request("account.export") }
           Button("Delete account", action: confirmDelete).buttonStyle(.link).foregroundStyle(theme.danger)
+            .control("Delete account", press: confirmDelete)
         }
         Button("How Margin works") { model.showGuide = true }.buttonStyle(.link)
+          .control("How Margin works") { model.showGuide = true }
         Button("Quit Margin", action: onQuit).buttonStyle(.plain).foregroundStyle(theme.secondary).padding(.top, 4)
+          .control("Quit Margin", press: onQuit)
       }
       .toggleStyle(.checkbox)
       .controlSize(.small)
       .font(theme.font(12))
       .padding(.horizontal, 16).padding(.vertical, 10)
     }
+    .onChange(of: model.cursor) {
+      if let cursor = model.cursor { proxy.scrollTo(cursor) }
+    }
+    }
   }
 
   @ViewBuilder private func privacy(_ settings: PrivacySettings) -> some View {
     SectionLabel("Privacy").padding(.top, 6)
-    Toggle("Invisible", isOn: bind(\.invisible))
+    Check("Invisible", isOn: bind(\.invisible))
     Text("Friends see:").foregroundStyle(theme.secondary)
     FlowRow {
-      Toggle("tool", isOn: bind(\.share.tool))
-      Toggle("model", isOn: bind(\.share.model))
-      Toggle("repo", isOn: bind(\.share.repo))
-      Toggle("time", isOn: bind(\.share.time))
-      Toggle("tokens", isOn: bind(\.share.tokens))
+      Check("tool", isOn: bind(\.share.tool))
+      Check("model", isOn: bind(\.share.model))
+      Check("repo", isOn: bind(\.share.repo))
+      Check("time", isOn: bind(\.share.time))
+      Check("tokens", isOn: bind(\.share.tokens))
     }
-    Toggle(
+    Check(
       "Close friends only",
       isOn: Binding(
-        get: { settings.audience == "close" },
+        get: { model.settings?.audience == "close" },
         set: { on in model.updateSettings { $0.audience = on ? "close" : "everyone" } }))
     if settings.audience == "close" {
       Text("Everyone else sees only online or idle.").font(theme.caption).foregroundStyle(theme.tertiary)
       ForEach(model.friends) { friend in
-        Toggle(
+        Check(
           friend.displayName,
           isOn: Binding(
-            get: { settings.closeFriends.contains(friend.handle) },
+            get: { model.settings?.closeFriends.contains(friend.handle) == true },
             set: { on in
               model.updateSettings { s in
                 s.closeFriends.removeAll { $0 == friend.handle }
                 if on { s.closeFriends.append(friend.handle) }
               }
-            })
+            }),
+          id: "close:\(friend.handle)"
         )
         .padding(.leading, 18)
       }
@@ -157,22 +175,29 @@ struct SettingsView: View {
           Image(systemName: "xmark").font(theme.font(9, bold: true))
         }
         .buttonStyle(.plain).accessibilityLabel("Remove override for \(repo)")
+        .control("repo:\(repo)") { model.updateSettings { $0.repos[repo] = nil } }
       }
     }
     HStack(spacing: 6) {
       TextField("owner/repo", text: $newRepo).textFieldStyle(.roundedBorder)
+        .focused($repoFocused)
+        .control("New repo") { repoFocused = true }
       Picker("", selection: $newRepoMode) {
         Text("Hide").tag("hidden")
         Text("Private").tag("private")
       }
       .labelsHidden().frame(width: 76)
-      Button("Add") {
-        let repo = newRepo.trimmingCharacters(in: .whitespaces)
-        guard repo.range(of: #"^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$"#, options: .regularExpression) != nil else { return }
-        model.updateSettings { $0.repos[repo] = newRepoMode }
-        newRepo = ""
-      }
+      .control("New repo mode", choice: $newRepoMode, from: ["hidden", "private"])
+      Button("Add", action: addRepo)
+        .control("Add repo", press: addRepo)
     }
+  }
+
+  private func addRepo() {
+    let repo = newRepo.trimmingCharacters(in: .whitespaces)
+    guard repo.range(of: #"^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$"#, options: .regularExpression) != nil else { return }
+    model.updateSettings { $0.repos[repo] = newRepoMode }
+    newRepo = ""
   }
 
   private func bind(_ path: WritableKeyPath<PrivacySettings, Bool>) -> Binding<Bool> {

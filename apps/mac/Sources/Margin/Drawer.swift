@@ -6,11 +6,13 @@ import SwiftUI
 // text field needs the keyboard, or when opened with the hotkey.
 final class DrawerPanel: NSPanel {
   var onEscape: (() -> Void)?
-  // Keys for moving around the drawer; true when handled.
+  // Keys for moving around the drawer; true when handled. They're seen before any control
+  // or field, which decide for themselves through onKey whether to let them through.
   var onKey: ((NSEvent) -> Bool)?
 
-  override func keyDown(with event: NSEvent) {
-    if onKey?(event) != true { super.keyDown(with: event) }
+  override func sendEvent(_ event: NSEvent) {
+    if event.type == .keyDown, onKey?(event) == true { return }
+    super.sendEvent(event)
   }
 
   init(content: NSView) {
@@ -39,7 +41,7 @@ final class DrawerPanel: NSPanel {
     guard flags.contains(.command), let key = event.charactersIgnoringModifiers?.lowercased() else {
       return super.performKeyEquivalent(with: event)
     }
-    if ["1", "2", "3"].contains(key), onKey?(event) == true { return true }
+    if onKey?(event) == true { return true }
     let action: Selector? =
       switch (key, flags.contains(.shift)) {
       case ("c", false): #selector(NSText.copy(_:))
@@ -450,31 +452,97 @@ final class DrawerController {
     model.expanded ? collapse() : expand(byHover: false, focus: true)
   }
 
-  // ↑/↓ through friends, Return to chat, Tab or ⌘1–3 between tabs. While you're typing in
-  // a field, keys stay with the field.
+  // ↑/↓ through friends, Return to chat, Tab or ⌘1–3 between tabs. On Add and Settings ↑/↓
+  // outline a control, Space or Return presses it and ←/→ change it. In a chat, ↑ from an
+  // empty field outlines your last message and ⌘C copies it. While you're typing in a field,
+  // keys stay with the field.
   private func key(_ event: NSEvent) -> Bool {
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    let field = panel.firstResponder as? NSTextView
     if flags.contains(.command) {
-      guard let digit = event.charactersIgnoringModifiers.flatMap(Int.init), (1...3).contains(digit) else { return false }
+      let key = event.charactersIgnoringModifiers?.lowercased()
+      if key == "c", field == nil, let message = model.cursorMessage {
+        model.copy(message)
+        return true
+      }
+      guard let digit = key.flatMap(Int.init), (1...3).contains(digit) else { return false }
       model.showTab([.friends, .add, .settings][digit - 1])
       return true
     }
-    if panel.firstResponder is NSTextView { return false }
-    let onList = model.chatWith == nil && model.tab == .friends && !model.needsSetup
+    guard !model.needsSetup, !model.showGuide else { return false }
+    if model.chatWith != nil { return chatKey(event, field: field) }
+    if field != nil {
+      // Esc leaves a field on Add or Settings without closing the drawer.
+      guard event.keyCode == kVK_Escape else { return false }
+      panel.makeFirstResponder(nil)
+      return true
+    }
+    let control = model.control
     switch Int(event.keyCode) {
-    case kVK_UpArrow where onList:
+    case kVK_UpArrow where model.tab == .friends:
       model.moveSelection(-1)
-    case kVK_DownArrow where onList:
+    case kVK_DownArrow where model.tab == .friends:
       model.moveSelection(1)
-    case kVK_Return where onList, kVK_ANSI_KeypadEnter where onList:
+    case kVK_Return where model.tab == .friends, kVK_ANSI_KeypadEnter where model.tab == .friends:
       guard let handle = model.selected else { return false }
       model.openChat(handle)
-    case kVK_Tab where model.chatWith == nil && !model.needsSetup:
+    case kVK_UpArrow:
+      model.moveCursor(-1)
+    case kVK_DownArrow:
+      model.moveCursor(1)
+    case kVK_Space, kVK_Return, kVK_ANSI_KeypadEnter:
+      guard let control else { return false }
+      control.press()
+    case kVK_LeftArrow, kVK_RightArrow:
+      guard let adjust = control?.adjust else { return false }
+      adjust(event.keyCode == kVK_LeftArrow ? -1 : 1)
+    case kVK_Tab:
       model.cycleTab(flags.contains(.shift) ? -1 : 1)
     default:
       return false
     }
     return true
+  }
+
+  // ↑ from an empty message field walks back through the chat; ↓ past the last message, Esc
+  // or typing goes back to the field.
+  private func chatKey(_ event: NSEvent, field: NSTextView?) -> Bool {
+    let ids = (model.conversations[model.chatWith ?? ""] ?? []).map(\.id)
+    if let field {
+      guard event.keyCode == kVK_UpArrow, field.string.isEmpty, let last = ids.last else { return false }
+      model.cursor = last
+      panel.makeFirstResponder(nil)
+      return true
+    }
+    guard let cursor = model.cursor, let index = ids.firstIndex(of: cursor) else { return false }
+    switch Int(event.keyCode) {
+    case kVK_UpArrow:
+      model.cursor = ids[max(index - 1, 0)]
+    case kVK_DownArrow where index < ids.count - 1:
+      model.cursor = ids[index + 1]
+    case kVK_DownArrow, kVK_Escape:
+      backToField(typing: nil)
+    default:
+      // Arrow and function keys arrive as private-use characters, Return and Tab as controls.
+      guard let typed = event.characters?.unicodeScalars.first,
+        !CharacterSet.controlCharacters.contains(typed), !(0xF700...0xF8FF).contains(typed.value)
+      else { return false }
+      backToField(typing: event)
+    }
+    return true
+  }
+
+  private func backToField(typing event: NSEvent?) {
+    model.cursor = nil
+    guard let field = editableField(in: panelView) else { return }
+    panel.makeFirstResponder(field)
+    if let event { panel.firstResponder?.keyDown(with: event) }
+  }
+
+  private func editableField(in view: NSView) -> NSView? {
+    if let field = view as? NSTextField, field.isEditable { return field }
+    if let text = view as? NSTextView, text.isEditable { return text }
+    return view.subviews.lazy.compactMap { self.editableField(in: $0) }.first
   }
 
   private func escape() {
@@ -527,6 +595,7 @@ final class DrawerController {
     clickMonitor = nil
     model.expanded = false
     model.selected = nil
+    model.cursor = nil
     model.updates.drawerClosed()
     let wasKey = panel.isKeyWindow
     let frame = panel.frame

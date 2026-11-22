@@ -37,6 +37,10 @@ final class AppModel {
   var chatWith: String?
   // The friend picked with ↑/↓, highlighted in the list.
   var selected: String?
+  // The control (Add, Settings) or message (chat) outlined with ↑/↓.
+  var cursor: String?
+  // What ↑/↓ can reach on the Add or Settings tab, as the views last reported it.
+  @ObservationIgnored var controls: [Control] = []
   // True while the drawer has the keyboard (opened with ⌥M, or clicked into); only then may a
   // field take focus by itself, so keystrokes meant for your work never land in Margin.
   var drawerFocused = false
@@ -167,8 +171,28 @@ final class AppModel {
     selected = handles[min(max(current + delta, 0), handles.count - 1)]
   }
 
+  func moveCursor(_ delta: Int) {
+    let ids = controls.map(\.id)
+    guard !ids.isEmpty else { return }
+    let current = cursor.flatMap { ids.firstIndex(of: $0) } ?? (delta > 0 ? -1 : ids.count)
+    cursor = ids[min(max(current + delta, 0), ids.count - 1)]
+  }
+
+  var control: Control? { controls.first { $0.id == cursor } }
+
+  var cursorMessage: ChatMessage? {
+    guard let chatWith, let cursor else { return nil }
+    return conversations[chatWith]?.first { $0.id == cursor }
+  }
+
+  func copy(_ message: ChatMessage) {
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(message.text, forType: .string)
+  }
+
   func showTab(_ next: Tab) {
     chatWith = nil
+    cursor = nil
     tab = next
   }
 
@@ -182,6 +206,7 @@ final class AppModel {
     if peek?.handle == handle { peek = nil }
     selected = handle
     chatWith = handle
+    cursor = nil
     request("history", ["with": handle])
     request("read", ["handle": handle])
   }

@@ -58,7 +58,7 @@ Each trigger is switchable in settings, and the hotkey can be changed.
 
 **Focus:** opening Margin doesn't take keyboard focus from your work. It takes focus only when you click a text field (chat, add friend) or open it with the hotkey. Esc returns focus to the app you were in.
 
-**Keyboard (when the drawer has focus — opened with ⌥M, or once you click into it):** ↑/↓ move through friends (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Add and Settings, ⌘1/⌘2/⌘3 jump to them, Esc goes back one level (chat → list → collapsed). While typing in a field, keys stay with the field.
+**Keyboard (when the drawer has focus — opened with ⌥M, or once you click into it):** ↑/↓ move through friends (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Add and Settings, ⌘1/⌘2/⌘3 jump to them, Esc goes back one level (chat → list → collapsed). On Add and Settings, ↑/↓ outline each control in turn, Space or Return toggles or presses it (or puts you in a text field), and ←/→ change a choice (appearance, theme, accent, new-message alert); Esc leaves a text field. While typing in a field, keys stay with the field.
 
 ## 5. Expanded panel
 
@@ -110,6 +110,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 ```
 - Theirs on the left, yours on the right; history loads when the chat opens.
 - Enter sends; Esc goes back to the list. Opening a chat marks it read.
+- Copying: right-click a message → Copy, or with the field empty press ↑ to outline your last message, ↑/↓ to pick another, and ⌘C to copy the whole message. ↓ past the last message, Esc, or typing returns to the field. Text inside a message can still be selected with the pointer.
 - Friend-written text is displayed as plain text (control characters stripped).
 
 ### Add tab
