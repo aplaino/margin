@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 
 // Links in chat: found in the text and made clickable, and previewed on the sender's Mac only
 // (the page's standard preview tags and a small picture), which margind then sends encrypted
@@ -44,7 +45,7 @@ enum LinkPreviews {
 
   // Title, a line of detail, the site and a small picture, from the page's preview tags.
   static func fetch(_ url: URL) async -> LinkPreview? {
-    let session = URLSession(configuration: .ephemeral)
+    let session = URLSession(configuration: .ephemeral, delegate: Redirects(), delegateQueue: nil)
     defer { session.finishTasksAndInvalidate() }
     guard let (data, response) = await read(url, session: session, limit: 512_000, stopAt: "</head>"),
       (response.mimeType ?? "").contains("html")
@@ -68,6 +69,7 @@ enum LinkPreviews {
   // Up to `limit` bytes of an https response (stopping early once `stopAt` has arrived); nil
   // for anything else, including a redirect away from https.
   private static func read(_ url: URL, session: URLSession, limit: Int, stopAt: String? = nil) async -> (Data, HTTPURLResponse)? {
+    guard isPublic(url) else { return nil }
     var request = URLRequest(url: url, timeoutInterval: 8)
     request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
     guard let (bytes, response) = try? await session.bytes(for: request),
@@ -85,6 +87,91 @@ enum LinkPreviews {
       return nil
     }
     return (data, http)
+  }
+
+  // Each redirect is checked like the first address; one that fails isn't followed.
+  private final class Redirects: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+      _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+      newRequest request: URLRequest
+    ) async -> URLRequest? {
+      guard let url = request.url, LinkPreviews.isPublic(url) else { return nil }
+      return request
+    }
+  }
+
+  // Only https to a public address, never this Mac, your network or a local name, so a page
+  // (or its redirects or image) can't make your Mac reach the devices around you. The name is
+  // resolved first and every address it has must be public.
+  static func isPublic(_ url: URL) -> Bool {
+    guard url.scheme == "https", url.user == nil, url.password == nil,
+      let host = url.host(percentEncoded: false)?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "[]")),
+      host.contains("."), !host.hasSuffix(".")
+    else { return false }
+    let local = ["localhost", "local", "internal", "lan", "home.arpa", "intranet", "corp", "home"]
+    if local.contains(where: { host == $0 || host.hasSuffix("." + $0) }) { return false }
+    var hints = addrinfo()
+    hints.ai_socktype = SOCK_STREAM
+    var result: UnsafeMutablePointer<addrinfo>?
+    guard getaddrinfo(host, "443", &hints, &result) == 0, let first = result else { return false }
+    defer { freeaddrinfo(first) }
+    var node: UnsafeMutablePointer<addrinfo>? = first
+    while let current = node {
+      guard let address = current.pointee.ai_addr, publicAddress(address) else { return false }
+      node = current.pointee.ai_next
+    }
+    return true
+  }
+
+  private static func publicAddress(_ address: UnsafeMutablePointer<sockaddr>) -> Bool {
+    switch Int32(address.pointee.sa_family) {
+    case AF_INET:
+      return address.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+        publicIPv4(UInt32(bigEndian: $0.pointee.sin_addr.s_addr))
+      }
+    case AF_INET6:
+      return address.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { pointer in
+        let b = withUnsafeBytes(of: pointer.pointee.sin6_addr) { Array($0) }
+        // IPv4-mapped: judged as IPv4.
+        if b[0..<10].allSatisfy({ $0 == 0 }), b[10] == 0xff, b[11] == 0xff {
+          return publicIPv4(UInt32(b[12]) << 24 | UInt32(b[13]) << 16 | UInt32(b[14]) << 8 | UInt32(b[15]))
+        }
+        if b[0..<15].allSatisfy({ $0 == 0 }) { return false }  // :: and ::1
+        if b[0] & 0xfe == 0xfc { return false }  // unique local
+        if b[0] == 0xfe, b[1] & 0xc0 == 0x80 { return false }  // link-local
+        return b[0] != 0xff  // multicast
+      }
+    default:
+      return false
+    }
+  }
+
+  private static func publicIPv4(_ v: UInt32) -> Bool {
+    let a = v >> 24, b = (v >> 16) & 0xff
+    if a == 0 || a == 10 || a == 127 || a >= 224 { return false }
+    if a == 169 && b == 254 { return false }
+    if a == 172 && (16...31).contains(b) { return false }
+    if a == 192 && b == 168 { return false }
+    if a == 100 && (64...127).contains(b) { return false }  // carrier-grade NAT
+    if a == 198 && (b == 18 || b == 19) { return false }
+    if a == 192 && b == 0 && (v >> 8) & 0xff == 0 { return false }
+    return true
+  }
+
+  // A preview's picture from a friend: decoded only if it's a small JPEG, by the JPEG decoder
+  // alone, never handed to every image format macOS knows.
+  static func image(_ base64: String) -> NSImage? {
+    guard let data = Data(base64Encoded: base64), data.count <= 24_000, data.starts(with: [0xFF, 0xD8, 0xFF]),
+      let source = CGImageSourceCreateWithData(
+        data as CFData, [kCGImageSourceTypeIdentifierHint: "public.jpeg"] as CFDictionary),
+      CGImageSourceGetType(source) as String? == "public.jpeg",
+      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+      let width = properties[kCGImagePropertyPixelWidth] as? Int,
+      let height = properties[kCGImagePropertyPixelHeight] as? Int,
+      (1...512).contains(width), (1...512).contains(height),
+      let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+    else { return nil }
+    return NSImage(cgImage: image, size: NSSize(width: width, height: height))
   }
 
   // <meta property|name="…" content="…">, keyed by the lowercased name; the first one wins.

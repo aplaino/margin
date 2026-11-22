@@ -248,7 +248,7 @@ struct ChatView: View {
       if let url = URL(string: preview.url), url.scheme == "https" { NSWorkspace.shared.open(url) }
     } label: {
       HStack(alignment: .top, spacing: 8) {
-        if let image = preview.image.flatMap({ Data(base64Encoded: $0) }).flatMap(NSImage.init(data:)) {
+        if let image = preview.image.flatMap(LinkPreviews.image) {
           Image(nsImage: image).resizable().scaledToFill()
             .frame(width: 40, height: 40)
             .clipShape(RoundedRectangle(cornerRadius: theme.nested(10)))
@@ -258,8 +258,10 @@ struct ChatView: View {
           if let detail = preview.detail {
             Text(verbatim: detail).font(theme.caption).foregroundStyle(theme.secondary).lineLimit(2)
           }
-          if let site = preview.site {
-            Text(verbatim: site).font(theme.font(10)).foregroundStyle(theme.tertiary).lineLimit(1)
+          // The host the card really opens, not the name the sender's page gave itself.
+          if let host = URL(string: preview.url)?.host() {
+            Text(verbatim: host.hasPrefix("www.") ? String(host.dropFirst(4)) : host)
+              .font(theme.font(10)).foregroundStyle(theme.tertiary).lineLimit(1)
           }
         }
         Spacer(minLength: 0)

@@ -106,6 +106,34 @@ const log = (what: string, e?: unknown) => {
 // Received chat text keeps newlines, tabs and joiners; every other control or format character goes.
 // How long after sending a message you can still Undo Send.
 const UNSEND_MS = 24 * 60 * 60_000;
+// A preview follows its message within seconds; one arriving much later is refused.
+const PREVIEW_MS = 10 * 60_000;
+
+// The preview's address is a whole link in the text (not the start of a longer one) with no
+// user name or password, so the card opens exactly what the message shows.
+export function linkIn(text: string, url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.username || parsed.password) return false;
+  } catch {
+    return false;
+  }
+  for (let i = text.indexOf(url); i >= 0; i = text.indexOf(url, i + 1)) {
+    const before = text[i - 1] ?? '';
+    const rest = text.slice(i + url.length);
+    if (/^$|[\s("'<[]/.test(before) && /^$|^\s|^[.,!?;:)\]}>"']+(\s|$)/.test(rest)) return true;
+  }
+  return false;
+}
+
+// Only a JPEG picture is kept; anything else loses its picture, not the preview.
+export function safePreview(preview: LinkPreview): LinkPreview {
+  if (!preview.image) return preview;
+  const bytes = Buffer.from(preview.image, 'base64');
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return preview;
+  const { image: _dropped, ...rest } = preview;
+  return rest;
+}
 
 function cleanChat(text: string) {
   const cleaned = text.replace(CONTROL, (c) => ('\t\n‌‍'.includes(c) ? c : '')).slice(0, 4000);
@@ -523,9 +551,11 @@ export async function startDaemon(options: DaemonOptions) {
         original?.peer === frame.from &&
         original.direction === 'in' &&
         original.state !== 'unsent' &&
-        original.text.includes(control.preview.url)
+        !original.preview &&
+        frame.sentAt - original.sentAt <= PREVIEW_MS &&
+        linkIn(original.text, control.preview.url)
       ) {
-        store.setPreview(control.id, control.preview);
+        store.setPreview(control.id, safePreview(control.preview));
         chatChanged(frame.from, control.id);
       }
       return ack();
@@ -566,12 +596,13 @@ export async function startDaemon(options: DaemonOptions) {
           m.direction === 'out' &&
           m.state !== 'unsent' &&
           !m.preview &&
-          m.text.includes(preview.url) &&
+          linkIn(m.text, preview.url) &&
           Date.now() - m.sentAt < 5 * 60_000,
       );
     if (!message) return;
-    await sendControl(to, { t: 'preview', id: message.id, preview }, () =>
-      store.setPreview(message.id, preview),
+    const safe = safePreview(preview);
+    await sendControl(to, { t: 'preview', id: message.id, preview: safe }, () =>
+      store.setPreview(message.id, safe),
     );
     chatChanged(to, message.id);
   }
