@@ -53,6 +53,12 @@ const MIGRATIONS: string[][] = [
   ],
   // Find friends: whether others can find this account (on unless switched off).
   [`ALTER TABLE accounts ADD COLUMN findable BOOLEAN NOT NULL DEFAULT TRUE`],
+  // "I couldn't read your message": held for a sender who's offline, sent when they connect.
+  [
+    `CREATE TABLE queued_resets (
+      to_id TEXT NOT NULL, from_id TEXT NOT NULL, message_id TEXT NOT NULL, sent_at BIGINT NOT NULL,
+      PRIMARY KEY (to_id, from_id, message_id))`,
+  ],
 ];
 
 export const TABLES = [
@@ -65,6 +71,7 @@ export const TABLES = [
   'blocks',
   'reports',
   'queued_messages',
+  'queued_resets',
   'releases',
   'crash_reports',
   'schema_migrations',

@@ -98,6 +98,17 @@ describe('store', () => {
     expect(store.history('leo', 4, 2).map((m) => m.text)).toEqual(['m2', 'm3']);
   });
 
+  test('removing a friend ends the session, unless only switching servers', () => {
+    const store = new Store(':memory:', keys('k'));
+    store.upsertFriend('leo');
+    store.storeSignalSession('leo.1', '{}');
+    store.removeFriend('leo', { keepSession: true });
+    expect(store.loadSignalSession('leo.1')).not.toBeNull();
+    store.upsertFriend('leo');
+    store.removeFriend('leo');
+    expect(store.loadSignalSession('leo.1')).toBeNull();
+  });
+
   test('the newest message in each chat, most recent chat first', () => {
     const store = new Store(':memory:', keys('l'));
     const save = (peer: string, direction: 'in' | 'out', text: string, sentAt: number) =>

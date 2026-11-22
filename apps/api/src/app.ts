@@ -116,6 +116,7 @@ export function createApp(sql: SQL, options: Options = {}) {
   const online = new Map<string, Online>();
   const limits = {
     message: limiter(60, 60_000),
+    reset: limiter(30, 60_000),
     presence: limiter(60, 60_000),
     request: limiter(20, 60 * 60_000),
     directory: limiter(300, 60 * 60_000),
@@ -279,6 +280,7 @@ export function createApp(sql: SQL, options: Options = {}) {
       await tx`DELETE FROM blocks WHERE blocker_id = ${id} OR blocked_id = ${id}`;
       await tx`DELETE FROM reports WHERE reporter_id = ${id}`;
       await tx`DELETE FROM queued_messages WHERE to_id = ${id} OR from_id = ${id}`;
+      await tx`DELETE FROM queued_resets WHERE to_id = ${id} OR from_id = ${id}`;
       await tx`DELETE FROM one_time_prekeys WHERE account_id = ${id}`;
       await tx`DELETE FROM key_bundles WHERE account_id = ${id}`;
       await tx`DELETE FROM sessions WHERE account_id = ${id}`;
@@ -551,6 +553,7 @@ export function createApp(sql: SQL, options: Options = {}) {
       await sql`INSERT INTO blocks ${sql({ blocker_id: me.id, blocked_id: peer.id, created_at: Date.now() })}
         ON CONFLICT DO NOTHING`;
       await sql`DELETE FROM queued_messages WHERE from_id = ${peer.id} AND to_id = ${me.id}`;
+      await sql`DELETE FROM queued_resets WHERE from_id = ${peer.id} AND to_id = ${me.id}`;
       await friendsChanged(me, peer);
       return json({ ok: true });
     }
@@ -655,6 +658,20 @@ export function createApp(sql: SQL, options: Options = {}) {
     if (frame.t === 'ack') {
       await sql`DELETE FROM queued_messages WHERE id = ${frame.id} AND to_id = ${me.id}`;
     }
+
+    if (frame.t === 'reset') {
+      if (!limits.reset(me.id)) return;
+      const peer = await accountByHandle(frame.to);
+      if (!peer || !(await areFriends(me.id, peer.id))) return;
+      const reset: ServerFrame = { t: 'reset', from: me.handle, id: frame.id };
+      if (online.has(peer.id)) return sendTo(peer.id, reset);
+      await sql`INSERT INTO queued_resets ${sql({
+        to_id: peer.id,
+        from_id: me.id,
+        message_id: frame.id,
+        sent_at: Date.now(),
+      })} ON CONFLICT DO NOTHING`;
+    }
   }
 
   async function onOpen(ws: Socket) {
@@ -687,6 +704,19 @@ export function createApp(sql: SQL, options: Options = {}) {
       };
       ws.send(JSON.stringify(frame));
     }
+
+    // Requests to resend that came while this Mac was away; a resend is only useful while the
+    // message itself could still be delivered.
+    await sql`DELETE FROM queued_resets WHERE sent_at < ${Date.now() - retentionMs}`;
+    const resets = await sql`
+      SELECT r.message_id, a.handle FROM queued_resets r JOIN accounts a ON a.id = r.from_id
+      WHERE r.to_id = ${me.id} ORDER BY r.sent_at`;
+    for (const r of resets) {
+      ws.send(
+        JSON.stringify({ t: 'reset', from: r.handle, id: r.message_id } satisfies ServerFrame),
+      );
+    }
+    await sql`DELETE FROM queued_resets WHERE to_id = ${me.id}`;
   }
 
   async function onClose(ws: Socket) {

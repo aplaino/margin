@@ -218,10 +218,16 @@ export class Store {
   }
 
   // Forgets the friend and anything waiting to be sent to them. Chat history stays.
-  removeFriend(handle: string) {
+  // Removing someone ends the encrypted session too, as it does on their side. Switching
+  // servers keeps it (keepSession), since the friends on the other server still have theirs.
+  removeFriend(handle: string, { keepSession = false } = {}) {
     v.parse(Handle, handle);
     this.db.query('DELETE FROM friends WHERE handle = ?').run(handle);
     this.db.query('DELETE FROM outbox WHERE peer = ?').run(handle);
+    if (!keepSession) this.removeSignalSessions(handle);
+  }
+
+  removeSignalSessions(handle: string) {
     // Signal addresses are "<handle>.<deviceId>"; match that exact prefix.
     const prefix = `${handle}.`;
     this.db

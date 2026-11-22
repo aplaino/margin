@@ -321,6 +321,34 @@ describe('presence', () => {
   });
 });
 
+describe('resend requests', () => {
+  const resetFrom = (handle: string) => (f: ServerFrame) => f.t === 'reset' && f.from === handle;
+
+  test('reach the sender at once, or when they next connect, and only between friends', async () => {
+    const maya = await api.user('maya');
+    const leo = await api.user('leo');
+    const stranger = await api.user('stranger');
+    await api.befriend(maya, leo);
+    const [m, l, s] = [await maya.connect(), await leo.connect(), await stranger.connect()];
+    const [live, later] = [uuid(), uuid()];
+
+    l.send({ t: 'reset', to: 'maya', id: live });
+    expect(await m.next(resetFrom('leo'))).toEqual({ t: 'reset', from: 'leo', id: live });
+
+    m.ws.close();
+    await m.closed();
+    l.send({ t: 'reset', to: 'maya', id: later });
+    s.send({ t: 'reset', to: 'maya', id: uuid() });
+    await Bun.sleep(50);
+    const back = await maya.connect();
+    expect(await back.next(resetFrom('leo'))).toEqual({ t: 'reset', from: 'leo', id: later });
+    expect(await back.unexpected((f) => f.t === 'reset')).toEqual([]);
+    // Delivered once.
+    const again = await maya.connect();
+    expect(await again.unexpected((f) => f.t === 'reset')).toEqual([]);
+  });
+});
+
 describe('messages', () => {
   test('delivered live, with the sender set by the server', async () => {
     const maya = await api.user('maya');

@@ -86,6 +86,8 @@ export const ClientFrame = v.variant('t', [
   }),
   v.object({ t: v.literal('send'), id: MessageId, to: Handle, ciphertext: Ciphertext }),
   v.object({ t: v.literal('ack'), id: MessageId }),
+  // "I couldn't read your message `id`": the sender starts a new session and sends it again.
+  v.object({ t: v.literal('reset'), to: Handle, id: MessageId }),
 ]);
 export type ClientFrame = v.InferOutput<typeof ClientFrame>;
 
@@ -106,6 +108,8 @@ export const ServerFrame = v.variant('t', [
     id: MessageId,
     error: v.pipe(v.string(), v.maxLength(200)),
   }),
+  // A friend couldn't read message `id`: start a new session with them and send it again.
+  v.object({ t: v.literal('reset'), from: Handle, id: MessageId }),
   v.object({ t: v.literal('friends-changed') }),
   v.object({ t: v.literal('prekeys-low'), remaining: Count }),
   v.object({ t: v.literal('error'), error: v.pipe(v.string(), v.maxLength(200)) }),

@@ -5,7 +5,20 @@ import type { Ciphertext, KeyBundle, PeerBundle } from '@margin/protocol';
 import libsignal from 'libsignal';
 import type { Store } from './store';
 
-const { keyhelper, ProtocolAddress, SessionBuilder, SessionCipher, SessionRecord } = libsignal;
+const {
+  keyhelper,
+  ProtocolAddress,
+  SessionBuilder,
+  SessionCipher,
+  SessionRecord,
+  SessionError,
+  MessageCounterError,
+} = libsignal;
+
+// A message that failed because a session was lost (theirs or ours) heals by starting a new
+// one. A replay or a different identity key never does.
+export const healable = (e: unknown) =>
+  e instanceof SessionError && !(e instanceof MessageCounterError);
 
 type KeyPair = { pubKey: Buffer; privKey: Buffer };
 type Saved = {

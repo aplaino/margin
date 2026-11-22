@@ -115,6 +115,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 - Enter sends; Esc goes back to the list. Opening a chat marks it read.
 - Copying: right-click a message → Copy, or with the field empty press ↑ to outline your last message, ↑/↓ to pick another, and ⌘C to copy the whole message. ↓ past the last message, Esc, or typing returns to the field. Text inside a message can still be selected with the pointer.
 - Friend-written text is displayed as plain text (control characters stripped).
+- **Lost sessions heal (agreed with the owner 2026-11-22):** if this Mac can't read a message because its side of the encrypted session is gone (Margin's data reset, or a server switch in development), it asks the sender's Mac to start a new session from fresh keys and send that message again; the sender's chat keeps it once. The sender's identity key must still match the one pinned, so this never lets a different key in, and a replayed message is never resent. Switching servers no longer deletes sessions.
 
 ### Chats tab (agreed with the owner 2026-11-22)
 ```

@@ -312,6 +312,29 @@ describe('two users, two daemons, one server', () => {
     );
   });
 
+  test('a message the friend can’t read is sent again under a new session', async () => {
+    // As after switching servers or losing Margin's data: Leo's side of the session is gone,
+    // Maya's isn't.
+    leo.daemon.store.removeSignalSessions('maya');
+    const sent = (await maya.app.request({ op: 'send', to: 'leo', text: 'are you there?' })) as {
+      id: string;
+    };
+    const received = await leo.app.until(
+      (p) =>
+        p.type === 'message' && p.message.direction === 'in' && p.message.text === 'are you there?',
+    );
+    expect(received.type === 'message' && received.message.id).not.toBe(sent.id);
+    // Maya's chat still has it once, and Leo's reply goes through on the new session.
+    expect(
+      maya.daemon.store.history('leo').filter((m) => m.text === 'are you there?'),
+    ).toHaveLength(1);
+    await leo.app.request({ op: 'send', to: 'maya', text: 'yes, back now' });
+    await maya.app.until(
+      (p) =>
+        p.type === 'message' && p.message.direction === 'in' && p.message.text === 'yes, back now',
+    );
+  });
+
   test('a message sent while the friend is offline arrives after their daemon restarts', async () => {
     leo.app.close();
     await leo.daemon.stop();
@@ -338,6 +361,8 @@ describe('two users, two daemons, one server', () => {
     expect(history.type === 'history' && history.messages.map((m) => m.text)).toEqual([
       'shipped the new parser!',
       'nice, how fast is it now?\nbenchmarks?',
+      'are you there?',
+      'yes, back now',
       'see you tomorrow',
     ]);
     const [{ n }] = await sql`SELECT COUNT(*) AS n FROM queued_messages`;

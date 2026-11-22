@@ -42,7 +42,7 @@ import {
 import { type FetchRepo, originRepo, repoClassifier } from './repo';
 import { Reports, stackOf } from './reports';
 import { Sessions } from './sessions';
-import { PREKEY_BATCH, Signal } from './signal';
+import { healable, PREKEY_BATCH, Signal } from './signal';
 import { Store } from './store';
 import { scanTokens, type TokenSources } from './tokens';
 import {
@@ -128,7 +128,7 @@ export async function startDaemon(options: DaemonOptions) {
   const saved = store.account();
   if (saved && saved.server !== options.server) {
     store.setAccount(undefined);
-    for (const friend of store.friends()) store.removeFriend(friend.handle);
+    for (const friend of store.friends()) store.removeFriend(friend.handle, { keepSession: true });
     store.delete('friendLastSeen');
   }
   const signal = new Signal(store);
@@ -411,8 +411,10 @@ export async function startDaemon(options: DaemonOptions) {
     try {
       text = cleanChat(await signal.decrypt(frame.from, frame.ciphertext));
     } catch (e) {
-      // Retrying can't help (wrong key, forged sender, replay): drop it rather than jam the queue.
+      // Retrying this frame can't help, so it's dropped rather than jam the queue. A lost
+      // session asks the sender to start a new one and send it again.
       problem('dropped a message that could not be decrypted', e);
+      if (healable(e)) askToResend(frame.from, frame.id);
       return ack();
     }
     if (!text) return ack();
@@ -429,6 +431,37 @@ export async function startDaemon(options: DaemonOptions) {
     push({ type: 'roster', friends: roster() });
   }
 
+  // At most 20 resend requests a minute to each friend.
+  const resendAsks = new Map<string, number[]>();
+  function askToResend(from: string, id: string) {
+    const now = Date.now();
+    const recent = (resendAsks.get(from) ?? []).filter((t) => now - t < 60_000);
+    if (recent.length >= 20) return;
+    resendAsks.set(from, [...recent, now]);
+    connection?.send({ t: 'reset', to: from, id });
+  }
+
+  // A friend couldn't read one of your messages: start a new session from fresh keys (once,
+  // however many messages they ask about) and send that message again. The friend's identity
+  // key is still the one pinned, so this can't introduce a different person.
+  const lastReset = new Map<string, number>();
+  async function onReset(from: string, id: string) {
+    if (!store.friend(from)) return;
+    const now = Date.now();
+    if (now - (lastReset.get(from) ?? 0) > 60_000) {
+      lastReset.set(from, now);
+      store.removeSignalSessions(from);
+      await fetchBundle(from);
+    }
+    const original = store.message(id);
+    if (original?.direction !== 'out' || original.peer !== from || !store.bundle(from)) return;
+    const ciphertext = await signal.encrypt(from, original.text, store.bundle(from));
+    // A new id: the server has already delivered the old one. The chat keeps the original.
+    const frame: ClientFrame = { t: 'send', id: crypto.randomUUID(), to: from, ciphertext };
+    store.enqueue(frame.id, from, frame);
+    connection?.send(frame);
+  }
+
   function onFrame(frame: ServerFrame) {
     const handle = async () => {
       switch (frame.t) {
@@ -436,6 +469,8 @@ export async function startDaemon(options: DaemonOptions) {
           return onPresence(frame.from, frame.presence);
         case 'message':
           return onMessage(frame);
+        case 'reset':
+          return onReset(frame.from, frame.id);
         case 'accepted': {
           store.dequeue(frame.id);
           store.setMessageState(frame.id, 'sent');
