@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SQL } from 'bun';
 import { tokenMatches } from './limits';
@@ -20,6 +20,9 @@ const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
 const SIGNATURE = /^[A-Za-z0-9+/]{40,120}={0,2}$/;
 const SYSTEM = /^\d{1,3}\.\d{1,3}$/;
 const MAX_ZIP = 300 * 1024 * 1024;
+// Builds kept on disk. Installed copies update straight to the newest and first installs
+// get the newest image, so older ones only fill the volume (it filled at build 57).
+const KEEP = 3;
 
 type Release = {
   version: string;
@@ -49,6 +52,15 @@ export function updates(sql: SQL, options: UpdateOptions) {
     }));
   }
 
+  // Deletes every build but the newest `keep`, and any half-finished upload.
+  async function prune(keep: number) {
+    const kept = new Set((await latest(keep)).map((r) => r.build));
+    for (const name of readdirSync(options.dir)) {
+      const match = name.match(/^Margin-(\d+)\.(?:zip|dmg)(\.partial)?$/);
+      if (match && (match[2] || !kept.has(Number(match[1])))) unlinkSync(join(options.dir, name));
+    }
+  }
+
   async function upload(req: Request) {
     if (!options.releaseToken) return json({ error: 'not found' }, 404);
     if (!tokenMatches(req.headers.get('authorization'), options.releaseToken))
@@ -72,6 +84,8 @@ export function updates(sql: SQL, options: UpdateOptions) {
     const bytes = await req.arrayBuffer();
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_ZIP)
       return json({ error: 'invalid release' }, 400);
+    // Room first, so a full disk can't block the release that would free it.
+    await prune(KEEP - 1);
     // Written aside and renamed into place, so a half-uploaded zip is never served.
     const path = join(options.dir, zipName(build));
     await Bun.write(`${path}.partial`, bytes);
@@ -104,7 +118,7 @@ export function updates(sql: SQL, options: UpdateOptions) {
   }
 
   async function appcast(url: URL) {
-    const items = (await latest(5))
+    const items = (await latest(KEEP))
       .map(
         (r) => `    <item>
       <title>Margin ${esc(r.version)}</title>

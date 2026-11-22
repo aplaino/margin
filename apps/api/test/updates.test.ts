@@ -77,6 +77,19 @@ describe('releases', () => {
     expect(xml).toContain('<sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>');
   });
 
+  test('only the newest three builds stay on disk, and the appcast lists only those', async () => {
+    for (const build of [1, 2, 3, 4, 5]) expect((await upload(build)).status).toBe(200);
+    await Bun.write(join(dir, 'Margin-9.zip.partial'), 'half an upload');
+    expect((await upload(6)).status).toBe(200);
+    expect(readdirSync(dir).sort()).toEqual(['Margin-4.zip', 'Margin-5.zip', 'Margin-6.zip']);
+    const feed = await (await fetch(`${api.base}/updates/appcast.xml`)).text();
+    expect(feed.match(/<sparkle:version>(\d+)</g)).toEqual([
+      '<sparkle:version>6<',
+      '<sparkle:version>5<',
+      '<sparkle:version>4<',
+    ]);
+  });
+
   test('zips download as uploaded, and /download gives the newest as Margin.zip', async () => {
     const bytes = new Uint8Array([80, 75, 3, 4, 0, 1, 2, 255]);
     await upload(1, 'old');
