@@ -86,6 +86,7 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.82 or later (
 - [PASS] Pause alerts — B: Settings → Notifications → **Pause alerts** → For 1 hour. A sends a message: no tab, no glow, no macOS notification, but the unread count goes up. B presses **Resume**: the next message alerts as usual.
 - [PASS] No message lost — note anything sent that never arrived (Gaps §3).
 - [ ] A→B [ ] B→A — Read receipts: A sends B a message; under it A sees "Delivered", then "Read" and the time once B opens the chat. B turns off Settings → Privacy → **Send read receipts**: A's next message stays "Delivered" after B reads it, and B no longer sees "Read" under its own messages.
+- [ ] A→B [ ] B→A — Links: A sends a Spotify track link. Within a few seconds both chats show a card (cover, song, artist · album, Spotify) above the link; clicking the card or the link opens it. A turns off **Link previews**: the next link arrives as a plain clickable link.
 
 ### 6. Tokens
 - [ ] A→B [ ] B→A — Profile: B clicks A on Friends: A's picture, name, handle and status, this week's tokens, prompts and time, the 14-day chart, today, all time and this week. A sends a prompt in Claude Code: prompts today goes up within a minute on B's Mac. Message opens the chat; ‹ in the chat comes back to the profile; Esc goes back to the list. A's name in the chat header opens the profile. A clicks their own total: their profile as B sees it.

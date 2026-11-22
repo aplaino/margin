@@ -3,6 +3,7 @@ import {
   Ciphertext,
   Count,
   Handle,
+  LinkPreview,
   MessageId,
   Name,
   NoControl,
@@ -138,5 +139,7 @@ export const Control = v.variant('t', [
   // Read receipts: your message `id` reached their Mac; or they've read up to and including it.
   v.object({ t: v.literal('delivered'), id: MessageId }),
   v.object({ t: v.literal('read'), id: MessageId }),
+  // The preview for a link in your message `id`.
+  v.object({ t: v.literal('preview'), id: MessageId, preview: LinkPreview }),
 ]);
 export type Control = v.InferOutput<typeof Control>;

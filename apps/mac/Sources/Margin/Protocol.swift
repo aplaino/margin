@@ -56,6 +56,7 @@ struct ChatMessage: Codable, Equatable, Identifiable {
   var sentAt: Double
   var state: String?
   var readAt: Double?
+  var preview: LinkPreview?
   var incoming: Bool { direction == "in" }
   var unsent: Bool { state == "unsent" }
   // Your own, not yet unsent, and sent within the last day.
@@ -81,6 +82,16 @@ struct PrivacySettings: Codable, Equatable {
   // Missing from an older margind, which means on.
   var findable: Bool?
   var readReceipts: Bool?
+  var linkPreviews: Bool?
+}
+
+struct LinkPreview: Codable, Equatable {
+  var url: String
+  var title: String
+  var detail: String?
+  var site: String?
+  // A small JPEG, base64.
+  var image: String?
 }
 
 struct ToolState: Codable, Equatable, Identifiable {

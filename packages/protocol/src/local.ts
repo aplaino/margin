@@ -2,6 +2,7 @@ import * as v from 'valibot';
 import {
   Count,
   Handle,
+  LinkPreview,
   MessageId,
   Name,
   NoControl,
@@ -45,6 +46,8 @@ export const Settings = v.object({
   findable: v.boolean(),
   // Tell friends when you've read their messages; off also hides when they've read yours.
   readReceipts: v.boolean(),
+  // Fetch a preview of links you send (on this Mac) and send it with the message.
+  linkPreviews: v.boolean(),
 });
 export type Settings = v.InferOutput<typeof Settings>;
 
@@ -56,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   closeFriends: [],
   findable: true,
   readReceipts: true,
+  linkPreviews: true,
 };
 
 export const ChatText = v.pipe(v.string(), v.minLength(1), v.maxLength(4000), NoControlText);
@@ -76,6 +80,8 @@ export const Request = v.variant('op', [
   // delete a whole conversation from this Mac.
   v.object({ op: v.literal('delete'), id: MessageId }),
   v.object({ op: v.literal('unsend'), id: MessageId }),
+  // The preview the app fetched for a link in a message you just sent `to` someone.
+  v.object({ op: v.literal('preview'), to: Handle, preview: LinkPreview }),
   v.object({
     op: v.literal('history'),
     with: Handle,
@@ -137,6 +143,7 @@ export const ChatMessage = v.object({
   // Send removed it.
   state: v.optional(v.picklist(['queued', 'sent', 'delivered', 'read', 'unsent'])),
   readAt: v.optional(Timestamp),
+  preview: v.optional(LinkPreview),
 });
 export type ChatMessage = v.InferOutput<typeof ChatMessage>;
 

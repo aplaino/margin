@@ -505,10 +505,16 @@ struct SettingsView: View {
         "Send read receipts",
         Binding(
           get: { model.settings?.readReceipts ?? true },
-          set: { on in model.updateSettings { $0.readReceipts = on } }),
+          set: { on in model.updateSettings { $0.readReceipts = on } }))
+      switchRow(
+        "Link previews",
+        Binding(
+          get: { model.settings?.linkPreviews ?? true },
+          set: { on in model.updateSettings { $0.linkPreviews = on } }),
         last: true)
     }
     note("With read receipts off, you also won’t see when friends have read yours.")
+    note("Link previews are fetched on your Mac when you send a link and go with the message; friends’ Macs never contact the site.")
     SettingsGroup("Friends see") {
       switchRow("Tool", bind(\.share.tool))
       switchRow("Model", bind(\.share.model))

@@ -111,3 +111,15 @@ export const Ciphertext = v.object({
 export type Ciphertext = v.InferOutput<typeof Ciphertext>;
 
 export const MessageId = v.pipe(v.string(), v.uuid());
+
+// A link's preview, fetched on the sender's Mac and sent encrypted after the message, so the
+// receiving Mac never contacts the site. Its address must appear in the message's text.
+export const LinkPreview = v.object({
+  url: v.pipe(v.string(), v.maxLength(2048), v.url(), v.startsWith('https://')),
+  title: v.pipe(v.string(), v.minLength(1), v.maxLength(200), NoControl),
+  detail: v.optional(v.pipe(v.string(), v.maxLength(300), NoControl)),
+  site: v.optional(v.pipe(v.string(), v.maxLength(80), NoControl)),
+  // A small JPEG, base64; it has to fit in one encrypted control.
+  image: v.optional(v.pipe(v.string(), v.base64(), v.maxLength(24_000))),
+});
+export type LinkPreview = v.InferOutput<typeof LinkPreview>;

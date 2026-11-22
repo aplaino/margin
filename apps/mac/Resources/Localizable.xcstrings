@@ -4477,6 +4477,62 @@
         }
       }
     },
+    "Link previews": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Προεπισκοπήσεις συνδέσμων"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vistas previas de enlaces"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクのプレビュー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接预览"
+          }
+        }
+      }
+    },
+    "Link previews are fetched on your Mac when you send a link and go with the message; friends’ Macs never contact the site.": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Οι προεπισκοπήσεις συνδέσμων λαμβάνονται στο Mac σου όταν στέλνεις έναν σύνδεσμο και πηγαίνουν μαζί με το μήνυμα· τα Mac των φίλων σου δεν επικοινωνούν ποτέ με τον ιστότοπο."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las vistas previas se obtienen en tu Mac al enviar un enlace y van con el mensaje; los Mac de tus amigos nunca contactan con el sitio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクのプレビューはリンクを送信したときにあなたのMacで取得され、メッセージと一緒に送られます。友達のMacがそのサイトに接続することはありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接预览在你发送链接时由你的 Mac 获取，并随消息一起发送；好友的 Mac 从不访问该网站。"
+          }
+        }
+      }
+    },
     "Logarithm": {
       "localizations": {
         "el": {

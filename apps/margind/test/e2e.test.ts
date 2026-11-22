@@ -554,6 +554,29 @@ describe('two users, two daemons, one server', () => {
     await leo.app.request({ op: 'settings.set', settings: { invisible: false } });
   });
 
+  test('a link preview from the sender reaches the friend, only for a link in the message', async () => {
+    const url = 'https://open.spotify.com/track/0UqKPaKqC3tWU4o8BB7owl';
+    const preview = { url, title: 'Midnight City', detail: 'M83 · Song · 2011', site: 'Spotify' };
+    const sent = (await maya.app.request({ op: 'send', to: 'leo', text: `listen ${url}` })) as {
+      id: string;
+    };
+    await leo.app.until((p) => p.type === 'message' && p.message.id === sent.id);
+    await maya.app.request({ op: 'preview', to: 'leo', preview });
+    const got = await leo.app.until<Extract<Push, { type: 'message' }>>(
+      (p) => p.type === 'message' && p.message.id === sent.id && !!p.message.preview,
+    );
+    expect(got.message.preview).toEqual(preview);
+    expect(maya.daemon.store.message(sent.id)?.preview).toEqual(preview);
+
+    // A preview for a link that isn't in a recent message goes nowhere.
+    await maya.app.request({
+      op: 'preview',
+      to: 'leo',
+      preview: { url: 'https://example.com/elsewhere', title: 'Not this' },
+    });
+    expect(JSON.stringify(maya.daemon.store.history('leo'))).not.toContain('Not this');
+  });
+
   test('removing a friend clears them on both sides', async () => {
     const gone = (user: User, handle: string) =>
       user.app.next((p) => p.type === 'roster' && !p.friends.some((f) => f.handle === handle));

@@ -192,6 +192,17 @@ struct ChatView: View {
     let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else { return }
     model.request("send", ["to": handle, "text": text])
+    // The preview is fetched here, on the sender's Mac, and follows the message.
+    if model.settings?.linkPreviews ?? true, let url = LinkPreviews.firstLink(in: text) {
+      let to = handle
+      Task {
+        guard let preview = await LinkPreviews.fetch(url),
+          let data = try? JSONEncoder().encode(preview),
+          let object = try? JSONSerialization.jsonObject(with: data)
+        else { return }
+        model.request("preview", ["to": to, "preview": object])
+      }
+    }
     draft = ""
     focused = true
   }
@@ -230,9 +241,45 @@ struct ChatView: View {
     }
   }
 
+  // Picture, title, a line of detail and the site; the whole card opens the link, whose
+  // address margind has checked is in the message.
+  private func previewCard(_ preview: LinkPreview) -> some View {
+    Button {
+      if let url = URL(string: preview.url), url.scheme == "https" { NSWorkspace.shared.open(url) }
+    } label: {
+      HStack(alignment: .top, spacing: 8) {
+        if let image = preview.image.flatMap({ Data(base64Encoded: $0) }).flatMap(NSImage.init(data:)) {
+          Image(nsImage: image).resizable().scaledToFill()
+            .frame(width: 40, height: 40)
+            .clipShape(RoundedRectangle(cornerRadius: theme.nested(10)))
+        }
+        VStack(alignment: .leading, spacing: 1) {
+          Text(verbatim: preview.title).font(theme.font(12, bold: true)).lineLimit(2)
+          if let detail = preview.detail {
+            Text(verbatim: detail).font(theme.caption).foregroundStyle(theme.secondary).lineLimit(2)
+          }
+          if let site = preview.site {
+            Text(verbatim: site).font(theme.font(10)).foregroundStyle(theme.tertiary).lineLimit(1)
+          }
+        }
+        Spacer(minLength: 0)
+      }
+      .padding(8)
+      .foregroundStyle(theme.text)
+      .background(RoundedRectangle(cornerRadius: theme.bubbleRadius).fill(theme.surface))
+      .overlay(RoundedRectangle(cornerRadius: theme.bubbleRadius).strokeBorder(theme.border, lineWidth: theme.borderWidth))
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .help(preview.url)
+  }
+
   private func sentBubble(_ message: ChatMessage) -> some View {
     VStack(alignment: message.incoming ? .leading : .trailing, spacing: 2) {
-      Text(message.text)
+      if let preview = message.preview { previewCard(preview) }
+      Text(LinkPreviews.attributed(message.text))
+        .tint(message.incoming ? theme.accent : theme.onAccent)
+        .help(LinkPreviews.links(in: message.text).map(\.url.absoluteString).joined(separator: "\n"))
         .textSelection(.enabled)
         .padding(.horizontal, 11).padding(.vertical, 7)
         .foregroundStyle(message.incoming ? theme.text : theme.onAccent)

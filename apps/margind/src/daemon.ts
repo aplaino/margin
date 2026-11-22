@@ -12,6 +12,7 @@ import {
   Findable,
   type Friend,
   FriendList,
+  type LinkPreview,
   PeerBundle,
   PROTOCOL,
   type PublicPresence,
@@ -514,6 +515,21 @@ export async function startDaemon(options: DaemonOptions) {
       if (store.delivered(frame.from, control.id)) chatChanged(frame.from, control.id);
       return ack();
     }
+    // A preview is kept only for their own message, and only if its address is in the text,
+    // so a card can't claim one site and open another.
+    if (control.t === 'preview') {
+      const original = store.message(control.id);
+      if (
+        original?.peer === frame.from &&
+        original.direction === 'in' &&
+        original.state !== 'unsent' &&
+        original.text.includes(control.preview.url)
+      ) {
+        store.setPreview(control.id, control.preview);
+        chatChanged(frame.from, control.id);
+      }
+      return ack();
+    }
     if (control.t === 'read') {
       if (store.readUpTo(frame.from, control.id, frame.sentAt)) chatChanged(frame.from);
       return ack();
@@ -536,6 +552,28 @@ export async function startDaemon(options: DaemonOptions) {
   function sendReceipt(to: string, control: Extract<Control, { t: 'delivered' | 'read' }>) {
     if (store.settings().invisible) return;
     sendControl(to, control).catch((e) => problem(`could not send a ${control.t} receipt`, e));
+  }
+
+  // The preview the app fetched for a link you just sent: kept on your newest message to them
+  // with that link (from the last five minutes) and sent after it.
+  async function attachPreview(to: string, preview: LinkPreview) {
+    if (!store.settings().linkPreviews || !store.friend(to)) return;
+    const message = store
+      .history(to)
+      .reverse()
+      .find(
+        (m) =>
+          m.direction === 'out' &&
+          m.state !== 'unsent' &&
+          !m.preview &&
+          m.text.includes(preview.url) &&
+          Date.now() - m.sentAt < 5 * 60_000,
+      );
+    if (!message) return;
+    await sendControl(to, { t: 'preview', id: message.id, preview }, () =>
+      store.setPreview(message.id, preview),
+    );
+    chatChanged(to, message.id);
   }
 
   // An encrypted instruction for a friend's margind, kept in the outbox like a message until
@@ -864,6 +902,8 @@ export async function startDaemon(options: DaemonOptions) {
         chatChanged(message.peer);
         return undefined;
       }
+      case 'preview':
+        return attachPreview(request.to, request.preview);
       case 'unsend':
         return unsend(request.id);
       case 'chat.delete':

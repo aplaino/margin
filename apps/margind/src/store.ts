@@ -5,6 +5,7 @@ import {
   type ChatMessage,
   DEFAULT_SETTINGS,
   Handle,
+  type LinkPreview,
   type PeerBundle,
   Settings,
 } from '@margin/protocol';
@@ -30,6 +31,8 @@ const MIGRATIONS = [
    CREATE TABLE token_seen (id TEXT PRIMARY KEY);`,
   // Read receipts: when a friend read your message.
   `ALTER TABLE messages ADD COLUMN read_at INTEGER;`,
+  // A link's preview, sealed like the text.
+  `ALTER TABLE messages ADD COLUMN preview BLOB;`,
 ];
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
@@ -132,6 +135,7 @@ export class Store {
           invisible: true,
           findable: false,
           readReceipts: false,
+          linkPreviews: false,
           damaged: true,
         };
   }
@@ -309,11 +313,17 @@ export class Store {
     );
   }
 
-  // Undo Send: the text is gone, a marker stays in its place.
+  // Undo Send: the text (and any link preview) is gone, a marker stays in its place.
   unsend(id: string) {
     this.db
-      .query("UPDATE messages SET state = 'unsent', body = ? WHERE id = ?")
+      .query("UPDATE messages SET state = 'unsent', body = ?, preview = NULL WHERE id = ?")
       .run(this.seal(''), id);
+  }
+
+  setPreview(id: string, preview: LinkPreview) {
+    this.db
+      .query('UPDATE messages SET preview = ? WHERE id = ?')
+      .run(this.seal(JSON.stringify(preview)), id);
   }
 
   deleteMessage(id: string) {
@@ -365,6 +375,7 @@ export class Store {
       sentAt: r.sent_at,
       ...(r.state ? { state: r.state } : {}),
       ...(r.read_at ? { readAt: r.read_at } : {}),
+      ...(r.preview ? { preview: JSON.parse(this.open(r.preview).toString()) } : {}),
     };
   }
 
@@ -456,4 +467,5 @@ type MessageRow = {
   sent_at: number;
   state: 'queued' | 'sent' | 'delivered' | 'read' | 'unsent' | null;
   read_at: number | null;
+  preview: Uint8Array | null;
 };
