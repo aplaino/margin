@@ -13,7 +13,11 @@ struct StripView: View {
   var body: some View {
     let online = model.onlineFriends
     let connected = model.me?.connection == "online"
-    let quiet = model.prefs.fadeWhenQuiet && model.signedIn && online.isEmpty && model.unreadTotal == 0 && !model.stripHovered
+    // Only when hovering opens Margin: a faded strip is found by pointing at the edge, and
+    // with hover off it has to be seen to be clicked.
+    let quiet =
+      model.prefs.fadeWhenQuiet && model.prefs.openOnHover && model.signedIn && online.isEmpty
+      && model.unreadTotal == 0 && !model.stripHovered
     VStack(spacing: theme.stripSpacing) {
       if !model.signedIn {
         Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: theme.dot, height: theme.dot)
