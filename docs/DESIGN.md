@@ -58,9 +58,9 @@ Each trigger is switchable in settings, and the hotkey can be changed.
 
 **Animation:** slides out from the edge in 150 ms; with Reduce Motion on, it fades instead.
 
-**Focus:** opening Margin doesn't take keyboard focus from your work. It takes focus only when you click a text field (chat, add friend) or open it with the hotkey. Esc returns focus to the app you were in.
+**Focus:** opening Margin doesn't take keyboard focus from your work. It takes focus when you click into it, click its menu bar item (as any menu would), or open it with the hotkey; hovering or clicking the edge strip doesn't. Esc returns focus to the app you were in.
 
-**Keyboard (when the drawer has focus — opened with ⌥M, or once you click into it):** ↑/↓ move through friends (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Add and Settings, ⌘1/⌘2/⌘3 jump to them, Esc goes back one level (chat → list → collapsed). On Add and Settings, ↑/↓ outline each control in turn, Space or Return toggles or presses it (or puts you in a text field), and ←/→ change a choice (appearance, theme, accent, new-message alert); Esc leaves a text field. While typing in a field, keys stay with the field.
+**Keyboard (when the drawer has focus — opened with ⌥M or from the menu bar item, or once you click into it):** ↑/↓ move through friends (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Add and Settings, ⌘1/⌘2/⌘3 jump to them, Esc goes back one level (chat → list → collapsed). On Add and Settings, ↑/↓ outline each control in turn, Space or Return toggles or presses it (or puts you in a text field), and ←/→ change a choice (appearance, theme, accent, new-message alert); Esc leaves a text field. While typing in a field, keys stay with the field.
 
 ## 5. Expanded panel
 

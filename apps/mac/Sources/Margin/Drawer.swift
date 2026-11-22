@@ -214,8 +214,16 @@ final class DrawerController {
     observeMenuBar()
 
     let center = NotificationCenter.default
+    // Clicking anywhere in the drawer gives it the keyboard (not just a text field), so the
+    // arrow keys work on whatever you clicked into. Margin isn't activated, so the app you were
+    // in stays frontmost and gets the keyboard back when the drawer closes.
+    panel.becomesKeyOnlyIfNeeded = false
     center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: panel, queue: .main) { [weak self] _ in
-      MainActor.assumeIsolated { self?.model.drawerFocused = true }
+      MainActor.assumeIsolated {
+        guard let self else { return }
+        self.model.drawerFocused = true
+        if self.previousApp == nil { self.previousApp = NSWorkspace.shared.frontmostApplication }
+      }
     }
     center.addObserver(forName: NSWindow.didResignKeyNotification, object: panel, queue: .main) { [weak self] _ in
       MainActor.assumeIsolated { self?.model.drawerFocused = false }
@@ -656,9 +664,11 @@ final class DrawerController {
     }
   }
 
+  // A click on the menu bar item gives the drawer the keyboard, as every menu does; a click
+  // on the edge strip doesn't, so it never takes focus from your work by surprise.
   private func stripClicked() {
     guard model.prefs.openOnClick else { return }
-    model.expanded ? collapse() : expand(byHover: false, focus: false)
+    model.expanded ? collapse() : expand(byHover: false, focus: inMenuBar)
   }
 
   private func hotKeyPressed() {
