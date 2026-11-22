@@ -23,6 +23,7 @@ The rebuild runs in **phases**. Each phase ends with a review, and the next star
 - Connecting tools from the drawer's settings (installs/removes hooks with consent and backups); account export and deletion; privacy policy.
 - Token totals (input + output + cache writes, all connected tools) in the header and on every friend; theme setting (System/Light/Dark + accent). No XP or levels.
 - Stats on every online friend's card: tokens today and this week, time in a tool this week, active days of the last 14 (DESIGN.md, Friends tab). No rankings or streaks.
+- Profiles for friends and yourself: this week's tokens, prompts and time, tokens over 14 days, today and all-time totals, sessions, longest session, main tool and model, with GitHub pictures (DESIGN.md, Profile).
 
 **Not in v1:** VS Code and Cursor as editor surfaces, Antigravity (until its hooks fire reliably), a TUI, the Claude Code status line, other surfaces (the menu bar is a placement of the drawer, not a surface); duels and goals, stuck/help requests, cosmetics, group chat, multi-device, Linux/Windows apps, tmux pane, terminal-native notifications, git push hook.
 

@@ -719,6 +719,19 @@ final class DrawerController {
     }
     guard !model.needsSetup, !model.showGuide else { return false }
     if model.chatWith != nil { return chatKey(event, field: field) }
+    // On a profile, Return opens the chat; Tab still moves between tabs.
+    if let profile = model.profileOf, field == nil {
+      switch Int(event.keyCode) {
+      case kVK_Return, kVK_ANSI_KeypadEnter:
+        guard profile != model.me?.handle else { return false }
+        model.openChat(profile)
+      case kVK_Tab:
+        model.cycleTab(flags.contains(.shift) ? -1 : 1)
+      default:
+        return false
+      }
+      return true
+    }
     if field != nil {
       // Esc leaves a field on Add or Settings without closing the drawer.
       guard event.keyCode == kVK_Escape else { return false }
@@ -801,6 +814,8 @@ final class DrawerController {
   private func escape() {
     if model.chatWith != nil {
       model.chatWith = nil
+    } else if model.profileOf != nil {
+      model.profileOf = nil
     } else if model.showThemeEditor {
       model.showThemeEditor = false
     } else if model.tab == .settings, model.settingsPage != nil {

@@ -60,7 +60,7 @@ struct FriendRow: View {
 
   var body: some View {
     Button {
-      model.openChat(friend.handle)
+      model.openProfile(friend.handle)
     } label: {
       HStack(alignment: .top, spacing: 9) {
         dot.padding(.top, 5)
@@ -116,7 +116,7 @@ struct OfflineRow: View {
 
   var body: some View {
     Button {
-      model.openChat(friend.handle)
+      model.openProfile(friend.handle)
     } label: {
       HStack(spacing: 9) {
         PresenceDot(.offline, size: theme.rowDot - 1)

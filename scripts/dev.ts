@@ -211,18 +211,28 @@ function seedStats(where: ReturnType<typeof paths>, bot: Bot) {
   if (!bot.tool) return;
   const store = new Store(where.db, devKeys(`db:${where.home}`));
   const now = new Date();
-  const days: Record<string, { base: number; seconds: number; active: boolean }> = {};
+  const days: Record<string, object> = {};
   let base = bot.tokens;
+  let prompts = 0;
   for (let i = 0; i < 14; i++) {
     const active = i === 0 || (i * 7 + bot.name.length) % 3 !== 0;
     if (active) base -= Math.round(bot.tokens * 0.012 * (1 + (i % 4)));
+    const seconds = active ? (40 + ((i * 13 + bot.name.length * 7) % 140)) * 60 : 0;
+    const dayPrompts = active ? 8 + ((i * 11 + bot.name.length) % 37) : 0;
+    prompts += dayPrompts;
     days[dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i).getTime())] = {
       base,
-      seconds: active ? (40 + ((i * 13 + bot.name.length * 7) % 140)) * 60 : 0,
+      seconds,
       active,
+      prompts: dayPrompts,
+      sessions: active ? 1 + (i % 3) : 0,
+      longest: seconds * 0.6,
+      ...(active && bot.tool ? { tools: { [bot.tool]: seconds } } : {}),
+      ...(active && bot.model ? { models: { [bot.model]: seconds } } : {}),
     };
   }
   store.setJson('stats', days);
+  store.setJson('promptsTotal', prompts + Math.round(bot.tokens / 20_000));
   store.close();
 }
 

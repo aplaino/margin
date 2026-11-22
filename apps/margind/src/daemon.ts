@@ -36,6 +36,7 @@ import type { Paths } from './paths';
 import {
   assertPublic,
   buildView,
+  hiddenRepo,
   localSecrets,
   type PresenceView,
   shareable,
@@ -278,11 +279,20 @@ export async function startDaemon(options: DaemonOptions) {
     const session = sessions.current();
     const status = (await idle()) > IDLE_AFTER_S ? 'idle' : 'online';
     const remote = session?.cwd ? originRepo(session.cwd) : null;
+    const repo = session ? await classify(remote) : undefined;
     const activity =
-      session && !settings.invisible
-        ? shareable(session, await classify(remote), remote, settings)
+      session && repo && !settings.invisible
+        ? shareable(session, repo, remote, settings)
         : undefined;
-    working = status === 'online' ? session : undefined;
+    // Time while invisible or in a hidden repo isn't counted, so stats can't show it later.
+    working =
+      status === 'online' &&
+      session &&
+      repo &&
+      !settings.invisible &&
+      !hiddenRepo(repo, remote, settings)
+        ? session
+        : undefined;
     const recent = stats.view(tokens);
     let next = buildView({ status, activity, tokens, stats: recent, settings });
     const secrets = localSecrets(sessions.list());
@@ -293,10 +303,16 @@ export async function startDaemon(options: DaemonOptions) {
       assertPublic(basic, secrets);
       next = { ...next, full, basic };
     } catch {
-      // Fail closed: status, tokens and counts only.
+      // Fail closed: status, tokens and counts only, and without stats if even that fails.
       problem('withheld activity that failed the privacy check');
       const { model: _model, tool: _tool, ...counts } = recent;
       next = buildView({ status, tokens, stats: counts, settings });
+      try {
+        assertPublic(next.full, secrets);
+        assertPublic(next.basic, secrets);
+      } catch {
+        next = buildView({ status, tokens, settings });
+      }
     }
     if (mine !== generation) return;
     view = next;
@@ -965,7 +981,7 @@ export async function startDaemon(options: DaemonOptions) {
   connect();
 
   const heartbeat = setInterval(() => {
-    stats.tick(working);
+    stats.tick(working, localSecrets(sessions.list()));
     sessions.expire();
     void recompute();
     push({ type: 'roster', friends: roster() });

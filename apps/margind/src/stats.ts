@@ -1,5 +1,5 @@
 import type { PublicStats, ReporterEvent, Tool } from '@margin/protocol';
-import { publicModel } from './presence';
+import { isLocal, publicModel } from './presence';
 import type { LocalSession } from './sessions';
 import type { Store } from './store';
 
@@ -106,8 +106,9 @@ export class Stats {
     this.save();
   }
 
-  // On each heartbeat: the time since the last one counts if you were working in a tool.
-  tick(working?: LocalSession) {
+  // On each heartbeat: the time since the last one counts if you were working in a tool. A
+  // model named like a local folder (`secrets`) isn't recorded, since it might be sent later.
+  tick(working?: LocalSession, secrets: string[] = []) {
     const now = this.now();
     const elapsed = this.lastTick === undefined ? 0 : now - this.lastTick;
     this.lastTick = now;
@@ -119,7 +120,7 @@ export class Stats {
     day.tools ??= {};
     add(day.tools, working.tool, seconds);
     const model = publicModel(working.model);
-    if (model) {
+    if (model && !isLocal(model, secrets)) {
       day.models ??= {};
       add(day.models, model, seconds);
     }

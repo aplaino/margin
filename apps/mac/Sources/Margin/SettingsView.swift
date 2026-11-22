@@ -514,7 +514,13 @@ struct SettingsView: View {
       switchRow("Model", bind(\.share.model))
       switchRow("Repo", bind(\.share.repo))
       switchRow("Time", bind(\.share.time))
-      switchRow("Tokens", bind(\.share.tokens), last: true)
+      switchRow("Tokens", bind(\.share.tokens))
+      switchRow(
+        "Prompts",
+        Binding(
+          get: { model.settings?.share.prompts ?? true },
+          set: { on in model.updateSettings { $0.share.prompts = on } }),
+        last: true)
     }
     SettingsGroup("Close friends") {
       switchRow(

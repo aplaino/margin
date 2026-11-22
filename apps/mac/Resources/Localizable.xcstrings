@@ -515,6 +515,34 @@
     "+%lld": {
       "shouldTranslate": false
     },
+    "2 weeks ago": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Πριν από 2 εβδομάδες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hace 2 semanas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2週間前"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 周前"
+          }
+        }
+      }
+    },
     "48.1M tokens": {
       "localizations": {
         "el": {
@@ -829,6 +857,34 @@
         }
       }
     },
+    "Active %lld of the last 14 days": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ενεργός %lld από τις τελευταίες 14 ημέρες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activo %lld de los últimos 14 días"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "過去14日間のうち%lld日アクティブ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "过去 14 天中活跃 %lld 天"
+          }
+        }
+      }
+    },
     "Add": {
       "localizations": {
         "el": {
@@ -993,6 +1049,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "与 %@ 的所有信息都会从这台 Mac 上删除。对方仍保留自己的副本。"
+          }
+        }
+      }
+    },
+    "All time": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Συνολικά"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "累計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部"
           }
         }
       }
@@ -2337,6 +2421,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "深色"
+          }
+        }
+      }
+    },
+    "Day": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ημέρα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Día"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期"
           }
         }
       }
@@ -4245,6 +4357,34 @@
         }
       }
     },
+    "Last 14 days": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Τελευταίες 14 ημέρες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Últimos 14 días"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "過去14日間"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "过去 14 天"
+          }
+        }
+      }
+    },
     "Letters": {
       "localizations": {
         "el": {
@@ -4361,6 +4501,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "对数"
+          }
+        }
+      }
+    },
+    "Longest session": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μεγαλύτερη συνεδρία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesión más larga"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最長セッション"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最长会话"
           }
         }
       }
@@ -4679,6 +4847,34 @@
         }
       }
     },
+    "Message": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μήνυμα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensaje"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发消息"
+          }
+        }
+      }
+    },
     "Message %@": {
       "localizations": {
         "el": {
@@ -4843,6 +5039,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "等宽"
+          }
+        }
+      }
+    },
+    "Mostly in": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Κυρίως σε"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobre todo en"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主に使用"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最常用"
           }
         }
       }
@@ -5263,6 +5487,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "目前无人在线"
+          }
+        }
+      }
+    },
+    "Nothing yet": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Τίποτα ακόμα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada todavía"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无数据"
           }
         }
       }
@@ -5907,6 +6159,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "私人"
+          }
+        }
+      }
+    },
+    "Prompts": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Προτροπές"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prompts"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示"
           }
         }
       }
@@ -7062,6 +7342,34 @@
         }
       }
     },
+    "Sessions": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Συνεδρίες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesiones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会话"
+          }
+        }
+      }
+    },
     "Settings": {
       "localizations": {
         "el": {
@@ -7314,6 +7622,34 @@
         }
       }
     },
+    "Shows their profile": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Εμφανίζει το προφίλ τους"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra su perfil"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロフィールを表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示其个人资料"
+          }
+        }
+      }
+    },
     "Sign Out": {
       "localizations": {
         "el": {
@@ -7562,6 +7898,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "基于"
+          }
+        }
+      }
+    },
+    "Stats as of %@": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Στατιστικά από %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estadísticas de %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@時点の統計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@的统计"
           }
         }
       }
@@ -7874,6 +8238,34 @@
         }
       }
     },
+    "This week": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αυτή την εβδομάδα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta semana"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今週"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本周"
+          }
+        }
+      }
+    },
     "Thousands (K)": {
       "localizations": {
         "el": {
@@ -7926,6 +8318,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "时长"
+          }
+        }
+      }
+    },
+    "Today": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Σήμερα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天"
           }
         }
       }
@@ -8010,6 +8430,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "Token"
+          }
+        }
+      }
+    },
+    "Tokens on each of the last 14 days": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokens για καθεμία από τις τελευταίες 14 ημέρες"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokens de cada uno de los últimos 14 días"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "過去14日間の毎日のトークン数"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "过去 14 天每天的 token 数"
           }
         }
       }
@@ -8882,6 +9330,34 @@
         }
       }
     },
+    "Your profile": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το προφίλ σου"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu perfil"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたのプロフィール"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的个人资料"
+          }
+        }
+      }
+    },
     "You’ll stop being friends, they can’t message you or find you, and anything they sent that you haven’t received is deleted. To them it looks as if you’re not on Margin. You can unblock in Settings → Privacy.": {
       "localizations": {
         "el": {
@@ -9102,6 +9578,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "在工具中"
+          }
+        }
+      }
+    },
+    "in tools": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "σε εργαλεία"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "en herramientas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツール使用"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用工具"
           }
         }
       }
@@ -9361,6 +9865,34 @@
         }
       }
     },
+    "prompts": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "προτροπές"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "prompts"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提示"
+          }
+        }
+      }
+    },
     "public repo": {
       "localizations": {
         "el": {
@@ -9413,6 +9945,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "终端"
+          }
+        }
+      }
+    },
+    "tokens": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokens"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokens"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トークン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokens"
           }
         }
       }

@@ -74,6 +74,7 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.82 or later (
 ### 4. Privacy (A changes the setting; B watches A's row)
 - [PASS] A→B [PASS] B→A — **Invisible** on: A disappears from B's online list, as if offline. Off again: back within seconds.
 - [PASS] Friends see: untick **tool**, **model**, **repo**, **time** and **tokens** one at a time; each disappears from A's row on B's Mac.
+- [ ] Profile switches: untick **prompts**, **time**, **tool**, **model** and **tokens** one at a time; each disappears from A's profile on B's Mac, and says Hidden on A's own profile.
 - [PASS] **Close friends only** on, without B ticked: B sees only online/idle, no activity. Tick B: B sees everything again.
 - [PASS] **Repo overrides**: add the repo A is working in as **Hide**: B sees A online with no activity. As **Private**: B sees "private project", never the name.
 
@@ -87,6 +88,7 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.82 or later (
 - [ ] A→B [ ] B→A — Read receipts: A sends B a message; under it A sees "Delivered", then "Read" and the time once B opens the chat. B turns off Settings → Privacy → **Send read receipts**: A's next message stays "Delivered" after B reads it, and B no longer sees "Read" under its own messages.
 
 ### 6. Tokens
+- [ ] A→B [ ] B→A — Profile: B clicks A on Friends: A's picture, name, handle and status, this week's tokens, prompts and time, the 14-day chart, today, all time and this week. A sends a prompt in Claude Code: prompts today goes up within a minute on B's Mac. Message opens the chat; ‹ in the chat comes back to the profile; Esc goes back to the list. A's name in the chat header opens the profile. A clicks their own total: their profile as B sees it.
 - [PASS] A→B [PASS] B→A — A's header shows A's total. B's drawer shows the same number on A's row (within a minute of a change). With **tokens** unticked under Friends see, it disappears from B's view.
 - [PASS] Sanity — A's total is in the right ballpark for A's Claude Code, Codex and OpenCode use (it excludes cache reads, so it's lower than tools that count them).
 - [ ] A→B [ ] B→A — Stats: A's card on B's Mac shows a stats line (today · wk · time · days). After A uses a tool for a few minutes, today and the time go up within a minute. Untick **tokens**: the two token numbers go; untick **time**: the time and days go. A long repo name wraps onto a second line instead of ending in ….

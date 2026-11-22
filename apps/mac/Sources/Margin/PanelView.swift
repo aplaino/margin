@@ -41,6 +41,8 @@ struct PanelView: View {
         CustomThemeView()
       } else if let handle = model.chatWith {
         ChatView(handle: handle)
+      } else if let handle = model.profileOf {
+        ProfileView(handle: handle)
       } else {
         header
         Divider().overlay(theme.divider)
@@ -81,14 +83,24 @@ struct PanelView: View {
     VStack(alignment: .leading, spacing: 10) {
       // Your all-time total, rolling up as tokens come in.
       HStack(alignment: .firstTextBaseline, spacing: 6) {
-        Text(model.prefs.tokenTotal(model.me?.tokens)).font(theme.bodyBold).monospacedDigit()
-          .lineLimit(1).layoutPriority(1)
-          .contentTransition(.numericText(value: model.me?.tokens ?? 0))
-          .animation(.smooth, value: model.me?.tokens)
-        // Another unit or notation can run long, so only the default keeps the label.
-        if model.prefs.defaultTokenFormat {
-          Text("tokens · all time").font(theme.caption).foregroundStyle(theme.tertiary).lineLimit(1)
+        // Your total opens your profile, as friends see it.
+        Button {
+          if let handle = model.me?.handle { model.openProfile(handle) }
+        } label: {
+          HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(model.prefs.tokenTotal(model.me?.tokens)).font(theme.bodyBold).monospacedDigit()
+              .lineLimit(1).layoutPriority(1)
+              .contentTransition(.numericText(value: model.me?.tokens ?? 0))
+              .animation(.smooth, value: model.me?.tokens)
+            // Another unit or notation can run long, so only the default keeps the label.
+            if model.prefs.defaultTokenFormat {
+              Text("tokens · all time").font(theme.caption).foregroundStyle(theme.tertiary).lineLimit(1)
+            }
+          }
+          .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Your profile")
         Spacer(minLength: 6)
         Text(model.me?.handle.map { "@\($0)" } ?? "").font(theme.caption).foregroundStyle(theme.secondary)
           .lineLimit(1)

@@ -54,6 +54,11 @@ final class AppModel {
   var menuBarHidden = false
   var tab: Tab = .friends
   var chatWith: String?
+  // The profile open (a friend's, or yours); a chat opened from it comes back to it.
+  var profileOf: String?
+  // GitHub profile pictures, fetched once each (URLCache keeps them across launches).
+  var avatars: [String: NSImage] = [:]
+  @ObservationIgnored private var avatarLoads: Set<String> = []
   // The friend picked with ↑/↓, highlighted in the list.
   var selected: String?
   // The control (Add, Settings) or message (chat) outlined with ↑/↓.
@@ -172,7 +177,10 @@ final class AppModel {
       if ok, let list = data?.blocked { blocked = list }
       if ok, let handle = data?.handle, let number = data?.safety { safety[handle] = number }
       // A friend you removed or blocked has no chat to stay in.
-      if ok, op == "friend.remove" || op == "block" { chatWith = nil }
+      if ok, op == "friend.remove" || op == "block" {
+        chatWith = nil
+        profileOf = nil
+      }
     case .reports(let count, let crash):
       reports = (count, crash)
       handleReports()
@@ -272,6 +280,7 @@ final class AppModel {
 
   func showTab(_ next: Tab) {
     chatWith = nil
+    profileOf = nil
     showThemeEditor = false
     settingsPage = nil
     cursor = nil
@@ -284,8 +293,34 @@ final class AppModel {
     showTab(tabs[(index + delta + tabs.count) % tabs.count])
   }
 
+  func openProfile(_ handle: String) {
+    if peek?.handle == handle { peek = nil }
+    if handle != me?.handle { selected = handle }
+    chatWith = nil
+    profileOf = handle
+    cursor = nil
+  }
+
+  // Handles are GitHub logins (checked by the protocol), so the address is always GitHub's.
+  func loadAvatar(_ handle: String) {
+    guard avatars[handle] == nil, avatarLoads.insert(handle).inserted,
+      let url = URL(string: "https://github.com/\(handle).png?size=128")
+    else { return }
+    Task {
+      let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 20)
+      guard let (data, response) = try? await URLSession.shared.data(for: request),
+        (response as? HTTPURLResponse)?.statusCode == 200, let image = NSImage(data: data)
+      else {
+        avatarLoads.remove(handle)
+        return
+      }
+      avatars[handle] = image
+    }
+  }
+
   func openChat(_ handle: String) {
     if peek?.handle == handle { peek = nil }
+    if profileOf != handle { profileOf = nil }
     selected = handle
     chatWith = handle
     cursor = nil

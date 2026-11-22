@@ -23,7 +23,13 @@ struct ChatView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Back to friends")
         VStack(alignment: .leading, spacing: 2) {
-          Text(friend?.displayName ?? handle).font(theme.bodyBold)
+          Button {
+            model.openProfile(handle)
+          } label: {
+            Text(friend?.displayName ?? handle).font(theme.bodyBold)
+          }
+          .buttonStyle(.plain)
+          .accessibilityHint("Shows their profile")
           if let friend {
             Group {
               let ago = Format.ago(friend.lastSeenAt)

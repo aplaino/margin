@@ -55,6 +55,13 @@ function repoOverride(settings: Settings, names: (string | null)[]) {
   return matches.includes('hidden') ? 'hidden' : matches[0];
 }
 
+const overrideFor = (repo: RepoInfo, remote: string | null, settings: Settings) =>
+  repoOverride(settings, [remote, repo.visibility === 'public' ? repo.repo : null]);
+
+// A session in a repo you've hidden: nothing about it reaches friends, not even in stats.
+export const hiddenRepo = (repo: RepoInfo, remote: string | null, settings: Settings) =>
+  overrideFor(repo, remote, settings) === 'hidden';
+
 // The session as friends may see it, after the sharing settings. Undefined when nothing may be shown.
 export function shareable(
   session: LocalSession,
@@ -62,10 +69,7 @@ export function shareable(
   remote: string | null,
   settings: Settings,
 ): PublicActivity | undefined {
-  const override = repoOverride(settings, [
-    remote,
-    repo.visibility === 'public' ? repo.repo : null,
-  ]);
+  const override = overrideFor(repo, remote, settings);
   if (override === 'hidden') return undefined;
   const activity: PublicActivity = {};
   if (settings.share.tool) activity.tool = session.tool;
@@ -157,7 +161,7 @@ export function assertPublic(presence: PublicPresence, secrets: string[]) {
   }
 }
 
-const isLocal = (model: string | undefined, secrets: string[]) =>
+export const isLocal = (model: string | undefined, secrets: string[]) =>
   !!model && secrets.some((s) => model.toLowerCase().includes(s.toLowerCase()));
 
 // A model name that happens to match a local folder name loses the model, not the

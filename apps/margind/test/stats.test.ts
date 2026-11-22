@@ -120,6 +120,17 @@ describe('stats', () => {
     expect(stats.view(0)).toMatchObject({ promptsToday: 1, promptsWeek: 4, prompts: 4 });
   });
 
+  test('a model named like a local folder is never recorded, so it can never be sent later', () => {
+    const { stats, set } = setup(at(22, 9));
+    const local = session({ model: 'acme-secret-v2' });
+    stats.tick(local, ['acme-secret']);
+    set(at(22, 9) + 30_000);
+    stats.tick(local, ['acme-secret']);
+    const view = stats.view(0);
+    expect(view.model).toBeUndefined();
+    expect(view.tool).toBe('claude-code');
+  });
+
   test('days older than 14 are dropped, and the log survives a restart', () => {
     const { store, stats, set } = setup(at(1, 9));
     stats.tokens(0);

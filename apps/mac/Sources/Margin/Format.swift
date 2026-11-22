@@ -185,11 +185,22 @@ enum Format {
     var parts: [String] = []
     if let today = stats.today { parts.append(tokens(today)) }
     if let week = stats.week { parts.append(String(localized: "\(tokens(week)) wk")) }
-    if let minutes = stats.minutes {
-      parts.append(minutes < 60 ? String(localized: "\(minutes)m") : String(localized: "\(minutes / 60)h"))
-    }
+    if let minutes = stats.minutes { parts.append(hours(minutes)) }
     if let days = stats.days { parts.append(String(localized: "\(days)/14d")) }
     return parts.joined(separator: " · ")
+  }
+
+  // Minutes under an hour, then whole hours: "45m", "14h".
+  static func hours(_ minutes: Int) -> String {
+    minutes < 60 ? String(localized: "\(minutes)m") : String(localized: "\(minutes / 60)h")
+  }
+
+  // "3h 12m", "47m".
+  static func hoursMinutes(_ minutes: Int) -> String {
+    let formatter = DateComponentsFormatter()
+    formatter.allowedUnits = minutes < 60 ? [.minute] : [.hour, .minute]
+    formatter.unitsStyle = .abbreviated
+    return formatter.string(from: TimeInterval(minutes * 60)) ?? ""
   }
 
   // "claude-opus-5-5 · 3h 4m"

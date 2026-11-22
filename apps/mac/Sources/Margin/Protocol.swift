@@ -17,8 +17,16 @@ struct Activity: Codable, Equatable {
 struct Stats: Codable, Equatable {
   var today: Double?
   var week: Double?
+  var daily: [Double]?
   var minutes: Int?
   var days: Int?
+  var promptsToday: Double?
+  var promptsWeek: Double?
+  var prompts: Double?
+  var sessions: Int?
+  var longest: Int?
+  var tool: String?
+  var model: String?
 }
 
 struct Presence: Codable, Equatable {
@@ -60,6 +68,8 @@ struct Share: Codable, Equatable {
   var repo: Bool
   var time: Bool
   var tokens: Bool
+  // Missing from an older margind, which means on.
+  var prompts: Bool?
 }
 
 struct PrivacySettings: Codable, Equatable {

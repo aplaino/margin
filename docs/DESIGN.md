@@ -74,7 +74,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 ├──────────────────────────────┤
 ```
 
-**Tokens** replace XP. Each person's number is their all-time total of input, output and cache-write tokens across Claude Code, Codex and OpenCode; cache reads are excluded because they repeat the same context on every turn and would swamp the number. Shown as 2.4M / 48.1M (one decimal). It's read locally from each tool's own usage records (Claude Code transcripts carry per-message `usage`; Codex and OpenCode sources to be confirmed in Phase 2) and only the total is sent. Your own total heads the drawer, rolling up as tokens come in. Settings → General → **Token total** picks its unit (Millions by default; Exact, Auto, Thousands, Billions, Trillions, Lakh, Crore), one of 29 notations from the game Antimatter Dimensions and its community (Engineering, Letters, Emoji, Logarithm, Brackets, Infinity, Roman, Dots, Zalgo, Hex, Imperial, Clock, Prime, Shi, Blind, All; Greek Letters, Omega, Japanese, Chinese, Elemental, Binary, Hexadecimal, English, Flags, Yes/No, Emojier, Tritetrated, Precise Prime; ported from its MIT-licensed library in `Notations.swift`), or **Scientific notation** (1.19 × 10⁸); anything but the default drops the "tokens · all time" label so the line doesn't wrap, and a number that still doesn't fit ends in …; it's also in Settings → Account, on every friend's row, in the chat header and on offline friends. You can hide it from friends under Privacy → Friends see → tokens.
+**Tokens** replace XP. Each person's number is their all-time total of input, output and cache-write tokens across Claude Code, Codex and OpenCode; cache reads are excluded because they repeat the same context on every turn and would swamp the number. Shown as 2.4M / 48.1M (one decimal). It's read locally from each tool's own usage records (Claude Code transcripts carry per-message `usage`; Codex and OpenCode sources to be confirmed in Phase 2) and only the total is sent. Your own total heads the drawer, rolling up as tokens come in. Settings → General → **Token total** picks its unit (Millions by default; Exact, Auto, Thousands, Billions, Trillions, Lakh, Crore), one of 29 notations from the game Antimatter Dimensions and its community (Engineering, Letters, Emoji, Logarithm, Brackets, Infinity, Roman, Dots, Zalgo, Hex, Imperial, Clock, Prime, Shi, Blind, All; Greek Letters, Omega, Japanese, Chinese, Elemental, Binary, Hexadecimal, English, Flags, Yes/No, Emojier, Tritetrated, Precise Prime; ported from its MIT-licensed library in `Notations.swift`), or **Scientific notation** (1.19 × 10⁸); anything but the default drops the "tokens · all time" label so the line doesn't wrap, and a number that still doesn't fit ends in …; it's also in Settings → Account, on every friend's row, in the chat header and on offline friends. You can hide it from friends under Privacy → Friends see → tokens. Clicking your own total opens your profile.
 
 ### Friends tab
 ```
@@ -95,9 +95,41 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 ```
 - Online first (in a tool, then idle), then offline in one line each with "last seen".
 - What they're doing wraps onto more lines rather than being cut off.
-- **Stats (agreed with the owner 2026-11-22):** one line on every online card, visible without opening anything: tokens today, tokens over the last 7 days ("wk"), time in a tool over the last 7 days (minutes under an hour, then whole hours) and how many of the last 14 days they used a tool ("9/14d"). Days follow the sender's local midnight. Each Mac works them out from its own log (the day's starting token total, and time while a tool session is open and you're not idle) and sends only the four numbers. The token numbers follow Privacy → Friends see → **tokens**, time and days follow **time**; with close friends only, everyone else gets the token numbers like the total. History from before the update isn't counted. Offline rows stay one line; there's no profile page, and clicking still opens the chat. No rankings or streaks.
-- Click (or Enter on) a friend to open the chat.
+- **Stats (agreed with the owner 2026-11-22):** one line on every online card, visible without opening anything: tokens today, tokens over the last 7 days ("wk"), time in a tool over the last 7 days (minutes under an hour, then whole hours) and how many of the last 14 days they used a tool ("9/14d"). Days follow the sender's local midnight. Each Mac works them out from its own log (the day's starting token total, and time while a tool session is open and you're not idle) and sends only the four numbers. The token numbers follow Privacy → Friends see → **tokens**, time and days follow **time**; with close friends only, everyone else gets the token numbers like the total. History from before the update isn't counted. Offline rows stay one line; the full breakdown is on their profile. No rankings or streaks.
+- Click a friend (online or offline) to open their profile; Return opens the chat straight away.
 - Empty states: "No friends yet — Add someone by their GitHub handle" (with the Add tab highlighted); "Nobody's online right now".
+
+### Profile (agreed with the owner 2026-11-22)
+```
+┌──────────────────────────────┐
+│ ‹                            │
+│  (◉)  Maya Chen              │  GitHub picture (initials until it loads)
+│       @maya-chen             │
+│       ● Claude Code · tidepool-ui
+│ THIS WEEK                    │
+│ ╭──────╮╭──────╮╭──────╮     │
+│ │ 8.4M ││ 310  ││ 14h  │     │
+│ │tokens││prompt││in tools    │
+│ ╰──────╯╰──────╯╰──────╯     │
+│ LAST 14 DAYS                 │
+│  ▁▃▁▅▇▂▁▃▆█▄▂▅▇              │  tokens per day, today in the accent colour
+│ 2 weeks ago            Today │
+│ Active 9 of the last 14 days │
+│ TODAY        Tokens · Prompts│
+│ ALL TIME     Tokens · Prompts│
+│ THIS WEEK    Sessions, Longest session, Mostly in, Model
+├──────────────────────────────┤
+│         [ Message ]          │
+└──────────────────────────────┘
+```
+- Opened by clicking a friend on the Friends tab, or their name in the chat header; Esc or ‹ goes back (from a chat opened here, back to the profile). Return opens the chat.
+- Clicking your own token total at the top of the drawer opens **your** profile, exactly as friends see it: anything switched off under Privacy → Friends see says "Hidden", and while invisible it says friends see you as offline. No Message button.
+- Stats laid out like a game's stat sheet, in the app's own look: grouped rows, tabular numbers, no levels, XP, ranks or comparisons between friends.
+- **Prompts** count every prompt sent to a coding tool (from its prompt hook; never the text). Shell commands and local model requests don't count. **Sessions** are coding sessions started; **Longest session** is one session's time in a tool; **Mostly in** and **Model** are the tool and model with the most time this week.
+- Each group follows its Privacy → Friends see switch: tokens (today, week, the 14-day chart), **prompts** (a switch of its own, on by default), time (time, active days, sessions, longest), tool and model. With close friends only, everyone else gets the token and prompt numbers, like the token total.
+- Time, tool and model aren't counted while you're invisible or in a repo you've hidden, and a model named like one of your folders is never recorded. Counting starts with the update (no history).
+- An offline friend's profile keeps their last stats, marked "Stats as of 4h ago".
+- The GitHub picture is fetched from github.com by the app and cached; GitHub sees the request (owner's call).
 
 ### Chat
 ```
@@ -114,7 +146,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │      End-to-end encrypted    │
 └──────────────────────────────┘
 ```
-- Under the name: what they're doing, or "offline · last seen 4h ago". Last seen is the last time they were online or idle, kept across restarts; going invisible looks exactly like going offline then, and staying invisible never refreshes it.
+- Their name opens their profile. Under it: what they're doing, or "offline · last seen 4h ago". Last seen is the last time they were online or idle, kept across restarts; going invisible looks exactly like going offline then, and staying invisible never refreshes it.
 - Theirs on the left, yours on the right; history loads when the chat opens.
 - **Read receipts (agreed with the owner 2026-11-22, as Messages does):** under your latest message, while it's the last in the chat, "Delivered" once it's on their Mac, then "Read 2:14 PM" (or "Read Yesterday", or the date) once they've opened the chat. Anything still waiting to leave your Mac says "Sending…". Both travel as encrypted control messages between the two margind, like Undo Send; a read receipt covers that message and everything you sent before it, timed by the server. Settings → Privacy → **Send read receipts** is on by default; turned off, you send none and theirs show as "Delivered". Delivery receipts are always sent, except while you are invisible (they would show your Mac is online); damaged settings turn read receipts off.
 - Enter sends; Esc goes back to the list. Opening a chat marks it read.
