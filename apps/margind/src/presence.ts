@@ -3,6 +3,7 @@ import {
   Model,
   type PublicActivity,
   PublicPresence,
+  type PublicStats,
   type Settings,
   type Status,
 } from '@margin/protocol';
@@ -86,10 +87,11 @@ export function buildView(input: {
   status: Status;
   activity?: PublicActivity;
   tokens: number;
+  stats?: Required<PublicStats>;
   settings: Settings;
   now?: number;
 }): PresenceView {
-  const { settings } = input;
+  const { settings, stats } = input;
   const at = input.now ?? Date.now();
   // Invisible looks exactly like being offline: no activity, no token count changes.
   if (settings.invisible) {
@@ -97,14 +99,26 @@ export function buildView(input: {
     return { full: offline, basic: offline, close: [] };
   }
   const tokens = settings.share.tokens ? { tokens: input.tokens } : {};
+  const tokenStats = stats && settings.share.tokens ? { today: stats.today, week: stats.week } : {};
+  const timeStats =
+    stats && settings.share.time ? { minutes: stats.minutes, days: stats.days } : {};
+  const all = { ...tokenStats, ...timeStats };
   const full: PublicPresence = {
     status: input.status,
     ...(input.activity ? { activity: input.activity } : {}),
     ...tokens,
+    ...(Object.keys(all).length ? { stats: all } : {}),
     at,
   };
   if (settings.audience === 'everyone') return { full, basic: full, close: [] };
-  return { full, basic: { status: input.status, ...tokens, at }, close: settings.closeFriends };
+  // Everyone else sees online/idle and token numbers, like the token total.
+  const basic: PublicPresence = {
+    status: input.status,
+    ...tokens,
+    ...(Object.keys(tokenStats).length ? { stats: tokenStats } : {}),
+    at,
+  };
+  return { full, basic, close: settings.closeFriends };
 }
 
 export class LeakError extends Error {}

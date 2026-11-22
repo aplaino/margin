@@ -44,6 +44,7 @@ import { type FetchRepo, originRepo, repoClassifier } from './repo';
 import { Reports, stackOf } from './reports';
 import { Sessions } from './sessions';
 import { changedKey, healable, PREKEY_BATCH, Signal } from './signal';
+import { Stats } from './stats';
 import { Store } from './store';
 import { scanTokens, type TokenSources } from './tokens';
 import {
@@ -151,6 +152,9 @@ export async function startDaemon(options: DaemonOptions) {
   let connectionState: ConnectionState | 'update-required' = 'offline';
   let view: PresenceView | undefined;
   let tokens = store.tokenTotal();
+  const stats = new Stats(store);
+  // In a tool and not idle, as of the last recompute; the heartbeat counts it as time.
+  let working = false;
   let stopped = false;
 
   const account = () => store.account();
@@ -275,7 +279,8 @@ export async function startDaemon(options: DaemonOptions) {
       session && !settings.invisible
         ? shareable(session, await classify(remote), remote, settings)
         : undefined;
-    let next = buildView({ status, activity, tokens, settings });
+    working = !!session && status === 'online';
+    let next = buildView({ status, activity, tokens, stats: stats.view(tokens), settings });
     const secrets = localSecrets(sessions.list());
     const full = withoutLocalDetails(next.full, secrets);
     try {
@@ -285,7 +290,7 @@ export async function startDaemon(options: DaemonOptions) {
     } catch {
       // Fail closed: status (and tokens) only.
       problem('withheld activity that failed the privacy check');
-      next = buildView({ status, tokens, settings });
+      next = buildView({ status, tokens, stats: stats.view(tokens), settings });
     }
     if (mine !== generation) return;
     view = next;
@@ -321,6 +326,7 @@ export async function startDaemon(options: DaemonOptions) {
   async function refreshTokens() {
     try {
       const next = await scanTokens(store, options.tokenSources);
+      stats.tokens(next);
       if (next !== tokens) {
         tokens = next;
         await recompute();
@@ -922,6 +928,7 @@ export async function startDaemon(options: DaemonOptions) {
   connect();
 
   const heartbeat = setInterval(() => {
+    stats.tick(working);
     sessions.expire();
     void recompute();
     push({ type: 'roster', friends: roster() });

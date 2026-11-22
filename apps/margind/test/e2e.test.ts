@@ -209,6 +209,8 @@ describe('two users, two daemons, one server', () => {
         model: 'claude-opus-5-5',
         project: { visibility: 'public', repo: 'maya/tidepool-ui' },
       },
+      // Her history from before Margin isn't today's, and the session has only just begun.
+      stats: { today: 0, week: 0, minutes: 0, days: 0 },
     });
   });
 

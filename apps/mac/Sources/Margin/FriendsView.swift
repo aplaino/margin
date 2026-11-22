@@ -85,6 +85,11 @@ struct FriendRow: View {
             Text(detail).font(theme.mono).foregroundStyle(theme.tertiary)
               .fixedSize(horizontal: false, vertical: true)
           }
+          let stats = Format.stats(friend.presence)
+          if !stats.isEmpty {
+            Text(stats).font(theme.mono).foregroundStyle(theme.tertiary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
         }
       }
       .padding(.horizontal, 8).padding(.vertical, 7)

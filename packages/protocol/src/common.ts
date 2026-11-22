@@ -69,11 +69,24 @@ export const PublicActivity = v.object({
 });
 export type PublicActivity = v.InferOutput<typeof PublicActivity>;
 
+// Recent totals, worked out on the sender's Mac by its local day. Tokens follow the tokens
+// switch; minutes and days follow the time switch.
+export const PublicStats = v.object({
+  today: v.optional(Count),
+  week: v.optional(Count),
+  // Minutes in a tool, not idle, over the last 7 days.
+  minutes: v.optional(Count),
+  // Days with any tool use among the last 14.
+  days: v.optional(v.pipe(Count, v.maxValue(14))),
+});
+export type PublicStats = v.InferOutput<typeof PublicStats>;
+
 export const PublicPresence = v.object({
   status: Status,
   activity: v.optional(PublicActivity),
   // All-time input + output + cache-write tokens across connected tools.
   tokens: v.optional(Count),
+  stats: v.optional(PublicStats),
   at: Timestamp,
 });
 export type PublicPresence = v.InferOutput<typeof PublicPresence>;

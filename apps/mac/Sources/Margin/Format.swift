@@ -167,6 +167,20 @@ enum Format {
     return parts.isEmpty ? state : parts.joined(separator: " · ")
   }
 
+  // "1.2M · 8.4M wk · 14h · 9/14d": tokens today and this week, time in a tool this week,
+  // active days of the last 14. Each part only if they share it.
+  static func stats(_ presence: Presence) -> String {
+    guard let stats = presence.stats else { return "" }
+    var parts: [String] = []
+    if let today = stats.today { parts.append(tokens(today)) }
+    if let week = stats.week { parts.append(String(localized: "\(tokens(week)) wk")) }
+    if let minutes = stats.minutes {
+      parts.append(minutes < 60 ? String(localized: "\(minutes)m") : String(localized: "\(minutes / 60)h"))
+    }
+    if let days = stats.days { parts.append(String(localized: "\(days)/14d")) }
+    return parts.joined(separator: " · ")
+  }
+
   // "claude-opus-5-5 · 3h 4m"
   static func detail(_ presence: Presence, now: Date = .now) -> String {
     var parts: [String] = []

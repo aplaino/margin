@@ -14,10 +14,18 @@ struct Activity: Codable, Equatable {
   var since: Double?
 }
 
+struct Stats: Codable, Equatable {
+  var today: Double?
+  var week: Double?
+  var minutes: Int?
+  var days: Int?
+}
+
 struct Presence: Codable, Equatable {
   var status: String
   var activity: Activity?
   var tokens: Double?
+  var stats: Stats?
   var at: Double
 }
 

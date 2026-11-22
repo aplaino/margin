@@ -299,6 +299,33 @@ describe('what friends see', () => {
     expect(hidden.full).toEqual({ status: 'idle', at: 5 });
   });
 
+  test('stats follow the tokens and time switches, and only token stats reach everyone', () => {
+    const stats = { today: 10, week: 70, minutes: 840, days: 9 };
+    const view = (s: Partial<Settings>) =>
+      buildView({ status: 'online', tokens: 42, stats, settings: settings(s), now: 5 });
+    expect(view({}).full.stats).toEqual(stats);
+    expect(view({ share: { ...DEFAULT_SETTINGS.share, tokens: false } }).full.stats).toEqual({
+      minutes: 840,
+      days: 9,
+    });
+    expect(view({ share: { ...DEFAULT_SETTINGS.share, time: false } }).full.stats).toEqual({
+      today: 10,
+      week: 70,
+    });
+    expect(
+      view({ share: { ...DEFAULT_SETTINGS.share, tokens: false, time: false } }).full.stats,
+    ).toBeUndefined();
+    const close = view({ audience: 'close', closeFriends: ['leo'] });
+    expect(close.full.stats).toEqual(stats);
+    expect(close.basic).toEqual({
+      status: 'online',
+      tokens: 42,
+      stats: { today: 10, week: 70 },
+      at: 5,
+    });
+    expect(view({ invisible: true }).full.stats).toBeUndefined();
+  });
+
   test('nothing from a private project leaves the machine', () => {
     const s = session();
     const activity = shareable(s, { visibility: 'private' }, 'acme/secret-thing', settings());

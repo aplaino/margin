@@ -14,6 +14,8 @@ import { migrate } from '../apps/api/src/db';
 import { type Daemon, startDaemon } from '../apps/margind/src/daemon';
 import { onLines, sendOnce, write } from '../apps/margind/src/net';
 import { paths } from '../apps/margind/src/paths';
+import { dayOf } from '../apps/margind/src/stats';
+import { Store } from '../apps/margind/src/store';
 
 const ROOT = resolve(import.meta.dir, '..');
 const DEV = join(ROOT, '.dev');
@@ -204,6 +206,26 @@ if (!built) {
   log('building Margin.app failed (see above)');
 }
 
+// A made-up fortnight for each friend in a tool, so their cards show stats rather than zeros.
+function seedStats(where: ReturnType<typeof paths>, bot: Bot) {
+  if (!bot.tool) return;
+  const store = new Store(where.db, devKeys(`db:${where.home}`));
+  const now = new Date();
+  const days: Record<string, { base: number; seconds: number; active: boolean }> = {};
+  let base = bot.tokens;
+  for (let i = 0; i < 14; i++) {
+    const active = i === 0 || (i * 7 + bot.name.length) % 3 !== 0;
+    if (active) base -= Math.round(bot.tokens * 0.012 * (1 + (i % 4)));
+    days[dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i).getTime())] = {
+      base,
+      seconds: active ? (40 + ((i * 13 + bot.name.length * 7) % 140)) * 60 : 0,
+      active,
+    };
+  }
+  store.setJson('stats', days);
+  store.close();
+}
+
 // --- simulated friends
 const bots: { bot: Bot; daemon: Daemon; c: Awaited<ReturnType<typeof client>> }[] = [];
 for (const bot of BOTS) {
@@ -217,6 +239,7 @@ for (const bot of BOTS) {
   };
   writeFileSync(join(transcripts, 's.jsonl'), `${JSON.stringify(usage)}\n`);
   const where = paths(join(dir, 'data'));
+  seedStats(where, bot);
   const daemon = await startDaemon({
     paths: where,
     keys: devKeys,
