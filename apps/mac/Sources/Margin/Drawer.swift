@@ -213,6 +213,7 @@ final class DrawerController {
     observeStrip()
     observePeek()
     observeMenuBar()
+    observePulse()
 
     let center = NotificationCenter.default
     // Clicking anywhere in the drawer gives it the keyboard (not just a text field), so the
@@ -393,10 +394,21 @@ final class DrawerController {
         }
       }
     }
+  }
+
+  // Each observer re-registers only itself: one that renewed the other too stacked
+  // duplicates on every change, which multiplied until a message set off thousands of
+  // redraws and pinned the CPU.
+  private func observePulse() {
     withObservationTracking {
       _ = model.pulse
     } onChange: { [weak self] in
-      DispatchQueue.main.async { MainActor.assumeIsolated { self?.pulseMenuBar() } }
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          self?.pulseMenuBar()
+          self?.observePulse()
+        }
+      }
     }
   }
 
@@ -418,7 +430,6 @@ final class DrawerController {
   // Three pulses for a new message, like the strip: the glow rises and falls over half a
   // second each, drawn at 30 frames a second.
   private func pulseMenuBar() {
-    defer { observeMenuBar() }
     guard statusItem != nil else { return }
     let frames = reduceMotion ? 0 : 45
     for frame in 0...frames {
