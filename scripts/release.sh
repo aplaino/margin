@@ -14,6 +14,16 @@ if [ -n "$(git -C "$root" status --porcelain)" ]; then
   echo "commit your changes first: a release is built from what's committed" >&2
   exit 1
 fi
+# Every string in the app translated, and the catalog in step with the code, so a release
+# never goes out half in English.
+if ! "$root/scripts/strings.sh"; then
+  echo "translate the missing strings first (bun run strings lists them), then commit" >&2
+  exit 1
+fi
+if [ -n "$(git -C "$root" status --porcelain)" ]; then
+  echo "the string catalog was behind the code: translate what's new, commit apps/mac/Resources/Localizable.xcstrings" >&2
+  exit 1
+fi
 export MARGIN_BUILD=$(git -C "$root" rev-list --count HEAD)
 export MARGIN_VERSION=0.1.$MARGIN_BUILD
 

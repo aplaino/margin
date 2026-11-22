@@ -13,12 +13,15 @@ mkdir -p "$out/data"
 swift build --package-path "$mac" --scratch-path "$out/build" \
   -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$out/data" >/dev/null
 xcrun xcstringstool sync "$mac/Resources/Localizable.xcstrings" --stringsdata "$out"/data/*.stringsdata
-# What's left to translate, per language.
+# What's left to translate, per language; fails if anything is.
 bun -e '
   const { strings } = await Bun.file(process.argv[1]).json();
   const keys = Object.entries(strings).filter(([, s]) => s.shouldTranslate !== false && s.extractionState !== "stale");
+  let incomplete = false;
   for (const lang of ["es", "zh-Hans", "ja", "el"]) {
     const missing = keys.filter(([, s]) => s.localizations?.[lang]?.stringUnit?.state !== "translated").map(([k]) => k);
+    if (missing.length) incomplete = true;
     console.log(`${lang}: ${keys.length - missing.length}/${keys.length}` + (missing.length ? ` (missing: ${missing.slice(0, 5).join(" | ")}${missing.length > 5 ? " …" : ""})` : ""));
   }
+  process.exit(incomplete ? 1 : 0);
 ' "$mac/Resources/Localizable.xcstrings"
