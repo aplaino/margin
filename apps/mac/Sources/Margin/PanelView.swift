@@ -65,6 +65,9 @@ struct PanelView: View {
     }
     .frame(width: theme.panelWidth)
     .frame(maxHeight: .infinity, alignment: .top)
+    // No scroll bars on any page, even with "Always" in System Settings; the edge fades show
+    // there's more.
+    .scrollIndicators(.never)
     .font(theme.body)
     .foregroundStyle(theme.text)
     .themeSurface(shape, theme)
