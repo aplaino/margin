@@ -194,24 +194,43 @@ struct SettingsView: View {
       .padding(.horizontal, 2).padding(.top, 2)
   }
 
+  // What you're doing, as close friends see it: the dot, then the tool and repo.
+  @ViewBuilder private var status: some View {
+    let presence = model.me?.presence
+    if model.settings?.invisible == true {
+      HStack(spacing: 6) {
+        PresenceDot(.offline, size: theme.rowDot)
+        Text("Invisible")
+      }
+    } else if let presence, presence.status != "offline" {
+      HStack(spacing: 6) {
+        PresenceDot(status: presence.status, size: theme.rowDot)
+        Text([Format.what(presence), Format.detail(presence)].filter { !$0.isEmpty }.joined(separator: " · "))
+          .lineLimit(1).truncationMode(.tail)
+      }
+    } else {
+      HStack(spacing: 6) {
+        PresenceDot(.offline, size: theme.rowDot)
+        Text(model.me?.connection == "online" ? "Offline" : "Connecting…")
+      }
+    }
+  }
+
   // MARK: pages
 
   private var account: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    let online = model.onlineFriends.count
+    return VStack(alignment: .leading, spacing: 4) {
       SettingsGroup {
         SettingsRow(label: model.me?.name ?? "Signed in as") {
           Text("@\(model.me?.handle ?? "")").foregroundStyle(theme.secondary)
         }
-        SettingsRow(label: "Profile", last: true) {
-          Button("Show") {
-            model.settingsPage = nil
-            model.showProfile = true
-          }
-          .buttonStyle(.link)
-          .control("Show profile") {
-            model.settingsPage = nil
-            model.showProfile = true
-          }
+        SettingsRow(label: "Status") { status.foregroundStyle(theme.secondary) }
+        SettingsRow(label: "Tokens") {
+          Text(model.prefs.tokenTotal(model.me?.tokens)).foregroundStyle(theme.secondary).monospacedDigit()
+        }
+        SettingsRow(label: "Friends", last: true) {
+          Text("\(model.friends.count)" + (online > 0 ? " · \(online) online" : "")).foregroundStyle(theme.secondary)
         }
       }
       SettingsGroup("Your data") {
@@ -244,6 +263,18 @@ struct SettingsView: View {
         switchRow("Click", $prefs.openOnClick)
         switchRow("⌥M from anywhere", $prefs.openOnHotkey, last: true)
       }
+      SettingsGroup("Token total") {
+        SettingsRow(label: "Unit") {
+          Picker("Unit", selection: $prefs.tokenUnit) {
+            ForEach(TokenUnit.allCases, id: \.self) { Text($0.title).tag($0) }
+          }
+          .labelsHidden().fixedSize()
+          .disabled(prefs.scientificTokens)
+          .control("Token unit", choice: $prefs.tokenUnit, from: TokenUnit.allCases)
+        }
+        switchRow("Scientific notation", $prefs.scientificTokens, last: true)
+      }
+      note("Shows as \(prefs.tokenTotal(model.me?.tokens)).")
       SettingsGroup {
         switchRow(
           "Open at login",

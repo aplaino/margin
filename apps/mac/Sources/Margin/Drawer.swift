@@ -796,8 +796,6 @@ final class DrawerController {
   private func escape() {
     if model.chatWith != nil {
       model.chatWith = nil
-    } else if model.showProfile {
-      model.showProfile = false
     } else if model.showThemeEditor {
       model.showThemeEditor = false
     } else if model.tab == .settings, model.settingsPage != nil {

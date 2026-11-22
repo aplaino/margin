@@ -35,6 +35,9 @@ final class Prefs {
   var crashReports: String { didSet { defaults.set(crashReports, forKey: "crashReports") } }
   // Thin the strip to a faint hairline while nobody's online and nothing is unread.
   var fadeWhenQuiet: Bool { didSet { defaults.set(fadeWhenQuiet, forKey: "fadeWhenQuiet") } }
+  // The unit your token total is shown in, or scientific notation instead.
+  var tokenUnit: TokenUnit { didSet { defaults.set(tokenUnit.rawValue, forKey: "tokenUnit") } }
+  var scientificTokens: Bool { didSet { defaults.set(scientificTokens, forKey: "scientificTokens") } }
   var setupDone: Bool { didSet { defaults.set(setupDone, forKey: "setupDone") } }
   // The first-launch welcome window has been seen.
   var welcomed: Bool { didSet { defaults.set(welcomed, forKey: "welcomed") } }
@@ -42,7 +45,7 @@ final class Prefs {
   init() {
     defaults.register(defaults: [
       "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right", "menuBar": false,
-      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "crashReports": "ask", "fadeWhenQuiet": true, "setupDone": false, "welcomed": false,
+      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "crashReports": "ask", "fadeWhenQuiet": true, "tokenUnit": TokenUnit.m.rawValue, "scientificTokens": false, "setupDone": false, "welcomed": false,
     ])
     openOnHover = defaults.bool(forKey: "openOnHover")
     openOnClick = defaults.bool(forKey: "openOnClick")
@@ -60,6 +63,8 @@ final class Prefs {
     alert = defaults.string(forKey: "alert") ?? "preview"
     crashReports = defaults.string(forKey: "crashReports") ?? "ask"
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
+    tokenUnit = TokenUnit(rawValue: defaults.string(forKey: "tokenUnit") ?? "") ?? .m
+    scientificTokens = defaults.bool(forKey: "scientificTokens")
     setupDone = defaults.bool(forKey: "setupDone")
     welcomed = defaults.bool(forKey: "welcomed")
   }
@@ -70,6 +75,13 @@ final class Prefs {
     let base = customTheme.baseStyle
     return customTheme.apply(base.theme(dark: dark || base.alwaysDark, accent: accent.color))
   }
+
+  func tokenTotal(_ value: Double?) -> String {
+    Format.total(value, unit: tokenUnit, scientific: scientificTokens)
+  }
+
+  // Still the default (millions), so the header has room to say what the number is.
+  var defaultTokenFormat: Bool { tokenUnit == .m && !scientificTokens }
 
   // Midnight, or a custom theme started from it, is always dark.
   var alwaysDark: Bool { style == .custom ? customTheme.baseStyle.alwaysDark : style.alwaysDark }

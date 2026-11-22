@@ -39,7 +39,6 @@ final class AppModel {
   var directory: [Person] = []
   var blocked: [String] = []
   var safety: [String: String] = [:]
-  var showProfile = false
   var showThemeEditor = false
   // The Settings page open, or the list of them.
   var settingsPage: SettingsPage? { didSet { cursor = nil } }
@@ -221,7 +220,6 @@ final class AppModel {
 
   func showTab(_ next: Tab) {
     chatWith = nil
-    showProfile = false
     showThemeEditor = false
     settingsPage = nil
     cursor = nil

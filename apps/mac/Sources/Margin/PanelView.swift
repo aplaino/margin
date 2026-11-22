@@ -37,8 +37,6 @@ struct PanelView: View {
         SetupView()
       } else if model.showGuide {
         GuideView(onDone: { model.showGuide = false })
-      } else if model.showProfile {
-        ProfileView()
       } else if model.showThemeEditor {
         CustomThemeView()
       } else if let handle = model.chatWith {
@@ -80,22 +78,20 @@ struct PanelView: View {
 
   private var header: some View {
     VStack(alignment: .leading, spacing: 10) {
-      // You: opens your profile.
-      Button {
-        model.showProfile = true
-      } label: {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-          Text("\(Format.tokens(model.me?.tokens)) tokens").font(theme.bodyBold)
-          Text("all time").font(theme.caption).foregroundStyle(theme.tertiary)
-          Spacer()
-          Text(model.me?.handle.map { "@\($0)" } ?? "").font(theme.caption).foregroundStyle(theme.secondary)
-            .lineLimit(1)
-          Image(systemName: "chevron.right").font(theme.font(10)).foregroundStyle(theme.tertiary)
+      // Your all-time total, rolling up as tokens come in.
+      HStack(alignment: .firstTextBaseline, spacing: 6) {
+        Text(model.prefs.tokenTotal(model.me?.tokens)).font(theme.bodyBold).monospacedDigit()
+          .lineLimit(1).layoutPriority(1)
+          .contentTransition(.numericText(value: model.me?.tokens ?? 0))
+          .animation(.smooth, value: model.me?.tokens)
+        // Another unit or notation can run long, so only the default keeps the label.
+        if model.prefs.defaultTokenFormat {
+          Text("tokens · all time").font(theme.caption).foregroundStyle(theme.tertiary).lineLimit(1)
         }
-        .contentShape(Rectangle())
+        Spacer(minLength: 6)
+        Text(model.me?.handle.map { "@\($0)" } ?? "").font(theme.caption).foregroundStyle(theme.secondary)
+          .lineLimit(1)
       }
-      .buttonStyle(.plain)
-      .accessibilityLabel("Your profile")
       HStack(spacing: 16) {
         tab("Friends", .friends)
         tab(model.requests.incoming.isEmpty ? "Add" : "Add (\(model.requests.incoming.count))", .add)

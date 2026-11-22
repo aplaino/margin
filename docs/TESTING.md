@@ -60,8 +60,8 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.61 or later (
 - [ ] Remove — A: ⋯ → **Remove Friend…** → Remove. Each disappears from the other's Friends list; the chat closes. Add each other again.
 - [ ] Block and unblock — A: ⋯ → **Block…** → Block. B: A is gone from Friends, a request to A says "No Margin user called …", and A isn't in B's Find friends. A: Settings → Privacy → Blocked → **Unblock**; B can find and add A again.
 - [ ] Report — A: ⋯ → **Report…** with a reason. It confirms without error (reports reach the server's `reports` table).
-- [ ] Find friends — B opens **Add**: A (not yet a friend) is listed and searchable by handle or name; **Add** turns into "Requested". A turns off **Show me in Find friends** (Settings → Privacy or the profile): A disappears from B's list.
-- [ ] Profile — each: click the top line of the drawer. Your name, handle, tokens and friends are right, and **What friends see** matches what the other person sees on your row.
+- [ ] Find friends — B opens **Add**: A (not yet a friend) is listed and searchable by handle or name; **Add** turns into "Requested". A turns off **Show me in Find friends** (Settings → Privacy): A disappears from B's list.
+- [ ] Account — each: open Settings → Account. Your name, handle, status, tokens and friends are right, and the status matches what the other person sees on your row. The drawer's token total counts up as you use a tool.
 
 ### 3. Presence (for each tool you use: Claude Code, Codex, OpenCode, Cursor, Gemini CLI, the shell…)
 - [ ] A→B [ ] B→A — A starts the tool and sends a prompt in a **public** GitHub repo. Within 5 seconds B's strip shows A's dot and B's drawer shows A's tool, model, repo name and time.
