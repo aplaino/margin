@@ -29,7 +29,7 @@ final class DrawerPanel: NSPanel {
       contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
     isFloatingPanel = true
     level = .floating
-    collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+    collectionBehavior = Self.everyDesktop
     backgroundColor = .clear
     isOpaque = false
     hasShadow = false
@@ -39,6 +39,11 @@ final class DrawerPanel: NSPanel {
     acceptsMouseMovedEvents = true
     contentView = content
   }
+
+  // On every desktop and over full-screen apps, never moved by Mission Control.
+  static let everyDesktop: NSWindow.CollectionBehavior = [
+    .canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle,
+  ]
 
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { false }
@@ -251,6 +256,11 @@ final class DrawerController {
     NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
     ) { [weak self] _ in MainActor.assumeIsolated { self?.place() } }
+    // Before Margin becomes active (an alert, the colour picker), its windows are told to
+    // come to this desktop, so macOS doesn't switch to the desktop one was left on.
+    center.addObserver(forName: NSApplication.willBecomeActiveNotification, object: nil, queue: .main) {
+      [weak self] _ in MainActor.assumeIsolated { self?.keepOnThisDesktop() }
+    }
     // Another desktop: the menu bar item may have moved or come back from under the notch.
     NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
@@ -722,6 +732,23 @@ final class DrawerController {
     model.expanded ? collapse() : expand(byHover: false, focus: inMenuBar)
   }
 
+  // Opening the drawer must never take you to another desktop. macOS switches to "a Space
+  // with open windows for the application" when an app becomes active, and Margin can own
+  // windows that stay on one desktop: an alert or save panel, the colour picker, and windows
+  // macOS keeps for text input. Those now move to the desktop you're on instead, and the
+  // drawer's own windows are put back on every desktop in case anything changed that.
+  private func keepOnThisDesktop() {
+    for window in [strip, panel, peekPanel] as [NSWindow] where window.collectionBehavior != DrawerPanel.everyDesktop {
+      window.collectionBehavior = DrawerPanel.everyDesktop
+    }
+    // The menu bar item's own window is macOS's to place, so it's left alone.
+    let item = statusItem?.button?.window
+    for window in NSApp.windows
+    where window !== item && window.level < .statusBar && !window.collectionBehavior.contains(.canJoinAllSpaces) {
+      window.collectionBehavior.insert(.moveToActiveSpace)
+    }
+  }
+
   // What the drawer and menu bar item are doing, for the log.
   private var stateLine: String {
     let item = statusItem?.button?.window
@@ -730,7 +757,9 @@ final class DrawerController {
       "menuBar=\(statusItem != nil)", "hiddenItem=\(model.menuBarHidden)",
       "item=\(item.map { NSStringFromRect($0.frame) } ?? "none")", "itemScreen=\(item?.screen != nil)",
       "itemVisible=\(item?.occlusionState.contains(.visible) ?? false)", "openOnClick=\(model.prefs.openOnClick)",
-      "screens=\(NSScreen.screens.count)",
+      "screens=\(NSScreen.screens.count)", "active=\(NSApp.isActive)",
+      "panelEveryDesktop=\(panel.collectionBehavior == DrawerPanel.everyDesktop)",
+      "windows=\(NSApp.windows.count)",
     ].joined(separator: " ")
   }
 
@@ -873,6 +902,7 @@ final class DrawerController {
     }
     openTimer?.invalidate()
     closeTimer?.invalidate()
+    keepOnThisDesktop()
     openedByHover = byHover
     model.peek = nil
     model.expanded = true
