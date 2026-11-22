@@ -1,6 +1,12 @@
 import AppKit
 import Carbon.HIToolbox
 import SwiftUI
+import os
+
+// One line per click on the strip or menu bar item, desktop switch and skipped opening, so a
+// drawer that doesn't respond can be explained from the log (`log show --predicate
+// 'subsystem == "dev.margin.app"'`). Only the drawer's state and frames, never names or text.
+private let drawerLog = Logger(subsystem: "dev.margin.app", category: "drawer")
 
 // A borderless panel that never activates Margin on its own; it becomes key only when a
 // text field needs the keyboard, or when opened with the hotkey.
@@ -245,6 +251,16 @@ final class DrawerController {
     NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
     ) { [weak self] _ in MainActor.assumeIsolated { self?.place() } }
+    // Another desktop: the menu bar item may have moved or come back from under the notch.
+    NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self else { return }
+        drawerLog.notice("desktop changed: \(self.stateLine, privacy: .public)")
+        if self.statusItem != nil { self.menuBarVisibilityChanged() }
+      }
+    }
     center.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main) {
       [weak self] note in
       MainActor.assumeIsolated {
@@ -698,8 +714,24 @@ final class DrawerController {
   // A click on the menu bar item gives the drawer the keyboard, as every menu does; a click
   // on the edge strip doesn't, so it never takes focus from your work by surprise.
   private func stripClicked() {
+    drawerLog.notice("click: \(self.stateLine, privacy: .public)")
     guard model.prefs.openOnClick else { return }
+    // Marked open but not on this screen (macOS hid it during a call, or it's on another
+    // desktop): it's closed as far as you can see, so this click opens it.
+    if model.expanded, !(panel.isVisible && panel.isOnActiveSpace) { collapse() }
     model.expanded ? collapse() : expand(byHover: false, focus: inMenuBar)
+  }
+
+  // What the drawer and menu bar item are doing, for the log.
+  private var stateLine: String {
+    let item = statusItem?.button?.window
+    return [
+      "expanded=\(model.expanded)", "panelVisible=\(panel.isVisible)", "panelOnDesktop=\(panel.isOnActiveSpace)",
+      "menuBar=\(statusItem != nil)", "hiddenItem=\(model.menuBarHidden)",
+      "item=\(item.map { NSStringFromRect($0.frame) } ?? "none")", "itemScreen=\(item?.screen != nil)",
+      "itemVisible=\(item?.occlusionState.contains(.visible) ?? false)", "openOnClick=\(model.prefs.openOnClick)",
+      "screens=\(NSScreen.screens.count)",
+    ].joined(separator: " ")
   }
 
   private func hotKeyPressed() {
@@ -835,7 +867,10 @@ final class DrawerController {
   }
 
   func expand(byHover: Bool, focus: Bool) {
-    guard let screen, !model.expanded else { return }
+    guard let screen, !model.expanded else {
+      drawerLog.notice("open skipped: \(self.stateLine, privacy: .public)")
+      return
+    }
     openTimer?.invalidate()
     closeTimer?.invalidate()
     openedByHover = byHover
