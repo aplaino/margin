@@ -21,6 +21,10 @@ final class Prefs {
     }
   }
   var style: ThemeStyle { didSet { defaults.set(style.rawValue, forKey: "style") } }
+  // Your changes for the Custom theme.
+  var customTheme: CustomTheme {
+    didSet { defaults.set(try? JSONEncoder().encode(customTheme), forKey: "customTheme") }
+  }
   // "system", "light", "dark"
   var appearance: String { didSet { defaults.set(appearance, forKey: "appearance") } }
   var accent: Accent { didSet { defaults.set(accent.rawValue, forKey: "accent") } }
@@ -47,6 +51,9 @@ final class Prefs {
     menuBar = defaults.bool(forKey: "menuBar")
     position = defaults.object(forKey: "position") as? Double
     style = ThemeStyle(rawValue: defaults.string(forKey: "style") ?? "") ?? .graphite
+    customTheme =
+      defaults.data(forKey: "customTheme").flatMap { try? JSONDecoder().decode(CustomTheme.self, from: $0) }
+      ?? CustomTheme()
     appearance = defaults.string(forKey: "appearance") ?? "system"
     accent = Accent(rawValue: defaults.string(forKey: "accent") ?? "") ?? .blue
     notifications = defaults.bool(forKey: "notifications")
@@ -56,6 +63,16 @@ final class Prefs {
     setupDone = defaults.bool(forKey: "setupDone")
     welcomed = defaults.bool(forKey: "welcomed")
   }
+
+  // The theme to draw with: the chosen one, or the custom theme on top of its starting point.
+  func theme(dark: Bool) -> Theme {
+    guard style == .custom else { return style.theme(dark: dark || style.alwaysDark, accent: accent.color) }
+    let base = customTheme.baseStyle
+    return customTheme.apply(base.theme(dark: dark || base.alwaysDark, accent: accent.color))
+  }
+
+  // Midnight, or a custom theme started from it, is always dark.
+  var alwaysDark: Bool { style == .custom ? customTheme.baseStyle.alwaysDark : style.alwaysDark }
 
   static var dockEdge: String {
     UserDefaults(suiteName: "com.apple.dock")?.string(forKey: "orientation") ?? "bottom"

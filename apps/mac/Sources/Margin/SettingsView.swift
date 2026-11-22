@@ -59,11 +59,18 @@ struct SettingsView: View {
         .control("Appearance", choice: $prefs.appearance, from: ["system", "light", "dark"])
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
           ForEach(ThemeStyle.allCases) { style in
-            ThemeTile(style: style, selected: prefs.style == style) { prefs.style = style }
+            ThemeTile(style: style, selected: prefs.style == style) {
+              prefs.style = style
+              if style == .custom { model.showThemeEditor = true }
+            }
           }
         }
         .control("Theme", choice: $prefs.style, from: Array(ThemeStyle.allCases))
         .padding(.vertical, 4)
+        if prefs.style == .custom {
+          Button("Edit custom theme…") { model.showThemeEditor = true }.buttonStyle(.link)
+            .control("Edit custom theme") { model.showThemeEditor = true }
+        }
         HStack(spacing: 8) {
           Text("Accent")
           Spacer()
@@ -322,7 +329,12 @@ struct ThemeTile: View {
   @Environment(\.colorScheme) private var scheme
 
   var body: some View {
-    let theme = style.theme(dark: scheme == .dark, accent: model.prefs.accent.color)
+    let theme =
+      style == .custom
+        ? model.prefs.customTheme.apply(
+          model.prefs.customTheme.baseStyle.theme(
+            dark: scheme == .dark || model.prefs.customTheme.baseStyle.alwaysDark, accent: model.prefs.accent.color))
+        : style.theme(dark: scheme == .dark || style.alwaysDark, accent: model.prefs.accent.color)
     Button(action: choose) {
       VStack(spacing: 5) {
         VStack(alignment: .leading, spacing: 4) {

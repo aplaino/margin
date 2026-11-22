@@ -42,11 +42,7 @@ struct MenuBarView: View {
     .shadow(color: theme.unread.opacity(0.9 * glow), radius: 4 * glow)
   }
 
-  @ViewBuilder private func dot(_ friend: Friend) -> some View {
-    if friend.presence.status == "idle" {
-      HalfDot(color: theme.idle).frame(width: 7, height: 7)
-    } else {
-      Circle().fill(theme.inTool).frame(width: 7, height: 7)
-    }
+  private func dot(_ friend: Friend) -> some View {
+    PresenceDot(status: friend.presence.status, size: theme.rowDot)
   }
 }

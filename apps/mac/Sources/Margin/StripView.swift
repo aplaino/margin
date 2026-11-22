@@ -20,7 +20,7 @@ struct StripView: View {
       && model.unreadTotal == 0 && !model.stripHovered
     VStack(spacing: theme.stripSpacing) {
       if !model.signedIn {
-        Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: theme.dot, height: theme.dot)
+        PresenceDot(.offline, size: theme.dot)
       } else {
         ForEach(online.prefix(maxDots)) { friend in
           dot(friend).opacity(connected ? 1 : 0.35)
@@ -68,20 +68,7 @@ struct StripView: View {
       : UnevenRoundedRectangle(topLeadingRadius: theme.stripRadius, bottomLeadingRadius: theme.stripRadius)
   }
 
-  @ViewBuilder private func dot(_ friend: Friend) -> some View {
-    if friend.presence.status == "idle" {
-      HalfDot(color: theme.idle).frame(width: theme.dot, height: theme.dot)
-    } else {
-      Circle().fill(theme.inTool).frame(width: theme.dot, height: theme.dot)
-    }
-  }
-}
-
-// ◐: half filled, so idle reads differently from online in shape, not just colour.
-struct HalfDot: View {
-  var color: Color
-  var body: some View {
-    Circle().strokeBorder(color, lineWidth: 1)
-      .overlay(Circle().fill(color).mask(HStack(spacing: 0) { Rectangle(); Color.clear }))
+  private func dot(_ friend: Friend) -> some View {
+    PresenceDot(status: friend.presence.status, size: theme.dot)
   }
 }

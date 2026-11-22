@@ -283,7 +283,7 @@ final class DrawerController {
     withObservationTracking {
       _ = (
         model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey,
-        model.prefs.menuBar
+        model.prefs.menuBar, model.prefs.alwaysDark
       )
     } onChange: { [weak self] in
       DispatchQueue.main.async {
@@ -297,8 +297,9 @@ final class DrawerController {
   }
 
   private func applyPrefs() {
+    // A theme that's always dark gets a dark window too, so system controls match it.
     let appearance: NSAppearance? =
-      switch model.prefs.appearance {
+      switch model.prefs.alwaysDark ? "dark" : model.prefs.appearance {
       case "light": NSAppearance(named: .aqua)
       case "dark": NSAppearance(named: .darkAqua)
       default: nil
@@ -384,7 +385,7 @@ final class DrawerController {
     withObservationTracking {
       _ = (
         model.onlineFriends.map(\.presence.status), model.unreadTotal, model.signedIn, model.me?.connection,
-        model.prefs.style, model.prefs.accent
+        model.prefs.style, model.prefs.accent, model.prefs.customTheme
       )
     } onChange: { [weak self] in
       DispatchQueue.main.async {
@@ -535,7 +536,7 @@ final class DrawerController {
   // The strip is as tall as its dots and counts: it grows as friends come online.
   private func observeStrip() {
     withObservationTracking {
-      _ = (model.onlineFriends.count, model.unreadTotal, model.signedIn)
+      _ = (model.onlineFriends.count, model.unreadTotal, model.signedIn, model.prefs.style, model.prefs.customTheme)
     } onChange: { [weak self] in
       DispatchQueue.main.async {
         MainActor.assumeIsolated {
@@ -549,7 +550,7 @@ final class DrawerController {
 
   // Worked out from what the strip shows, with the same theme metrics it's drawn with.
   private func stripHeight() -> CGFloat {
-    let metrics = model.prefs.style.theme(dark: true, accent: .clear)
+    let metrics = model.prefs.theme(dark: true)
     guard model.signedIn else { return 32 }
     let online = model.onlineFriends.count
     var items = Array(repeating: metrics.dot, count: min(online, 12))
@@ -796,6 +797,8 @@ final class DrawerController {
       model.chatWith = nil
     } else if model.showProfile {
       model.showProfile = false
+    } else if model.showThemeEditor {
+      model.showThemeEditor = false
     } else {
       collapse()
     }

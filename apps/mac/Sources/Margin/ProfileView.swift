@@ -101,16 +101,12 @@ struct ProfileView: View {
       Label {
         Text("Invisible — friends see you as offline")
       } icon: {
-        Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: 7, height: 7)
+        PresenceDot(.offline, size: theme.rowDot)
       }
       .font(theme.small).foregroundStyle(theme.secondary)
     } else if let presence, presence.status != "offline" {
       HStack(spacing: 6) {
-        if presence.status == "idle" {
-          HalfDot(color: theme.idle).frame(width: 7, height: 7)
-        } else {
-          Circle().fill(theme.inTool).frame(width: 7, height: 7)
-        }
+        PresenceDot(status: presence.status, size: theme.rowDot)
         let detail = Format.detail(presence)
         Text([Format.what(presence), detail].filter { !$0.isEmpty }.joined(separator: " · "))
           .lineLimit(2)

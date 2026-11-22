@@ -39,6 +39,8 @@ struct PanelView: View {
         GuideView(onDone: { model.showGuide = false })
       } else if model.showProfile {
         ProfileView()
+      } else if model.showThemeEditor {
+        CustomThemeView()
       } else if let handle = model.chatWith {
         ChatView(handle: handle)
       } else {
@@ -140,7 +142,7 @@ struct StateView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: 9, height: 9)
+      PresenceDot(.offline, size: 9)
       Text(title).font(theme.title)
       Text(text).font(theme.small).foregroundStyle(theme.secondary)
       Spacer()

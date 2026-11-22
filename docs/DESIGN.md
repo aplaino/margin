@@ -148,7 +148,9 @@ The top line of the drawer (your token total and @handle, with ›) opens your p
 │ THEME                        │
 │ [System | Light | Dark]      │
 │ ▢Graphite ▢Glass  ▢Paper     │
-│ ▢Terminal ▢High Contrast     │
+│ ▢Terminal ▢Contrast ▢Classic │
+│ ▢Gel  ▢Modern Glass ▢Midnight│
+│ ▢Custom  Edit custom theme…  │
 │ Accent  ● ● ● ● ●            │
 │ CONNECTED TOOLS              │
 │ ☑ Claude Code   ☑ Codex      │
@@ -171,14 +173,20 @@ The top line of the drawer (your token total and @handle, with ›) opens your p
 ```
 - **Connected tools:** Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor, Ollama, LM Studio and the shell; tools that aren't installed are marked "not found". Ollama and LM Studio install nothing: margind watches their local servers while they're ticked (on by default when installed) and shows the model, never a project or tokens. For the rest, turning one on explains what will change ("adds a hook to ~/.claude/settings.json"), asks, backs the file up, then installs. Turning it off removes only Margin's entry. Margin's hooks print nothing into Claude's context.
 - **Crash reports (agreed with the owner 2026-11-21):** General → **Crash reports: Ask after a crash** (default) | Always send | Never send, with a line on what a report holds. margind keeps a report when it crashes (an unexpected error: it writes the report, exits, and the app restarts it), when macOS writes a crash report for Margin or margind, and for serious errors it survives (presence withheld by the privacy check, a failed token scan, keys that can't be pinned, a message that can't be decrypted, a server frame or request that fails unexpectedly, hooks that can't be updated; being offline doesn't count). A report holds the app and macOS versions, which part, what broke, the stack or crashed thread, and margind's last 50 log lines, and is scrubbed on the Mac first: paths, your and friends' handles and names, repo names, local folders, emails, URL queries and anything token-like are removed. It carries a random install id, never an account. After a crash Margin asks once: **Send Report** / **Don't Send**, with **Always send reports**; errors that aren't crashes wait (up to 20) and go with the next report you send, or from Settings, which shows "N reports waiting · Send · Discard". The server takes at most 64 KB per report, 30 a day per install and 100 an hour per address; new install ids share 1,000 an hour, and a hard ceiling of 5,000 an hour caps everything stored (owner's call, 2026-11-21: a flood can cost an hour of reports, never unbounded storage, so known installs are not exempt). It keeps them 90 days, and only the release token can read them (`bun run crashes`).
-- **Theme:** a gallery of five themes, each shown as a miniature drawer, like the Appearance tiles in System Settings. A theme sets colours, fonts and weights, corner shapes and the panel material (solid or frosted glass); each has a light and a dark version, picked by **Appearance** (System, Light, Dark).
+- **Theme:** a gallery of ten tiles, each shown as a miniature drawer, like the Appearance tiles in System Settings. A theme sets colours, fonts and weights, corner shapes, the panel material (solid or frosted glass) and texture, and the dots' shape and colours; each has a light and a dark version, picked by **Appearance** (System, Light, Dark).
   - **Graphite** (default): SF Pro, neutral greys, near-solid panel.
   - **Glass**: frosted material that blurs what's behind, like Control Center.
   - **Paper**: warm paper or charcoal, New York serif headings and names.
   - **Terminal**: SF Mono throughout, square corners.
   - **High Contrast**: pure black or white, heavier text, stronger borders.
+  - Mac-styled, after each era's look with our own names, never Apple's (agreed with the owner 2026-11-22):
+    - **Classic**: late-'90s platinum grey, black outlines, bevelled edges, nearly square corners.
+    - **Gel**: early Mac OS X pinstripes, soft rounded shapes.
+    - **Modern Glass**: today's clear glass, large round corners, light borders.
+    - **Midnight**: the 2018-era deep charcoal dark mode with a little vibrancy; always dark (the window is dark too, so system controls match).
+  - **Custom**: opens the editor (also Settings → Edit custom theme…). One custom theme, saved on the Mac: **Start from** any theme, then change **Colours** (background, panels, text, borders, accent), **Text** (system, rounded, serif, monospaced or any installed typeface; light, regular or medium; 85–125% size), **Shapes** (roundness from square to round; frosted glass on or off) and **Dots** (circle, square, diamond or ring; 80–180% size; colours for in a tool, idle and unread). Changes apply at once; anything unchanged follows the starting theme's light and dark versions; **Reset** clears the changes.
 
-  The **accent** (blue, green, orange, purple, graphite) is separate and works with every theme: your chat bubbles, buttons and the selected tab. Presence colours stay green for in a tool and amber for idle in every theme, so the strip always reads the same. Every colour, font, size and shape comes from the theme definition (`apps/mac/Sources/Margin/Theme.swift`); nothing is hard-coded in views, so adding a theme is adding a value.
+  The **accent** (blue, green, orange, purple, graphite) is separate and works with every theme (a custom theme can override it): your chat bubbles, buttons and the selected tab. Presence dots are green for in a tool and amber for idle unless a custom theme changes them, and then the chosen colours and shape apply everywhere (strip, menu bar, rows, profile). Idle is always half-filled, so it never depends on colour alone. Every colour, font, size and shape comes from the theme definition (`apps/mac/Sources/Margin/Theme.swift`, `CustomTheme.swift`); nothing is hard-coded in views, so adding a theme is adding a value.
 - **Privacy:** as in KNOWLEDGE.md — invisible, which fields friends see, close friends only (others see online/idle), per-repo "hidden" or "always private".
 
 ## 6. First launch

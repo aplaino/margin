@@ -9,6 +9,6 @@ struct Themed<Content: View>: View {
   var body: some View {
     content()
       .environment(model)
-      .environment(\.theme, model.prefs.style.theme(dark: scheme == .dark, accent: model.prefs.accent.color))
+      .environment(\.theme, model.prefs.theme(dark: scheme == .dark))
   }
 }

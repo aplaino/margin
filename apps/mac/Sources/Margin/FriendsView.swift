@@ -93,12 +93,8 @@ struct FriendRow: View {
     .accessibilityLabel("\(friend.displayName), \(Format.what(friend.presence))")
   }
 
-  @ViewBuilder private var dot: some View {
-    if friend.presence.status == "idle" {
-      HalfDot(color: theme.idle).frame(width: 7, height: 7)
-    } else {
-      Circle().fill(theme.inTool).frame(width: 7, height: 7)
-    }
+  private var dot: some View {
+    PresenceDot(status: friend.presence.status, size: theme.rowDot)
   }
 }
 
@@ -113,7 +109,7 @@ struct OfflineRow: View {
       model.openChat(friend.handle)
     } label: {
       HStack(spacing: 9) {
-        Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: 6, height: 6)
+        PresenceDot(.offline, size: theme.rowDot - 1)
         Text(friend.displayName).lineLimit(1)
         Spacer(minLength: 4)
         if let tokens = friend.presence.tokens {

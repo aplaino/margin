@@ -111,11 +111,7 @@ struct GuideView: View {
   private func miniStrip(dots: [Bool], unread: Int, glow: Bool) -> some View {
     VStack(spacing: 7) {
       ForEach(Array(dots.enumerated()), id: \.offset) { _, active in
-        if active {
-          Circle().fill(theme.inTool).frame(width: 6, height: 6)
-        } else {
-          HalfDot(color: theme.idle).frame(width: 6, height: 6)
-        }
+        PresenceDot(active ? .tool : .idle, size: 6)
       }
       if unread > 0 { Text("\(unread)").font(theme.font(8, bold: true)).foregroundStyle(theme.unread) }
     }

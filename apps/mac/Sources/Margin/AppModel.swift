@@ -40,6 +40,7 @@ final class AppModel {
   var blocked: [String] = []
   var safety: [String: String] = [:]
   var showProfile = false
+  var showThemeEditor = false
   private var askingAboutReports = false
 
   var expanded = false
@@ -219,6 +220,7 @@ final class AppModel {
   func showTab(_ next: Tab) {
     chatWith = nil
     showProfile = false
+    showThemeEditor = false
     cursor = nil
     tab = next
   }
