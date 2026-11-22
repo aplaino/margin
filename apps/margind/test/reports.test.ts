@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseIps, Reports, scrub } from '../src/reports';
+import { parseIps, Reports, scrub, stackOf } from '../src/reports';
 
 let root: string;
 let logs: string;
@@ -44,6 +44,20 @@ describe('scrubbing', () => {
     expect(out).toContain('TypeError: cannot read cwd of <path>');
     expect(out).toContain('at recompute (/$bunfs/root/margind:812:14)');
     expect(out).toContain('https://margin-api.fly.dev/crash');
+  });
+});
+
+describe('stacks', () => {
+  test('keep an error’s type and code locations, and its message only when it’s Margin’s own', () => {
+    const error = new TypeError('cannot read maya-chen/stealth-launch');
+    const foreign = stackOf(error);
+    expect(foreign.split('\n')[0]).toBe('TypeError');
+    expect(foreign).not.toContain('stealth-launch');
+    expect(foreign).toMatch(/\n\s+at /);
+    expect(stackOf(error, true).split('\n')[0]).toBe(
+      'TypeError: cannot read maya-chen/stealth-launch',
+    );
+    expect(stackOf('a string')).toBe('string');
   });
 });
 

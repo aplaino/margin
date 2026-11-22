@@ -37,7 +37,7 @@ import {
   withoutLocalDetails,
 } from './presence';
 import { type FetchRepo, originRepo, repoClassifier } from './repo';
-import { Reports } from './reports';
+import { Reports, stackOf } from './reports';
 import { Sessions } from './sessions';
 import { PREKEY_BATCH, Signal } from './signal';
 import { Store } from './store';
@@ -81,13 +81,14 @@ const IDLE_AFTER_S = 5 * 60;
 const STALE_MS = 90_000;
 const PREKEY_LOW = 20;
 
-// Other errors can carry paths, so only Margin's own messages are logged in full.
+// Other errors can carry paths, so only Margin's own messages are logged (or reported) in full.
+const ownError = (e: unknown) =>
+  e instanceof ApiError ||
+  e instanceof DaemonError ||
+  e instanceof GitHubError ||
+  e instanceof ToolError;
 const log = (what: string, e?: unknown) => {
-  const own =
-    e instanceof ApiError ||
-    e instanceof DaemonError ||
-    e instanceof GitHubError ||
-    e instanceof ToolError;
+  const own = ownError(e);
   const detail = e
     ? ` (${(e as Error).name ?? 'error'}${own ? `: ${(e as Error).message}` : ''})`
     : '';
@@ -177,7 +178,12 @@ export async function startDaemon(options: DaemonOptions) {
         component: 'margind',
         kind: 'error',
         what: error ? `${what} (${error.name})` : what,
-        detail: [error?.stack ?? '', '', 'recent log:', reports.logTail()].join('\n'),
+        detail: [
+          error ? stackOf(error, ownError(error)) : '',
+          '',
+          'recent log:',
+          reports.logTail(),
+        ].join('\n'),
       },
       reportSecrets(),
     );

@@ -3,7 +3,7 @@ import { startDaemon } from './daemon';
 import { keychainKey } from './keychain';
 import { paths } from './paths';
 import { runHook } from './reporters/hook';
-import { Reports } from './reports';
+import { Reports, stackOf } from './reports';
 import { defaultSources } from './tokens';
 
 // Files margind creates are private to you.
@@ -38,7 +38,8 @@ const crashed = (e: unknown) => {
         component: 'margind',
         kind: 'crash',
         what: error.name,
-        detail: [error.stack ?? error.name, '', 'recent log:', reports.logTail()].join('\n'),
+        // Never the message: before startup finishes there are no names to scrub against.
+        detail: [stackOf(error), '', 'recent log:', reports.logTail()].join('\n'),
       },
       secrets(),
     );

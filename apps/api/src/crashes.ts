@@ -20,16 +20,37 @@ const RETENTION_MS = 90 * 24 * 60 * 60_000;
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
+// The body as text, or null once it passes `max` bytes, without reading the rest.
+async function readLimited(req: Request, max: number) {
+  if (!req.body) return '';
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
 export function crashes(sql: SQL, options: CrashOptions = {}) {
   const retentionMs = options.retentionMs ?? RETENTION_MS;
   const perInstall = limiter(30, 24 * 60 * 60_000);
   const perAddress = limiter(100, 60 * 60_000);
+  // The install id is the sender's to choose, so a cap on everything bounds what's stored.
+  const overall = limiter(1000, 60 * 60_000);
 
   async function receive(req: Request) {
     if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY)
       return json({ error: 'too large' }, 413);
-    const text = await req.text();
-    if (text.length > MAX_BODY) return json({ error: 'too large' }, 413);
+    const text = await readLimited(req, MAX_BODY);
+    if (text === null) return json({ error: 'too large' }, 413);
     let input: unknown;
     try {
       input = JSON.parse(text);
@@ -41,7 +62,7 @@ export function crashes(sql: SQL, options: CrashOptions = {}) {
     const report = parsed.output;
     // Fly puts the caller's address here; anything else counts as one unknown caller.
     const address = req.headers.get('fly-client-ip') ?? 'unknown';
-    if (!perAddress(address) || !perInstall(report.install))
+    if (!overall('all') || !perAddress(address) || !perInstall(report.install))
       return json({ error: 'rate limited' }, 429);
     const now = Date.now();
     await sql`INSERT INTO crash_reports ${sql({ id: randomUUID(), ...report, received_at: now })}`;

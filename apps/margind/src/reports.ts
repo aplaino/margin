@@ -43,6 +43,15 @@ export function scrub(text: string, secrets: string[] = [], home = homedir()) {
   return out.replace(TOKENS, '<token>');
 }
 
+// An error's stack for a report: its type and the code locations it passed through. The
+// message is kept only for Margin's own errors (`own`): others can carry anything, which is
+// why margind's log leaves their messages out too.
+export function stackOf(e: unknown, own = false) {
+  if (!(e instanceof Error)) return typeof e;
+  const frames = (e.stack ?? '').split('\n').filter((line) => /^\s+at /.test(line));
+  return [own ? `${e.name}: ${e.message}` : e.name, ...frames].join('\n');
+}
+
 export class Reports {
   private dir: string;
 

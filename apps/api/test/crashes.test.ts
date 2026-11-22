@@ -56,6 +56,23 @@ describe('crash reports', () => {
     expect((await api.call('/crash', { token: TOKEN })).body).toHaveLength(0);
   });
 
+  test('a body with no stated length is cut off at 64 KB, not read to the end', async () => {
+    const chunk = new TextEncoder().encode('x'.repeat(16 * 1024));
+    let sent = 0;
+    const body = new ReadableStream({
+      pull(controller) {
+        if (sent++ < 64) controller.enqueue(chunk);
+        else controller.close();
+      },
+    });
+    const reply = await fetch(`${api.base}/crash`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body,
+    });
+    expect(reply.status).toBe(413);
+  });
+
   test('one install can send 30 a day', async () => {
     for (let i = 0; i < 30; i++)
       expect((await api.call('/crash', { body: report() })).status).toBe(204);
