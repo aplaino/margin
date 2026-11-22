@@ -8,18 +8,18 @@ Each row needs two kinds of evidence:
 
 ## Status
 
-As of 2026-11-21, commit `086b568`, Margin 0.1.61. Automated: **161 tests pass, 0 fail** (512 checks, 14 files).
+As of 2026-11-22, commit `676e0fa`, Margin 0.1.82. Automated: **178 tests pass, 0 fail** (567 checks, 15 files).
 
 | Area | Automated | Two Macs | Status |
 |---|---|---|---|
-| Sign-in | Pass | Seen working (3 people, informal) | Run checklist §1 (sign out and back in) |
-| Friends | Pass | Request and accept seen working | Checklist §2 (remove, block, report, unblock, safety number and Find friends added after 0.1.61) |
-| Presence | Pass | Seen working | Run checklist §3 (each tool you use, both directions, timing) |
+| Sign-in | Pass | **Pass** both ways | Done |
+| Friends | Pass | Request, decline, accept (A→B), mutual, unknown handle, safety number pass | Checklist §2: B→A, remove, block and unblock, report, Find friends, Account; safety number once more in the new 60-digit format |
+| Presence | Pass | Seen working | Checklist §3 for Claude Code, Codex and the shell, plus last seen |
 | Privacy | Pass | Not yet run | Checklist §4 |
-| Chat | Pass | Seen working (both ways) | Checklist §5 (offline delivery, restarts) |
+| Chat | Pass | Seen working (both ways) | Checklist §5 (offline delivery, restarts, Chats tab, pause alerts) |
 | Tokens | Pass | Not yet compared | Checklist §6 |
-| Drawer | n/a (UI) | Seen working | Checklist §7 |
-| Tools | Pass | Not yet run | Checklist §8 |
+| Drawer | n/a (UI) | Seen working | Checklist §7 (incl. language) |
+| Tools | Pass | Not yet run | Checklist §8 for Claude Code, Codex and the shell |
 | Versions | Pass | n/a | Passes on the automated test; a real old build is optional (§9) |
 | Leaks | Pass | Not yet run | Checklist §10 |
 
@@ -28,8 +28,8 @@ As of 2026-11-21, commit `086b568`, Margin 0.1.61. Automated: **161 tests pass, 
 ## Gaps found while writing this
 
 1. ~~No remove, block or report in the app.~~ Built: the chat header's ⋯ menu, and Unblock in Settings → Privacy.
-2. ~~No safety-number verification in the app.~~ Built: ⋯ → Safety Number; the e2e test checks both Macs show the same number.
-3. **Seen during testing, not a matrix row:** one message to the owner was dropped as undecryptable after switching between the dev and live servers (`dropped a message that could not be decrypted (SessionError)`). Watch for it in §5.
+2. ~~No safety-number verification in the app.~~ Built: ⋯ → Safety Number; the e2e test checks both Macs show the same number. Since 0.1.81 it's Signal's 60-digit format.
+3. ~~One message to the owner was dropped as undecryptable after switching between the dev and live servers.~~ Fixed in 0.1.80: the receiver asks for it again and the sender resends it on a new session. Since 0.1.81 a friend's changed identity key heals the same way, in the background (DESIGN.md). Still watch for lost messages in §5.
 
 ## Automated evidence
 
@@ -37,36 +37,37 @@ All in `bun run check`. Two-user tests run two margind instances against one ser
 
 - **Sign-in**: `signing in with GitHub` (uses the build's GitHub app, refuses a server naming another, no app means no sign-in); `signing out returns the app to the signed-out state`; `switching servers` starts signed out; api `versions and auth` (sessions required, sign-out ends the session and its socket, one account per GitHub id).
 - **Friends**: api `friends` (request, accept, list, remove; mutual request makes friends at once; declining clears both sides; a block looks exactly like an unknown handle); e2e `removing a friend clears them on both sides`.
-- **Presence**: e2e `a friend sees the tool, model, public repo and token total`; api `presence` (friends see it, strangers don't, late joiners get current presence, offline when the last socket closes); `sessions` (end on exit, quiet or end event; AI tool beats shell; local models rank between); tool hooks for all 13 tools (`tools.test.ts`), with real hooks confirmed firing for Qwen Code, CodeBuddy and Factory (KNOWLEDGE.md §3).
+- **Presence**: e2e `a friend sees the tool, model, public repo and token total`, `close friends stop seeing activity the moment you go invisible` and `when a friend was last online survives a restart`; api `presence` (friends see it, strangers don't, late joiners get current presence, offline when the last socket closes); `sessions` (end on exit, quiet or end event; AI tool beats shell; local models rank between); tool hooks for all 13 tools (`tools.test.ts`), with real hooks confirmed firing for Qwen Code, CodeBuddy and Factory (KNOWLEDGE.md §3).
 - **Privacy**: e2e `hiding tokens and going invisible take effect on the other machine`; `what friends see` (each sharing switch removes its field, repo overrides, renamed repos, close friends get the full view, invisible is indistinguishable from offline); api close-friends views.
-- **Chat**: e2e `end-to-end encrypted chat both ways, with unread counts` and `a message sent while the friend is offline arrives after their daemon restarts`; api `messages` (sender set by the server, queued until acked, retries deduplicated, friends only, blocking drops queued messages, undelivered ciphertext expires); `signal` (both ways, prekeys used once, impersonation rejected, safety numbers match); `store` (message text unreadable on disk, wrong key reads nothing).
+- **Chat**: e2e `end-to-end encrypted chat both ways, with unread counts`, `a message the friend can’t read is sent again under a new session`, `a message sent while the friend is offline arrives after their daemon restarts` and `a friend with a new identity key keeps messaging, with a new safety number`; api `messages` (sender set by the server, queued until acked, retries deduplicated, friends only, blocking drops queued messages, undelivered ciphertext expires); `signal` (both ways, prekeys used once, impersonation rejected, safety numbers match); `store` (message text unreadable on disk, wrong key reads nothing).
 - **Tokens**: `counting rules` (Claude Code, Codex, OpenCode; cache reads excluded); `scanning` (split and copied responses count once, only new lines read, rewritten files not double counted).
 - **Tools**: `connecting tools` (each tool's layout, beside the user's own hooks, backups, only Margin's entries removed, unparseable configs left alone, Kimi's TOML round-trips byte for byte); `when Margin moves` (hooks re-pointed, never from a temporary or writable copy).
 - **Versions**: api `reports its protocol and refuses clients on another one` (an old client gets 426, which margind turns into the app's "Margin needs an update" state).
-- **Leaks**: e2e `a private project shows as "private project" and nothing from it leaks`; `nothing from a private project leaves the machine`; `model names lose suffixes, or are dropped if odd`; the last check before presence is sent refuses anything but the exact public shape or containing local paths and session ids (`assertPublic`); crash reports are scrubbed (`reports.test.ts`).
+- **Leaks**: e2e `a private project shows as "private project" and nothing from it leaks`; `nothing from a private project leaves the machine`; `model names lose suffixes, or are dropped if odd`; the last check before presence is sent refuses anything but the exact public shape or containing local paths and session ids (`assertPublic`); crash reports are scrubbed (`reports.test.ts`); a project's `.git/config` that is a pipe, a device or huge is skipped without reading it.
 
 ## Two-Mac checklist
 
-Two people, **A** and **B**, each on their own Mac with Margin 0.1.61 or later (Settings shows the version), signed in and friends. Do each step one way, then swap roles and do it the other way. Tick both boxes when it worked both ways; write anything odd under Results.
+Two people, **A** and **B**, each on their own Mac with Margin 0.1.82 or later (Settings shows the version), signed in and friends. Do each step one way, then swap roles and do it the other way. Tick both boxes when it worked both ways; write anything odd under Results.
 
 ### 1. Sign-in
-- [ ] A→B [ ] B→A — Settings → Account → **Sign out**. The drawer shows sign-in. Sign in with GitHub again. Your friends, chat history and token total come back.
+- [PASS] A→B [PASS] B→A — Settings → Account → **Sign out**. The drawer shows sign-in. Sign in with GitHub again. Your friends, chat history and token total come back.
 
 ### 2. Friends
-- [ ] A→B [ ] B→A — B sends A a request from **Add**; A sees it under Requests with ✓ and ✕. A **declines**: it disappears on both sides. B sends again, A **accepts**: each appears in the other's Friends list within a few seconds.
-- [ ] Mutual — with a third person C who isn't a friend of A: A and C each send the other a request at about the same time. They become friends straight away, no accept needed.
-- [ ] Unknown handle — A sends a request to a GitHub handle that has never used Margin: "No Margin user called …".
-- [ ] Safety number — A and B each open the other's chat → ⋯ → **Safety Number**. Read them out: they're identical.
+- [PASS] A→B [ ] B→A — B sends A a request from **Add**; A sees it under Requests with ✓ and ✕. A **declines**: it disappears on both sides. B sends again, A **accepts**: each appears in the other's Friends list within a few seconds.
+- [PASS] Mutual — with a third person C who isn't a friend of A: A and C each send the other a request at about the same time. They become friends straight away, no accept needed.
+- [PASS] Unknown handle — A sends a request to a GitHub handle that has never used Margin: "No Margin user called …".
+- [PASS] Safety number — A and B each open the other's chat → ⋯ → **Safety Number**. Read them out: they're identical. (Passed with the old 20-character number; on 0.1.82 it's 60 digits in three lines, so read it out once more.)
 - [ ] Remove — A: ⋯ → **Remove Friend…** → Remove. Each disappears from the other's Friends list; the chat closes. Add each other again.
 - [ ] Block and unblock — A: ⋯ → **Block…** → Block. B: A is gone from Friends, a request to A says "No Margin user called …", and A isn't in B's Find friends. A: Settings → Privacy → Blocked → **Unblock**; B can find and add A again.
 - [ ] Report — A: ⋯ → **Report…** with a reason. It confirms without error (reports reach the server's `reports` table).
 - [ ] Find friends — B opens **Add**: A (not yet a friend) is listed and searchable by handle or name; **Add** turns into "Requested". A turns off **Show me in Find friends** (Settings → Privacy): A disappears from B's list.
 - [ ] Account — each: open Settings → Account. Your name, handle, status, tokens and friends are right, and the status matches what the other person sees on your row. The drawer's token total counts up as you use a tool.
 
-### 3. Presence (for each tool you use: Claude Code, Codex, OpenCode, Cursor, Gemini CLI, the shell…)
+### 3. Presence (Claude Code, Codex and the shell; the other tools are covered by the automated tests)
 - [ ] A→B [ ] B→A — A starts the tool and sends a prompt in a **public** GitHub repo. Within 5 seconds B's strip shows A's dot and B's drawer shows A's tool, model, repo name and time.
 - [ ] Ending — A quits the tool (or leaves it alone). B sees the activity go: Claude Code at once, others after their quiet time (15 minutes; the shell 10; Ollama and LM Studio 10).
 - [ ] Idle — A leaves the Mac alone for 5 minutes. B sees A as idle (◐).
+- [ ] Last seen — A quits Margin. B's Friends list shows A as offline with when A was last online, and A's chat header says "offline · last seen …" (never online).
 
 ### 4. Privacy (A changes the setting; B watches A's row)
 - [ ] A→B [ ] B→A — **Invisible** on: A disappears from B's online list, as if offline. Off again: back within seconds.
@@ -78,6 +79,8 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.61 or later (
 - [ ] A→B [ ] B→A — A sends B a message. B sees the tab slide out (or the strip glow), the unread badge, and the message in the chat. Opening the chat clears the badge.
 - [ ] Offline — B quits Margin. A sends two messages. B opens Margin: both arrive, in order.
 - [ ] Restarts — both quit and reopen Margin: the chat history is still there.
+- [ ] Chats tab — B opens **Chats**: every conversation, most recent first, with the last message and its time; the tab reads "Chats (n)" while anything is unread.
+- [ ] Pause alerts — B: Settings → Notifications → **Pause alerts** → For 1 hour. A sends a message: no tab, no glow, no macOS notification, but the unread count goes up. B presses **Resume**: the next message alerts as usual.
 - [ ] No message lost — note anything sent that never arrived (Gaps §3).
 
 ### 6. Tokens
@@ -88,9 +91,11 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.61 or later (
 - [ ] Each Mac — the dots on the strip (or menu bar) match who's online, and the unread count matches.
 - [ ] Opening: hover, click and ⌥M each open it; untick each in Settings → Open Margin with, and it no longer opens that way.
 - [ ] Focus: hovering or clicking the edge strip doesn't take the keyboard from the app you're typing in; ⌥M and the menu bar item do; Esc gives it back.
+- [ ] Settings: after launching, the first click on ⚙ shows the Settings list, not Account (fixed in 0.1.82).
+- [ ] Language: Settings → General → Language → Español (or 中文, 日本語, Ελληνικά), **Relaunch Now**: the drawer and Settings are in that language. Back to the Mac's language afterwards.
 
 ### 8. Tools
-- [ ] Each Mac, each tool you use — Settings → Connected tools: untick it. Its config file loses only Margin's entry (others' hooks stay), and a `.margin-backup-…` copy exists beside it. Tick it again: the hook is back and presence works again (§3).
+- [ ] Each Mac, for Claude Code, Codex and the shell — Settings → Connected tools: untick it. Its config file loses only Margin's entry (others' hooks stay), and a `.margin-backup-…` copy exists beside it. Tick it again: the hook is back and presence works again (§3).
 
 ### 9. Versions (optional)
 - Covered by the automated test. To see it for real you'd need a build with an older protocol; skip unless the protocol changes.
@@ -103,4 +108,5 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.61 or later (
 
 | Date | Macs and versions | People | Rows ticked | Notes |
 |---|---|---|---|---|
-| 2026-11-21 | Owner's MacBook Pro (M5 Pro) and two testers' Macs incl. an M2 (testers' versions not recorded) | 3 | None formally; sign-in, friends (request/accept), presence, chat and updates seen working | One stall with high CPU on the M2, traced to multiplying menu bar observers and fixed in 0.1.61. One message dropped as undecryptable after switching servers. |
+| 2026-11-21 | Owner's MacBook Pro (M5 Pro) and two testers' Macs incl. an M2 (testers' versions not recorded) | 3 | None formally; sign-in, friends (request/accept), presence, chat and updates seen working | One stall with high CPU on the M2, traced to multiplying menu bar observers and fixed in 0.1.61. One message dropped as undecryptable after switching servers (fixed in 0.1.80). |
+| 2026-11-22 | Owner's MacBook Pro and a tester's Mac (versions not recorded) | 2–3 | §1 both ways; §2 request, decline and accept (A→B), mutual, unknown handle, safety number | First click on ⚙ after launch opened Account (fixed in 0.1.82). |
