@@ -11,6 +11,8 @@ final class Launcher {
   private var stopping = false
   private var startedAt = Date.distantPast
   private var restarts = 0
+  // Margin found someone else's margind at launch (`bun run dev`'s) and is using it.
+  private var borrowed = false
 
   static var dataHome: String {
     ProcessInfo.processInfo.environment["MARGIN_HOME"]
@@ -24,15 +26,19 @@ final class Launcher {
   }
 
   func start() {
-    if DaemonClient.isRunning(path: DaemonClient.defaultPath()) { return }
+    if DaemonClient.isRunning(path: DaemonClient.defaultPath()) {
+      borrowed = true
+      return
+    }
     launch()
   }
 
-  // Starts margind if the one Margin was using went away (`bun run dev`'s, after Ctrl-C) and
-  // nothing else has taken its place. One Margin started itself is restarted by exited().
+  // Takes over once if the margind Margin borrowed went away (`bun run dev`'s, after Ctrl-C)
+  // and nothing has taken its place. One Margin started itself is left to exited(), so a
+  // crashing margind still stops after five tries.
   func ensureRunning() {
-    guard process == nil, !stopping, !DaemonClient.isRunning(path: DaemonClient.defaultPath()) else { return }
-    restarts = 0
+    guard borrowed, process == nil, !stopping, !DaemonClient.isRunning(path: DaemonClient.defaultPath()) else { return }
+    borrowed = false
     launch()
   }
 
