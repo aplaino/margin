@@ -38,6 +38,17 @@ final class Prefs {
   // The unit your token total is shown in, or scientific notation instead.
   var tokenUnit: TokenUnit { didSet { defaults.set(tokenUnit.rawValue, forKey: "tokenUnit") } }
   var scientificTokens: Bool { didSet { defaults.set(scientificTokens, forKey: "scientificTokens") } }
+  // The language Margin opens in, or nil to follow the Mac. It's the same per-app setting as
+  // System Settings → Language & Region → Applications, so the two never disagree, and like
+  // that one it applies the next time Margin opens.
+  var language: String? {
+    didSet {
+      if let language { defaults.set([language], forKey: "AppleLanguages") } else { defaults.removeObject(forKey: "AppleLanguages") }
+    }
+  }
+  // What it was when this copy opened, so Settings can offer to relaunch after a change.
+  let launchLanguage: String?
+  static let languages = ["en", "es", "zh-Hans", "ja", "el"]
   var setupDone: Bool { didSet { defaults.set(setupDone, forKey: "setupDone") } }
   // The first-launch welcome window has been seen.
   var welcomed: Bool { didSet { defaults.set(welcomed, forKey: "welcomed") } }
@@ -65,6 +76,11 @@ final class Prefs {
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
     tokenUnit = TokenUnit(rawValue: defaults.string(forKey: "tokenUnit") ?? "") ?? .m
     scientificTokens = defaults.bool(forKey: "scientificTokens")
+    // Only Margin's own choice, not the Mac's languages; System Settings may store "es-ES" for "es".
+    let chosen = (defaults.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] as? [String])?.first
+    let language = chosen.flatMap { Bundle.preferredLocalizations(from: Prefs.languages, forPreferences: [$0]).first }
+    self.language = language
+    launchLanguage = language
     setupDone = defaults.bool(forKey: "setupDone")
     welcomed = defaults.bool(forKey: "welcomed")
   }

@@ -58,10 +58,15 @@ enum Mover {
     if source.standardizedFileURL.path.hasPrefix(downloads + "/") {
       try? files.trashItem(at: source, resultingItemURL: nil)
     }
-    // Reopen from Applications once this copy (and its margind) have quit.
+    relaunch(destination)
+  }
+
+  // Quits, then opens the app again once this copy (and its margind) have gone.
+  @MainActor
+  static func relaunch(_ app: URL = Bundle.main.bundleURL) {
     let relaunch = Process()
     relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
-    relaunch.arguments = ["-c", "sleep 1.5; /usr/bin/open \"$0\"", destination.path]
+    relaunch.arguments = ["-c", "sleep 1.5; /usr/bin/open \"$0\"", app.path]
     try? relaunch.run()
     NSApp.terminate(nil)
   }

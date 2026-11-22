@@ -261,6 +261,28 @@ struct SettingsView: View {
   private var general: some View {
     @Bindable var prefs = model.prefs
     return VStack(alignment: .leading, spacing: 4) {
+      SettingsGroup {
+        SettingsRow(label: "Language", last: true) {
+          Picker("Language", selection: $prefs.language) {
+            Text("System").tag(String?.none)
+            Divider()
+            // Each in its own language, so people can find theirs.
+            ForEach(Prefs.languages, id: \.self) { code in
+              Text(verbatim: Locale(identifier: code).localizedString(forIdentifier: code)?.capitalized(with: Locale(identifier: code)) ?? code)
+                .tag(String?.some(code))
+            }
+          }
+          .labelsHidden().fixedSize()
+          .control("Language", choice: $prefs.language, from: [nil] + Prefs.languages.map { $0 })
+        }
+      }
+      if prefs.language != prefs.launchLanguage {
+        HStack(spacing: 6) {
+          note("Margin will use this the next time it opens.")
+          Button("Relaunch Now") { Mover.relaunch() }.buttonStyle(.link).font(theme.caption)
+            .control("Relaunch") { Mover.relaunch() }
+        }
+      }
       SettingsGroup("Open Margin with") {
         switchRow("Hover", $prefs.openOnHover)
         switchRow("Click", $prefs.openOnClick)

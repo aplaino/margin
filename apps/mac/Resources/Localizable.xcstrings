@@ -3769,6 +3769,34 @@
         }
       }
     },
+    "Language": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Γλώσσα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
+          }
+        }
+      }
+    },
     "Letters": {
       "localizations": {
         "el": {
@@ -4081,6 +4109,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "随后 Margin 会收进屏幕边缘。"
+          }
+        }
+      }
+    },
+    "Margin will use this the next time it opens.": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το Margin θα το χρησιμοποιήσει την επόμενη φορά που θα ανοίξει."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Margin lo usará la próxima vez que se abra."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次回 Margin を開いたときに適用されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Margin 下次打开时将使用此语言。"
           }
         }
       }
@@ -5406,6 +5462,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "常规"
+          }
+        }
+      }
+    },
+    "Relaunch Now": {
+      "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Επανεκκίνηση τώρα"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reiniciar ahora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ再起動"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即重新打开"
           }
         }
       }
