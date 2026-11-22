@@ -82,7 +82,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │   Claude Code · tidepool-ui  │  tool · public repo (or "private project")
 │   claude-opus-5-5 · 3h 4m    │  model · time in this session
 │   1.2M · 8.4M wk · 14h · 9/14d│  stats: today · this week · time this week · active days
-│ ● Leo Park          21.7M  2 │  ← unread from Leo
+│ ● Leo Park             21.7M │
 │   Codex · private project    │
 │   gpt-6.1-sol · 47m          │
 │   310K · 2.1M wk · 6h · 7/14d│
@@ -97,6 +97,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 - What they're doing wraps onto more lines rather than being cut off.
 - **Stats (agreed with the owner 2026-11-22):** one line on every online card, visible without opening anything: tokens today, tokens over the last 7 days ("wk"), time in a tool over the last 7 days (minutes under an hour, then whole hours) and how many of the last 14 days they used a tool ("9/14d"). Days follow the sender's local midnight. Each Mac works them out from its own log (the day's starting token total, and time while a tool session is open and you're not idle) and sends only the four numbers. The token numbers follow Privacy → Friends see → **tokens**, time and days follow **time**; with close friends only, everyone else gets the token numbers like the total. History from before the update isn't counted. Offline rows stay one line; the full breakdown is on their profile. No rankings or streaks.
 - Click a friend (online or offline), or press Return on them, to open their profile.
+- Unread messages show only on Chats (its rows and the "Chats (n)" tab), never on Friends; opening a chat from the message tab beside the strip leaves Chats underneath, so Back goes there (owner's call 2026-11-22).
 - Empty states: "No friends yet — Add someone by their GitHub handle" (with the Add tab highlighted); "Nobody's online right now".
 
 ### Profile (agreed with the owner 2026-11-22)

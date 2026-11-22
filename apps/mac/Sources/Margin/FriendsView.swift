@@ -71,12 +71,6 @@ struct FriendRow: View {
             if let tokens = friend.presence.tokens {
               Text(Format.tokens(tokens)).font(theme.mono).foregroundStyle(theme.secondary)
             }
-            if friend.unread > 0 {
-              Text("\(friend.unread)").contentTransition(.numericText(value: Double(friend.unread))).animation(.smooth, value: friend.unread).font(theme.font(10, bold: true))
-                .foregroundStyle(theme.onUnread)
-                .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16)
-                .background(Capsule().fill(theme.unread))
-            }
           }
           Text(Format.what(friend.presence)).font(theme.small).foregroundStyle(theme.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -127,10 +121,6 @@ struct OfflineRow: View {
         }
         let ago = Format.ago(friend.lastSeenAt, now: now)
         if !ago.isEmpty { Text("· \(ago)").font(theme.caption) }
-        if friend.unread > 0 {
-          Text("\(friend.unread)").contentTransition(.numericText(value: Double(friend.unread))).animation(.smooth, value: friend.unread).font(theme.font(10, bold: true)).foregroundStyle(theme.onUnread)
-            .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16).background(Capsule().fill(theme.unread))
-        }
       }
       .font(theme.font(12))
       .foregroundStyle(theme.secondary)

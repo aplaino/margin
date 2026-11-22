@@ -639,6 +639,8 @@ final class DrawerController {
     guard let handle = model.peek?.handle else { return }
     model.peek = nil
     expand(byHover: false, focus: false)
+    // Messages live on Chats, so that's where Back goes from here.
+    model.showTab(.chats)
     model.openChat(handle)
   }
 
