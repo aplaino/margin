@@ -47,6 +47,8 @@ export function crashes(sql: SQL, options: CrashOptions = {}) {
   // already heard from today keep their own budget, so a flood of made-up ids can't lock
   // them out.
   const newInstalls = limiter(1000, 60 * 60_000);
+  // A hard ceiling on what's stored, whatever ids and addresses are claimed.
+  const everything = limiter(5000, 60 * 60_000);
 
   async function receive(req: Request) {
     if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY)
@@ -65,7 +67,7 @@ export function crashes(sql: SQL, options: CrashOptions = {}) {
     // Fly puts the caller's address here; anything else counts as one unknown caller.
     const address = req.headers.get('fly-client-ip') ?? 'unknown';
     const admitted = perInstall.seen(report.install) || newInstalls('all');
-    if (!admitted || !perAddress(address) || !perInstall(report.install))
+    if (!admitted || !perAddress(address) || !perInstall(report.install) || !everything('all'))
       return json({ error: 'rate limited' }, 429);
     const now = Date.now();
     await sql`INSERT INTO crash_reports ${sql({ id: randomUUID(), ...report, received_at: now })}`;
