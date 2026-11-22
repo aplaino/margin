@@ -33,7 +33,7 @@ struct SettingsView: View {
           Text("Beside the notch, or at the right of the menu bar. ⌘-drag it to move it.")
             .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
           if model.menuBarHidden {
-            Text("macOS has hidden it for now (the menu bar is full, or an app is full screen), so the strip is at the screen edge until it’s back.")
+            Text("The menu bar is full, so macOS has hidden it under the notch; the strip is at the screen edge until there’s room.")
               .font(theme.font(10.5)).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
           }
         } else {

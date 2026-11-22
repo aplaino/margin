@@ -343,12 +343,13 @@ final class DrawerController {
     resizeStrip()
   }
 
-  // macOS hides menu bar items that don't fit beside the notch, and the whole menu bar over
-  // full-screen apps. After a moment hidden, Margin shows the edge strip until it's back.
+  // macOS tucks menu bar items that don't fit under the notch: after a moment there, Margin
+  // shows the edge strip until there's room again. When the whole menu bar is hidden (a
+  // full-screen app, or a menu bar set to hide), Margin hides with it and comes back with it.
   private func menuBarVisibilityChanged() {
-    let visible = menuBarItemShowing
+    let crowdedOut = menuBarItemCrowdedOut
     hiddenTimer?.invalidate()
-    if visible {
+    if !crowdedOut {
       guard model.menuBarHidden else { return }
       model.menuBarHidden = false
       place(movingDrawer: true)
@@ -363,14 +364,15 @@ final class DrawerController {
     }
   }
 
-  // On screen, and not tucked under the notch, where macOS puts items that don't fit.
-  private var menuBarItemShowing: Bool {
-    guard let window = statusItem?.button?.window, window.occlusionState.contains(.visible),
-      let screen = window.screen
+  // Under the notch, or given no place in the menu bar at all. Being out of sight with the
+  // rest of the menu bar doesn't count.
+  private var menuBarItemCrowdedOut: Bool {
+    guard let window = statusItem?.button?.window else { return true }
+    guard let screen = window.screen, let left = screen.auxiliaryTopLeftArea,
+      let right = screen.auxiliaryTopRightArea
     else { return false }
-    guard let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea else { return true }
     let notch = (screen.frame.minX + left.width)...(screen.frame.maxX - right.width)
-    return !notch.contains(window.frame.midX)
+    return notch.contains(window.frame.midX)
   }
 
   private var inMenuBar: Bool { statusItem != nil && !model.menuBarHidden }
