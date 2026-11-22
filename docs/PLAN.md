@@ -23,7 +23,7 @@ The rebuild runs in **phases**. Each phase ends with a review, and the next star
 - Connecting tools from the drawer's settings (installs/removes hooks with consent and backups); account export and deletion; privacy policy.
 - Token totals (input + output + cache writes, all connected tools) in the header and on every friend; theme setting (System/Light/Dark + accent). No XP or levels.
 
-**Not in v1:** VS Code and Cursor as editor surfaces, Antigravity (until its hooks fire reliably), a TUI, the Claude Code status line, a menu bar icon, other surfaces; duels and goals, stuck/help requests, cosmetics, group chat, multi-device, Linux/Windows apps, tmux pane, terminal-native notifications, git push hook.
+**Not in v1:** VS Code and Cursor as editor surfaces, Antigravity (until its hooks fire reliably), a TUI, the Claude Code status line, other surfaces (the menu bar is a placement of the drawer, not a surface); duels and goals, stuck/help requests, cosmetics, group chat, multi-device, Linux/Windows apps, tmux pane, terminal-native notifications, git push hook.
 
 ## 2. Principles
 

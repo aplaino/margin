@@ -34,6 +34,10 @@ final class AppModel {
 
   var expanded = false
   var stripHovered = false
+  // Where the drawer is showing right now: under the menu bar item, or at a screen edge
+  // (including when macOS has hidden the menu bar item).
+  var atTop = false
+  var menuBarHidden = false
   var tab: Tab = .friends
   var chatWith: String?
   // The friend picked with ↑/↓, highlighted in the list.

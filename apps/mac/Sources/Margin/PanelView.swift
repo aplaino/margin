@@ -67,7 +67,9 @@ struct PanelView: View {
   }
 
   private var shape: UnevenRoundedRectangle {
-    model.prefs.edge == "left"
+    // Flush with the menu bar above it, or with the screen edge beside it.
+    if model.atTop { return UnevenRoundedRectangle(bottomLeadingRadius: theme.radius, bottomTrailingRadius: theme.radius) }
+    return model.prefs.edge == "left"
       ? UnevenRoundedRectangle(bottomTrailingRadius: theme.radius, topTrailingRadius: theme.radius)
       : UnevenRoundedRectangle(topLeadingRadius: theme.radius, bottomLeadingRadius: theme.radius)
   }

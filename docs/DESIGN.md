@@ -6,7 +6,7 @@ Agreed with the owner on 2026-11-21 (Phase 1). This is the source of truth for w
 
 Margin shows what your friends are building, from one fixed spot at the edge of your screen, without getting in the way of your own work. Glance at it to see who's coding and in what; open it to see details, chat, add friends or change settings.
 
-**One home.** Margin is a single screen-edge drawer. It never follows windows (the prototype's window-docking felt glitchy) and draws nothing inside terminals or editors. Terminals and AI tools are activity sources only.
+**One home.** Margin is a single drawer, at a screen edge or under its menu bar item. It never follows windows (the prototype's window-docking felt glitchy) and draws nothing inside terminals or editors. Terminals and AI tools are activity sources only.
 
 ## 2. Placement
 
@@ -18,6 +18,7 @@ Margin shows what your friends are building, from one fixed spot at the edge of 
 - **Display:** the screen that contains the frontmost window (falling back to the one with the pointer). It moves to another display only when you switch work there, never while open.
 - **Full-screen apps and Spaces:** visible on every Space and over full-screen apps.
 - **Stage Manager:** sits above the stage; unaffected.
+- **Menu bar (agreed with the owner 2026-11-21, at a user's request):** Settings → Position → **Screen edge | Menu bar**; one or the other, never both. In the menu bar, Margin is a menu bar item, which macOS places beside the notch on the right (or at the right of a menu bar without one); ⌘-drag moves it. The left of the notch is the active app's menus, where macOS reserves nothing, so Margin doesn't go there. The item shows up to 6 dots (● in a tool, ◐ idle), then `+N`, then the unread badge; a dim dot when nobody's online, a hollow one when signed out. Hover, click and ⌥M open the drawer, which slides down from under the menu bar with its top corners square; the new-message tab slides down under the item. When macOS hides the item (a full menu bar on a notched Mac, the menu bar of a full-screen app), the edge strip appears after 2 s until it's back, and Settings says why.
 
 ## 3. Collapsed state (always visible)
 
@@ -136,6 +137,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │ OPEN MARGIN WITH             │
 │ ☑ Hover   ☑ Click   ☑ ⌥M  ✎ │
 │ POSITION                     │
+│ [Screen edge | Menu bar]     │
 │ Drag the strip to move it.   │
 │ Reset position               │
 │ ☑ Fade when nobody's online  │
@@ -176,7 +178,9 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 
 ## 6. First launch
 
-Shown inside the expanded drawer the first time Margin runs:
+A strip at the screen edge or a few dots in the menu bar are easy to miss, so the first time Margin runs it opens a **welcome window** in the middle of the screen (the only window it ever opens on its own; agreed with the owner 2026-11-21): the icon, "Welcome to Margin", one line on what it does, and **Where should it live?** with two picture tiles, **Screen edge** (default) and **Menu bar** (beside the notch), noting it can be changed in Settings. **Get started** (or closing the window) opens the drawer where Margin now lives, with the strip or menu bar item pulsing, and setup carries on inside it from step 2. People who finished setup before this existed never see it.
+
+The rest is shown inside the expanded drawer:
 
 ```
 1. Welcome          2. Sign in                3. Connect tools           4. Add friends
@@ -202,7 +206,7 @@ here at the edge.   │ ABCD-1234│              ☐ Shell (zsh)
 
 ## 8. Activity sources (v1)
 
-Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor and the shell (zsh/bash) report activity through hooks/plugins; Ollama and LM Studio are watched through their local servers (KNOWLEDGE.md §3). When several are active, friends see a coding tool first, then a local model, then the shell. **Not in v1:** VS Code, a TUI, the Claude Code status line, a menu bar icon. A `margin` CLI exists only for diagnostics (`margin doctor`).
+Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, Kimi Code, Cursor and the shell (zsh/bash) report activity through hooks/plugins; Ollama and LM Studio are watched through their local servers (KNOWLEDGE.md §3). When several are active, friends see a coding tool first, then a local model, then the shell. **Not in v1:** VS Code, a TUI, the Claude Code status line. A `margin` CLI exists only for diagnostics (`margin doctor`).
 
 ## 9. Defaults
 

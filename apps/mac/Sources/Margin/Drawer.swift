@@ -107,6 +107,20 @@ final class StripHostingView: TrackingHostingView<AnyView> {
   }
 }
 
+// Reports the pointer entering and leaving a view it doesn't own (the menu bar item's button).
+final class HoverTracker: NSResponder {
+  var onHover: ((Bool) -> Void)?
+  override func mouseEntered(with event: NSEvent) { onHover?(true) }
+  override func mouseExited(with event: NSEvent) { onHover?(false) }
+}
+
+// AppKit actions need an Objective-C target.
+final class ActionTarget: NSObject {
+  let action: () -> Void
+  init(_ action: @escaping () -> Void) { self.action = action }
+  @objc func fire() { action() }
+}
+
 // ⌥M from anywhere. Carbon hotkeys need no Accessibility permission.
 final class HotKey {
   nonisolated(unsafe) private static var action: (() -> Void)?
@@ -153,6 +167,13 @@ final class DrawerController {
   private var previousApp: NSRunningApplication?
   private var clickMonitor: Any?
   private var hotKey: HotKey?
+  // The menu bar item, while Margin is placed there.
+  private var statusItem: NSStatusItem?
+  private let hoverTracker = HoverTracker()
+  private var clickTarget: ActionTarget?
+  private var hiddenTimer: Timer?
+  private var lastPlacement = ""
+  private var welcome: WelcomeWindow?
 
   private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
@@ -172,6 +193,7 @@ final class DrawerController {
     peekView.rootView = AnyView(Themed(model: model) { PeekView(onOpen: onPeek) })
     peekView.sizingOptions = []
     peekView.onHover = { [weak self] inside in self?.peekHover(inside) }
+    hoverTracker.onHover = { [weak self] inside in self?.stripHover(inside) }
 
     // The windows are sized here, not by SwiftUI's constraints.
     stripView.sizingOptions = []
@@ -189,6 +211,7 @@ final class DrawerController {
     observePrefs()
     observeStrip()
     observePeek()
+    observeMenuBar()
 
     let center = NotificationCenter.default
     center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: panel, queue: .main) { [weak self] _ in
@@ -198,20 +221,52 @@ final class DrawerController {
       MainActor.assumeIsolated { self?.model.drawerFocused = false }
     }
     center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) {
-      [weak self] _ in MainActor.assumeIsolated { self?.place() }
+      [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.place(movingDrawer: true)
+        if self?.statusItem != nil { self?.menuBarVisibilityChanged() }
+      }
     }
     NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
     ) { [weak self] _ in MainActor.assumeIsolated { self?.place() } }
+    center.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main) {
+      [weak self] note in
+      MainActor.assumeIsolated {
+        guard let self, let window = note.object as? NSWindow, window === self.statusItem?.button?.window else { return }
+        self.menuBarVisibilityChanged()
+      }
+    }
 
     place()
-    strip.orderFrontRegardless()
+    if !model.prefs.welcomed && !model.prefs.setupDone { showWelcome() }
+  }
+
+  // First launch: say where Margin lives, then open the drawer there with the strip or menu
+  // bar item pulsing, and carry on setup inside it (the welcome page is already done).
+  private func showWelcome() {
+    let window = WelcomeWindow(model: model) { [weak self] in
+      guard let self else { return }
+      self.model.prefs.welcomed = true
+      self.welcome = nil
+      if self.model.setupStep == .welcome { self.model.setupStep = .guide }
+      // Give a new menu bar item a moment to take its place.
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+        self?.expand(byHover: false, focus: true)
+        self?.model.pulse += 1
+      }
+    }
+    welcome = window
+    window.show()
   }
 
   // Re-applies settings that affect the windows whenever they change.
   private func observePrefs() {
     withObservationTracking {
-      _ = (model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey)
+      _ = (
+        model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey,
+        model.prefs.menuBar
+      )
     } onChange: { [weak self] in
       DispatchQueue.main.async {
         MainActor.assumeIsolated {
@@ -234,11 +289,137 @@ final class DrawerController {
     panel.appearance = appearance
     peekPanel.appearance = appearance
     hotKey?.set(enabled: model.prefs.openOnHotkey)
-    place()
+    setMenuBar(model.prefs.menuBar)
+    let placement = "\(model.prefs.menuBar) \(model.prefs.edge) \(model.prefs.resolvedPosition)"
+    place(movingDrawer: placement != lastPlacement)
+    lastPlacement = placement
   }
 
-  // The screen you're working on: the one with the frontmost window.
-  private var screen: NSScreen? { NSScreen.main ?? NSScreen.screens.first }
+  // MARK: the menu bar item
+
+  private func setMenuBar(_ on: Bool) {
+    guard on != (statusItem != nil) else { return }
+    if on {
+      let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+      // macOS remembers where you ⌘-drag it.
+      item.autosaveName = "Margin"
+      if let button = item.button {
+        button.imagePosition = .imageOnly
+        button.addTrackingArea(
+          NSTrackingArea(
+            rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: hoverTracker))
+        let target = ActionTarget { [weak self] in self?.stripClicked() }
+        button.target = target
+        button.action = #selector(ActionTarget.fire)
+        button.setAccessibilityLabel("Margin")
+        clickTarget = target
+      }
+      statusItem = item
+      drawMenuBar()
+    } else if let item = statusItem {
+      collapse()
+      NSStatusBar.system.removeStatusItem(item)
+      statusItem = nil
+      hiddenTimer?.invalidate()
+      model.menuBarHidden = false
+    }
+    resizeStrip()
+  }
+
+  // macOS hides menu bar items that don't fit beside the notch, and the whole menu bar over
+  // full-screen apps. After a moment hidden, Margin shows the edge strip until it's back.
+  private func menuBarVisibilityChanged() {
+    let visible = menuBarItemShowing
+    hiddenTimer?.invalidate()
+    if visible {
+      guard model.menuBarHidden else { return }
+      model.menuBarHidden = false
+      place(movingDrawer: true)
+    } else {
+      hiddenTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { [weak self] _ in
+        MainActor.assumeIsolated {
+          guard let self, self.statusItem != nil else { return }
+          self.model.menuBarHidden = true
+          self.place(movingDrawer: true)
+        }
+      }
+    }
+  }
+
+  // On screen, and not tucked under the notch, where macOS puts items that don't fit.
+  private var menuBarItemShowing: Bool {
+    guard let window = statusItem?.button?.window, window.occlusionState.contains(.visible),
+      let screen = window.screen
+    else { return false }
+    guard let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea else { return true }
+    let notch = (screen.frame.minX + left.width)...(screen.frame.maxX - right.width)
+    return !notch.contains(window.frame.midX)
+  }
+
+  private var inMenuBar: Bool { statusItem != nil && !model.menuBarHidden }
+
+  // Draws the item again whenever what it shows changes: friends and their status, unread,
+  // sign-in, connection, theme.
+  private func observeMenuBar() {
+    withObservationTracking {
+      _ = (
+        model.onlineFriends.map(\.presence.status), model.unreadTotal, model.signedIn, model.me?.connection,
+        model.prefs.style, model.prefs.accent
+      )
+    } onChange: { [weak self] in
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          self?.drawMenuBar()
+          self?.observeMenuBar()
+        }
+      }
+    }
+    withObservationTracking {
+      _ = model.pulse
+    } onChange: { [weak self] in
+      DispatchQueue.main.async { MainActor.assumeIsolated { self?.pulseMenuBar() } }
+    }
+  }
+
+  // The image follows the menu bar's own light or dark look, which depends on the wallpaper,
+  // not on Margin's appearance setting. macOS sizes the item to the image.
+  private func drawMenuBar(glow: Double = 0) {
+    guard let button = statusItem?.button else { return }
+    let dark = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    let renderer = ImageRenderer(
+      content: Themed(model: model) { MenuBarView(glow: glow) }.environment(\.colorScheme, dark ? .dark : .light))
+    renderer.scale = button.window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+    guard let image = renderer.nsImage else { return }
+    image.isTemplate = false
+    button.image = image
+    // A wider item can push it (or others) under the notch.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.menuBarVisibilityChanged() }
+  }
+
+  // Three pulses for a new message, like the strip: the glow rises and falls over half a
+  // second each, drawn at 30 frames a second.
+  private func pulseMenuBar() {
+    defer { observeMenuBar() }
+    guard statusItem != nil else { return }
+    let frames = reduceMotion ? 0 : 45
+    for frame in 0...frames {
+      let t = Double(frame) / 30
+      let glow = frame == frames ? 0 : sin(.pi * (t.truncatingRemainder(dividingBy: 0.5) / 0.5))
+      DispatchQueue.main.asyncAfter(deadline: .now() + t) { [weak self] in self?.drawMenuBar(glow: glow) }
+    }
+  }
+  private var menuBarAnchor: NSRect? { inMenuBar ? statusItem?.button?.window?.frame : nil }
+
+  // Where a window slides in from: up under the menu bar, or off the screen edge.
+  private func tucked(_ frame: NSRect) -> NSRect {
+    if model.atTop { return frame.offsetBy(dx: 0, dy: frame.height + 8) }
+    return frame.offsetBy(dx: model.prefs.edge == "left" ? -frame.width : frame.width, dy: 0)
+  }
+
+  // The menu bar item's screen, or the one you're working on: the one with the frontmost window.
+  private var screen: NSScreen? {
+    (inMenuBar ? statusItem?.button?.window?.screen : nil) ?? NSScreen.main ?? NSScreen.screens.first
+  }
 
   private func stripFrame(on screen: NSScreen) -> NSRect {
     let full = screen.frame
@@ -263,6 +444,11 @@ final class DrawerController {
     let visible = screen.visibleFrame
     let width: CGFloat = 260
     let height = min(visible.height * 0.7, 620)
+    // Drops down from the menu bar item, kept on screen.
+    if let anchor = menuBarAnchor {
+      let x = min(max(anchor.midX - width / 2, full.minX + 8), full.maxX - width - 8)
+      return NSRect(x: x, y: visible.maxY - height, width: width, height: height)
+    }
     // Opens downward from a strip in the top half, upward from one in the bottom half.
     let anchor = stripFrame(on: screen)
     var y = anchor.midY >= visible.midY ? anchor.maxY - height : anchor.minY
@@ -271,10 +457,49 @@ final class DrawerController {
     return NSRect(x: x, y: y, width: width, height: height)
   }
 
-  private func place() {
+  // An open drawer stays where it opened while the strip or menu bar item changes size (a
+  // friend coming online, a chat being read); it moves only with the screen or placement.
+  private func place(movingDrawer: Bool = false) {
+    if model.atTop != inMenuBar { model.atTop = inMenuBar }
     guard let screen else { return }
-    strip.setFrame(stripFrame(on: screen), display: true)
-    if model.expanded { panel.setFrame(panelFrame(on: screen), display: true) }
+    if inMenuBar {
+      strip.orderOut(nil)
+    } else {
+      strip.setFrame(stripFrame(on: screen), display: true)
+      if !strip.isVisible { strip.orderFrontRegardless() }
+    }
+    if model.expanded, movingDrawer { panel.setFrame(panelFrame(on: screen), display: true) }
+  }
+
+  // MARK: sliding in and out
+
+  // A soft ease-out in (fast start, long settle) and a quicker ease-in out, fading as they go.
+  private let easeOut = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
+  private let easeIn = CAMediaTimingFunction(controlPoints: 0.5, 0, 0.75, 0)
+
+  private func slideIn(_ window: NSWindow, to target: NSRect, duration: TimeInterval = 0.32) {
+    window.setFrame(reduceMotion ? target : tucked(target), display: true)
+    window.alphaValue = 0
+    window.orderFrontRegardless()
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = reduceMotion ? 0.15 : duration
+      context.timingFunction = easeOut
+      context.allowsImplicitAnimation = true
+      window.animator().alphaValue = 1
+      if !reduceMotion { window.animator().setFrame(target, display: true) }
+    }
+  }
+
+  private func slideOut(_ window: NSWindow, then done: @escaping () -> Void) {
+    let frame = window.frame
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = reduceMotion ? 0.12 : 0.22
+      context.timingFunction = easeIn
+      window.animator().alphaValue = 0
+      if !reduceMotion { window.animator().setFrame(tucked(frame), display: true) }
+    } completionHandler: {
+      MainActor.assumeIsolated { done() }
+    }
   }
 
   // The strip is as tall as its dots and counts: it grows as friends come online.
@@ -327,6 +552,12 @@ final class DrawerController {
   }
 
   private func peekFrame() -> NSRect {
+    // Under the menu bar item, kept on screen.
+    if let anchor = menuBarAnchor, let screen {
+      let full = screen.frame
+      let x = min(max(anchor.maxX - peekSize.width, full.minX + 8), full.maxX - peekSize.width - 8)
+      return NSRect(x: x, y: screen.visibleFrame.maxY - peekSize.height - 6, width: peekSize.width, height: peekSize.height)
+    }
     let anchor = strip.frame
     let x = model.prefs.edge == "left" ? anchor.maxX - 1 : anchor.minX - peekSize.width + 1
     let y = anchor.maxY - peekSize.height
@@ -338,18 +569,9 @@ final class DrawerController {
       model.peek = nil
       return
     }
-    let target = peekFrame()
-    let offset: CGFloat = model.prefs.edge == "left" ? -peekSize.width : peekSize.width
     if !peekPanel.isVisible {
-      peekPanel.setFrame(reduceMotion ? target : target.offsetBy(dx: offset, dy: 0), display: true)
-      peekPanel.alphaValue = reduceMotion ? 0 : 1
-      peekPanel.orderFrontRegardless()
-      strip.orderFrontRegardless()
-      NSAnimationContext.runAnimationGroup { context in
-        context.duration = 0.22
-        context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        if reduceMotion { peekPanel.animator().alphaValue = 1 } else { peekPanel.animator().setFrame(target, display: true) }
-      }
+      slideIn(peekPanel, to: peekFrame(), duration: 0.36)
+      if !model.atTop { strip.orderFrontRegardless() }
     }
     schedulePeekHide(after: 4)
   }
@@ -370,19 +592,10 @@ final class DrawerController {
   private func hidePeek() {
     peekTimer?.invalidate()
     guard peekPanel.isVisible else { return }
-    let frame = peekPanel.frame
-    let offset: CGFloat = model.prefs.edge == "left" ? -frame.width : frame.width
-    NSAnimationContext.runAnimationGroup { context in
-      context.duration = 0.18
-      if self.reduceMotion { peekPanel.animator().alphaValue = 0 } else {
-        peekPanel.animator().setFrame(frame.offsetBy(dx: offset, dy: 0), display: true)
-      }
-    } completionHandler: { [weak self] in
-      MainActor.assumeIsolated {
-        guard let self, self.model.peek == nil else { return }
-        self.peekPanel.orderOut(nil)
-        self.peekPanel.alphaValue = 1
-      }
+    slideOut(peekPanel) { [weak self] in
+      guard let self, self.model.peek == nil else { return }
+      self.peekPanel.orderOut(nil)
+      self.peekPanel.alphaValue = 1
     }
   }
 
@@ -561,23 +774,8 @@ final class DrawerController {
     openedByHover = byHover
     model.peek = nil
     model.expanded = true
-    let target = panelFrame(on: screen)
-    if reduceMotion {
-      panel.setFrame(target, display: true)
-      panel.alphaValue = 0
-      panel.orderFrontRegardless()
-      NSAnimationContext.runAnimationGroup { $0.duration = 0.15; panel.animator().alphaValue = 1 }
-    } else {
-      let offset: CGFloat = model.prefs.edge == "left" ? -target.width : target.width
-      panel.alphaValue = 1
-      panel.setFrame(target.offsetBy(dx: offset, dy: 0), display: true)
-      panel.orderFrontRegardless()
-      NSAnimationContext.runAnimationGroup {
-        $0.duration = 0.15
-        $0.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        panel.animator().setFrame(target, display: true)
-      }
-    }
+    slideIn(panel, to: panelFrame(on: screen))
+    statusItem?.button?.highlight(true)
     if focus {
       previousApp = NSWorkspace.shared.frontmostApplication
       panel.makeKey()
@@ -599,21 +797,11 @@ final class DrawerController {
     model.cursor = nil
     model.updates.drawerClosed()
     let wasKey = panel.isKeyWindow
-    let frame = panel.frame
-    let offset: CGFloat = model.prefs.edge == "left" ? -frame.width : frame.width
-    NSAnimationContext.runAnimationGroup { context in
-      context.duration = 0.15
-      if self.reduceMotion {
-        panel.animator().alphaValue = 0
-      } else {
-        panel.animator().setFrame(frame.offsetBy(dx: offset, dy: 0), display: true)
-      }
-    } completionHandler: { [weak self] in
-      MainActor.assumeIsolated {
-        guard let self, !self.model.expanded else { return }
-        self.panel.orderOut(nil)
-        self.panel.alphaValue = 1
-      }
+    statusItem?.button?.highlight(false)
+    slideOut(panel) { [weak self] in
+      guard let self, !self.model.expanded else { return }
+      self.panel.orderOut(nil)
+      self.panel.alphaValue = 1
     }
     // Hand the keyboard back to whatever you were using.
     if wasKey { previousApp?.activate() }

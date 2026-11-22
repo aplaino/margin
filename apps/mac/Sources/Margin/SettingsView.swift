@@ -23,16 +23,31 @@ struct SettingsView: View {
         }
 
         SectionLabel("Position").padding(.top, 6)
-        Text("Drag the strip along either edge to move it, or across the screen to switch sides.")
-          .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
-        if prefs.position != nil || prefs.edge != "right" {
-          Button("Reset position") { prefs.resetPosition() }.buttonStyle(.link)
-            .control("Reset position") { prefs.resetPosition() }
-        } else if Prefs.dockEdge == prefs.edge {
-          Text("Near the top for now, because your Dock is on the \(prefs.edge).")
-            .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
+        Picker("Show Margin", selection: $prefs.menuBar) {
+          Text("Screen edge").tag(false)
+          Text("Menu bar").tag(true)
         }
-        Check("Fade the strip when nobody’s online", isOn: $prefs.fadeWhenQuiet)
+        .pickerStyle(.segmented).labelsHidden()
+        .control("Show Margin", choice: $prefs.menuBar, from: [false, true])
+        if prefs.menuBar {
+          Text("Beside the notch, or at the right of the menu bar. ⌘-drag it to move it.")
+            .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
+          if model.menuBarHidden {
+            Text("macOS has hidden it for now (the menu bar is full, or an app is full screen), so the strip is at the screen edge until it’s back.")
+              .font(theme.font(10.5)).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
+          }
+        } else {
+          Text("Drag the strip along either edge to move it, or across the screen to switch sides.")
+            .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
+          if prefs.position != nil || prefs.edge != "right" {
+            Button("Reset position") { prefs.resetPosition() }.buttonStyle(.link)
+              .control("Reset position") { prefs.resetPosition() }
+          } else if Prefs.dockEdge == prefs.edge {
+            Text("Near the top for now, because your Dock is on the \(prefs.edge).")
+              .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
+          }
+          Check("Fade the strip when nobody’s online", isOn: $prefs.fadeWhenQuiet)
+        }
 
         SectionLabel("Theme").padding(.top, 6)
         Picker("Appearance", selection: $prefs.appearance) {

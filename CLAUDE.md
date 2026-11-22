@@ -8,7 +8,7 @@ Read before working here:
 - `docs/KNOWLEDGE.md` — how the prototype's messaging and compatibility layers worked, tested quirks of Claude Code / Codex / OpenCode / shell hooks, macOS notes, and mistakes not to repeat
 
 Working rules for this project:
-- One home: the screen-edge drawer. Don't add other surfaces (TUI, VS Code, menu bar, status line) without the owner.
+- One home: the drawer, at a screen edge or under its menu bar item (Settings → Position). Don't add other surfaces (TUI, VS Code, status line) without the owner.
 - Work phase by phase; agree the design of anything new with the owner before building it.
 - Professional and plain over feature count: no coins, casino, loot boxes, stakes or meme naming. Anything outside v1 goes to "Not in v1" first.
 - Friends only ever see what you'd post publicly; privacy is enforced locally, never trusted to the server.

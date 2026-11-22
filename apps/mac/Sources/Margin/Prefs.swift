@@ -11,6 +11,8 @@ final class Prefs {
   var openOnHotkey: Bool { didSet { defaults.set(openOnHotkey, forKey: "openOnHotkey") } }
   // "right" or "left"
   var edge: String { didSet { defaults.set(edge, forKey: "edge") } }
+  // In the menu bar beside the notch instead of on a screen edge.
+  var menuBar: Bool { didSet { defaults.set(menuBar, forKey: "menuBar") } }
   // Where along the edge the strip sits, 0 (top) to 1 (bottom), set by dragging it.
   // nil until you move it: top if the Dock shares the edge, else the middle.
   var position: Double? {
@@ -28,16 +30,19 @@ final class Prefs {
   // Thin the strip to a faint hairline while nobody's online and nothing is unread.
   var fadeWhenQuiet: Bool { didSet { defaults.set(fadeWhenQuiet, forKey: "fadeWhenQuiet") } }
   var setupDone: Bool { didSet { defaults.set(setupDone, forKey: "setupDone") } }
+  // The first-launch welcome window has been seen.
+  var welcomed: Bool { didSet { defaults.set(welcomed, forKey: "welcomed") } }
 
   init() {
     defaults.register(defaults: [
-      "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right",
-      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "fadeWhenQuiet": true, "setupDone": false,
+      "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right", "menuBar": false,
+      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "fadeWhenQuiet": true, "setupDone": false, "welcomed": false,
     ])
     openOnHover = defaults.bool(forKey: "openOnHover")
     openOnClick = defaults.bool(forKey: "openOnClick")
     openOnHotkey = defaults.bool(forKey: "openOnHotkey")
     edge = defaults.string(forKey: "edge") ?? "right"
+    menuBar = defaults.bool(forKey: "menuBar")
     position = defaults.object(forKey: "position") as? Double
     style = ThemeStyle(rawValue: defaults.string(forKey: "style") ?? "") ?? .graphite
     appearance = defaults.string(forKey: "appearance") ?? "system"
@@ -46,6 +51,7 @@ final class Prefs {
     alert = defaults.string(forKey: "alert") ?? "preview"
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
     setupDone = defaults.bool(forKey: "setupDone")
+    welcomed = defaults.bool(forKey: "welcomed")
   }
 
   static var dockEdge: String {

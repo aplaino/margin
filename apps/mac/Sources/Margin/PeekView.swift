@@ -7,7 +7,7 @@ struct Peek: Equatable {
   var preview: String?
 }
 
-// The tab that slides out beside the strip when a message arrives.
+// The tab that slides out beside the strip, or down from the menu bar, when a message arrives.
 struct PeekView: View {
   var onOpen: () -> Void
   @Environment(AppModel.self) private var model
@@ -36,7 +36,11 @@ struct PeekView: View {
   }
 
   private var shape: UnevenRoundedRectangle {
-    model.prefs.edge == "left"
+    if model.atTop {
+      let r = theme.controlRadius + 2
+      return UnevenRoundedRectangle(topLeadingRadius: r, bottomLeadingRadius: r, bottomTrailingRadius: r, topTrailingRadius: r)
+    }
+    return model.prefs.edge == "left"
       ? UnevenRoundedRectangle(bottomTrailingRadius: theme.controlRadius + 2, topTrailingRadius: theme.controlRadius + 2)
       : UnevenRoundedRectangle(topLeadingRadius: theme.controlRadius + 2, bottomLeadingRadius: theme.controlRadius + 2)
   }
