@@ -185,7 +185,12 @@ const built = process.env.MARGIN_DEV_NO_APP
 if (!built) {
   log('not opening Margin.app (MARGIN_DEV_NO_APP)');
 } else if (built.exitCode === 0) {
-  Bun.spawnSync(['open', built.stdout.toString().trim()]);
+  const app = built.stdout.toString().trim();
+  // `open` only brings forward a copy that's already running, so quit the old build first
+  // (Margin treats SIGTERM as Quit).
+  if (Bun.spawnSync(['pkill', '-TERM', '-f', `${app}/Contents/MacOS/Margin`]).exitCode === 0)
+    await Bun.sleep(1000);
+  Bun.spawnSync(['open', app]);
   log('opened Margin.app; it’s the strip at the edge of your screen');
 } else {
   log('building Margin.app failed (see above)');
