@@ -29,6 +29,7 @@
 
 <!-- Hero -->
 <section class="hero" id="overview">
+  <img class="app-icon" src="/favicon.svg" alt="" width="128" height="128">
   <p class="eyebrow">Early beta for Mac</p>
   <h1>Margin</h1>
   <p class="lede">Your friends, at the edge of your screen.</p>
@@ -63,7 +64,7 @@ Done. Large photos now upload in under 2 seconds.
         <ul class="friends">
           <li><i class="dot on"></i><div><p><b>Maya Chen</b><em>48.1M</em></p><p>Claude Code · maya-chen/tidepool-ui</p><p class="mono">claude-opus-5-5 · 3h 4m</p></div></li>
           <li><i class="dot on"></i><div><p><b>Leo Park</b><em>21.7M</em><span class="badge">2</span></p><p>Codex · private project</p><p class="mono">gpt-6.1-sol · 47m</p></div></li>
-          <li><i class="dot on"></i><div><p><b>Nina Kowalski</b><em>33.6M</em></p><p>OpenCode · nkowalski/quill</p><p class="mono">claude-sonnet-5-5 · 2h 12m</p></div></li>
+          <li><i class="dot on"></i><div><p><b>Nina Kowalski</b><em>33.6M</em></p><p>Cursor · nkowalski/quill</p><p class="mono">claude-sonnet-5-5 · 2h 12m</p></div></li>
           <li><i class="dot idle"></i><div><p><b>Sam Rivera</b><em>12.9M</em></p><p>idle · OpenCode · samr/glyphs</p></div></li>
         </ul>
         <p class="section">Offline</p>
@@ -75,101 +76,101 @@ Done. Large photos now upload in under 2 seconds.
 
 <!-- Statement -->
 <section class="dark statement" id="how">
-  <h2 class="reveal">See what they’re building.<br><span class="soft">Not what they’re typing.</span></h2>
-  <p class="body reveal">Margin lives in a thin strip on the edge of your screen: a dot for every friend who’s coding right now. Hover, click or press ⌥M and it slides open to show which tool they’re in, the model they’re using and how long they’ve been at it. Move the pointer away and it tucks back in.</p>
+  <h2>See what they’re building.<br><span class="soft">Not what they’re typing.</span></h2>
+  <p class="body">Margin lives in a thin strip on the edge of your screen: a dot for every friend who’s coding right now. Hover, click or press ⌥M and it slides open to show which tool they’re in, the model they’re using and how long they’ve been at it. Move the pointer away and it tucks back in. Or stay on the keyboard: arrow keys move through friends, messages and every setting, and Return opens them.</p>
 
   <div class="tiles">
-    <article class="tile reveal">
+    <article class="tile">
       <div class="tile-art strip-art" aria-hidden="true"><span class="s"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot idle"></i><b>2</b></span></div>
       <h3>Always there. Never in the way.</h3>
-      <p>Eight pixels wide. Green for in a tool, half-filled amber for idle, and your unread count underneath. It never takes focus from your work.</p>
+      <p>Eight pixels wide. Green for in a tool, half-filled amber for idle, and your unread count underneath. When nobody’s online it fades to a faint hairline, and it never takes focus from your work.</p>
     </article>
-    <article class="tile reveal">
+    <article class="tile">
       <div class="tile-art pulse-art" aria-hidden="true"><span class="s pulse"><i class="dot on"></i><i class="dot on"></i><b>1</b></span></div>
-      <h3>Quiet alerts.</h3>
-      <p>A new message makes the strip glow once. No banners, no sounds, nothing in your terminal. Turn on macOS notifications if you want them.</p>
+      <h3>Hard to miss. Easy to ignore.</h3>
+      <p>A new message slides a small tab out beside the strip with who wrote and the first few words, and the strip pulses three times. Prefer just the name, or just the glow? It’s one setting. No sounds, nothing in your terminal.</p>
     </article>
-    <article class="tile reveal">
+    <article class="tile">
       <div class="tile-art chat-art" aria-hidden="true"><span class="bubble in">shipped the new parser!</span><span class="bubble out">nice, how fast is it now?</span></div>
       <h3>Chat, right in the drawer.</h3>
-      <p>Click a friend to message them without leaving what you’re doing. Every message is end-to-end encrypted.</p>
+      <p>Click a friend to message them without leaving what you’re doing. Right-click a message to copy it. Every message is end-to-end encrypted.</p>
     </article>
   </div>
 </section>
 
 <!-- Tokens -->
 <section class="tokens-section">
-  <p class="eyebrow reveal">Instead of points</p>
-  <h2 class="reveal">Every token, counted.</h2>
-  <p class="big-number reveal" data-count="48100000">48.1M</p>
-  <p class="body center reveal">Your all-time total across Claude Code, Codex and OpenCode — input, output and cache writes, read from each tool’s own records on your Mac. Cache reads are left out, so the number means something. Only the total ever leaves your Mac.</p>
+  <p class="eyebrow">Instead of points</p>
+  <h2>Every token, counted.</h2>
+  <p class="big-number">48.1M</p>
+  <p class="body center">Your all-time total across Claude Code, Codex and OpenCode — input, output and cache writes, read from each tool’s own records on your Mac. Cache reads are left out, so the number means something. Only the total ever leaves your Mac.</p>
 </section>
 
 <!-- Privacy -->
 <section class="dark privacy" id="privacy">
-  <p class="eyebrow reveal">Privacy</p>
-  <h2 class="reveal">Private by design.</h2>
+  <p class="eyebrow">Privacy</p>
+  <h2>Private by design.</h2>
   <div class="grid">
-    <div class="cell reveal"><h3>Your code stays on your Mac.</h3><p>Friends see the tool, the model, how long you’ve been working and your token total. Never your code, prompts, files, folders or branches.</p></div>
-    <div class="cell reveal"><h3>Private repos stay private.</h3><p>A project is named only when GitHub confirms it’s public. Everything else shows as “private project”.</p></div>
-    <div class="cell reveal"><h3>End-to-end encrypted.</h3><p>Messages use the Signal protocol. The server only ever holds ciphertext it can’t read, and only until it’s delivered.</p></div>
-    <div class="cell reveal"><h3>You decide what’s shared.</h3><p>Turn off the tool, model, repo, time or tokens. Share activity with close friends only. Hide a repo entirely.</p></div>
-    <div class="cell reveal"><h3>Invisible, any time.</h3><p>One switch and you look exactly like you’re offline.</p></div>
-    <div class="cell reveal"><h3>Invite-only.</h3><p>Friends add you by your GitHub handle, and you choose who to accept.</p></div>
+    <div class="cell"><h3>Your code stays on your Mac.</h3><p>Friends see the tool, the model, how long you’ve been working and your token total. Never your code, prompts, files, folders or branches.</p></div>
+    <div class="cell"><h3>Private repos stay private.</h3><p>A project is named only when GitHub confirms it’s public. Everything else shows as “private project”.</p></div>
+    <div class="cell"><h3>End-to-end encrypted.</h3><p>Messages use the Signal protocol. The server only ever holds ciphertext it can’t read, and only until it’s delivered.</p></div>
+    <div class="cell"><h3>You decide what’s shared.</h3><p>Turn off the tool, model, repo, time or tokens. Share activity with close friends only. Hide a repo entirely.</p></div>
+    <div class="cell"><h3>Invisible, any time.</h3><p>One switch and you look exactly like you’re offline.</p></div>
+    <div class="cell"><h3>Invite-only.</h3><p>Friends add you by your GitHub handle, and you choose who to accept.</p></div>
   </div>
 </section>
 
 <!-- Themes -->
 <section class="themes" id="themes">
-  <p class="eyebrow reveal">Themes</p>
-  <h2 class="reveal">Make it yours.</h2>
-  <p class="body center reveal">Five themes, each with its own fonts, colours and material — and each in light and dark. Pick an accent colour and it follows you through all of them.</p>
-  <fieldset class="switch reveal">
+  <p class="eyebrow">Themes</p>
+  <h2>Make it yours.</h2>
+  <p class="body center">Five themes, each with its own fonts, colours and material — and each in light and dark. Pick an accent colour and it follows you through all of them.</p>
+  <fieldset class="switch">
     <legend class="visually-hidden">Show themes in</legend>
     <button type="button" class="on" data-mode="light">Light</button>
     <button type="button" data-mode="dark">Dark</button>
   </fieldset>
   <div class="theme-row" data-mode="light">
-    <figure class="theme t-graphite reveal"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>Graphite</figcaption></figure>
-    <figure class="theme t-glass reveal"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>Glass</figcaption></figure>
-    <figure class="theme t-paper reveal"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>Paper</figcaption></figure>
-    <figure class="theme t-terminal reveal"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>maya-chen</p><p><i class="dot on"></i>leo-park</p><p><i class="dot idle"></i>sam-rivera</p></div><figcaption>Terminal</figcaption></figure>
-    <figure class="theme t-contrast reveal"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>High Contrast</figcaption></figure>
+    <figure class="theme t-graphite"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>Graphite</figcaption></figure>
+    <figure class="theme t-glass"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>Glass</figcaption></figure>
+    <figure class="theme t-paper"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>Paper</figcaption></figure>
+    <figure class="theme t-terminal"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>maya-chen</p><p><i class="dot on"></i>leo-park</p><p><i class="dot idle"></i>sam-rivera</p></div><figcaption>Terminal</figcaption></figure>
+    <figure class="theme t-contrast"><div class="mini"><b>115.5M tokens</b><p><i class="dot on"></i>Maya Chen</p><p><i class="dot on"></i>Leo Park</p><p><i class="dot idle"></i>Sam Rivera</p></div><figcaption>High Contrast</figcaption></figure>
   </div>
 </section>
 
 <!-- Tools -->
 <section class="dark tools" id="tools">
-  <p class="eyebrow reveal">Works where you work</p>
-  <h2 class="reveal">One click to connect.</h2>
-  <div class="chips reveal"><span>Claude Code</span><span>Codex</span><span>OpenCode</span><span>Cursor</span><span>Gemini CLI</span><span>Qwen Code</span><span>Factory</span><span>CodeBuddy</span><span>Qoder</span><span>Kimi Code</span><span>Ollama</span><span>LM Studio</span><span>Terminal (zsh)</span></div>
-  <p class="body center reveal">Turn a tool on from the drawer and Margin adds a small hook to it, backing up the file first. Turn it off and only Margin’s entry is removed. Margin never prints anything into your sessions. Ollama and LM Studio need nothing installed: Margin notices when a local model is answering and shows its name.</p>
+  <p class="eyebrow">Works where you work</p>
+  <h2>One click to connect.</h2>
+  <div class="chips"><span>Claude Code</span><span>Codex</span><span>OpenCode</span><span>Cursor</span><span>Gemini CLI</span><span>Qwen Code</span><span>Factory</span><span>CodeBuddy</span><span>Qoder</span><span>Kimi Code</span><span>Ollama</span><span>LM Studio</span><span>Terminal (zsh)</span></div>
+  <p class="body center">Turn a tool on from the drawer and Margin adds a small hook to it, backing up the file first. Turn it off and only Margin’s entry is removed. Margin never prints anything into your sessions. Ollama and LM Studio need nothing installed: Margin notices when a local model is answering and shows its name.</p>
 </section>
 
 <!-- Drag -->
 <section class="drag">
   <div class="drag-copy">
-    <p class="eyebrow reveal">Placement</p>
-    <h2 class="reveal">Put it exactly where you want it.</h2>
-    <p class="body reveal">Drag the strip up or down either edge of your screen, or across to the other side. It shows up on every Space and over full-screen apps, and remembers where you left it.</p>
+    <p class="eyebrow">Placement</p>
+    <h2>Put it exactly where you want it.</h2>
+    <p class="body">Drag the strip up or down either edge of your screen, or across to the other side. It shows up on every Space and over full-screen apps, and remembers where you left it.</p>
   </div>
-  <div class="drag-art reveal" aria-hidden="true">
+  <div class="drag-art" aria-hidden="true">
     <div class="edge"><span class="s glide"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot idle"></i></span></div>
   </div>
 </section>
 
 <!-- Download -->
 <section class="download" id="download">
-  <h2 class="reveal">Margin for Mac.</h2>
-  <p class="lede reveal">Early beta. Updates itself as it improves.</p>
-  <div class="install-cmd reveal">
+  <h2>Margin for Mac.</h2>
+  <p class="lede">Early beta. Updates itself as it improves.</p>
+  <div class="install-cmd">
     <code id="install-command">curl -fsSL https://margin-api.fly.dev/install.sh | sh</code>
     <button type="button" class="copy" data-copy="install-command">Copy</button>
   </div>
-  <p class="fine reveal">Paste it into Terminal: it installs Margin in Applications and opens it.</p>
-  <div class="ctas reveal"><a class="link" href="/download">Or download the disk image</a></div>
-  <p class="fine reveal">Requires macOS 26 or later on a Mac with Apple silicon.</p>
-  <details class="install reveal">
+  <p class="fine">Paste it into Terminal: it installs Margin in Applications and opens it.</p>
+  <div class="ctas"><a class="link" href="/download">Or download the disk image</a></div>
+  <p class="fine">Requires macOS 26 or later on a Mac with Apple silicon.</p>
+  <details class="install">
     <summary>Installing the beta</summary>
     <ol>
       <li>Open <b>Margin.dmg</b> and drag <b>Margin</b> onto the <b>Applications</b> folder beside it.</li>

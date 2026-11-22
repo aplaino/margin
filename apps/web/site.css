@@ -209,6 +209,12 @@ h3 {
 .hero .eyebrow {
   font-size: 17px;
 }
+.app-icon {
+  display: block;
+  width: 128px;
+  height: 128px;
+  margin: 0 auto 12px;
+}
 .stage {
   margin: 60px auto 0;
   max-width: 1080px;
@@ -849,27 +855,9 @@ h3 {
   line-height: 1.5;
 }
 
-/* Reveal on scroll */
-/* Only once the script runs, so the page is complete without it. */
-.js .reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition:
-    opacity 0.8s ease,
-    transform 0.8s ease;
-}
-.js .reveal.shown {
-  opacity: 1;
-  transform: none;
-}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-  .js .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
   }
   .cursor,
   .pulse,
@@ -924,6 +912,10 @@ h3 {
   .drawer {
     width: 230px;
     top: 150px;
+  }
+  .app-icon {
+    width: 96px;
+    height: 96px;
   }
 }
 
