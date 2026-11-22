@@ -133,7 +133,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 - **Friend actions** are in the chat header's ⋯ menu: **Safety Number** (the 20-character fingerprint of both identity keys, the same on both Macs, to compare in person or on a call), **Remove Friend…**, **Block…** (also unfriends and deletes what they queued for you; to them you look like you're not on Margin) and **Report…** (an optional reason, with "Also block"). Remove and block ask first. Settings → Privacy lists who you've blocked, with **Unblock**.
 
 ### Profile
-The top line of the drawer (your token total and @handle, with ›) opens your profile: your name and handle; tokens, friends and how many are online; **What friends see**, your row exactly as it goes out (with close friends only on, switch between what everyone sees and what close friends see); **Show me in Find friends**; and a link to Privacy settings. Esc or ‹ goes back.
+The top line of the drawer (your token total and @handle, with ›) opens your profile: your name and handle, with your status under them (dot and "Claude Code · repo · time" as close friends see it, or "Invisible — friends see you as offline"); tokens, friends and how many are online; **What friends see**, your row exactly as it goes out (with close friends only on, switch between what everyone sees and what close friends see); **Show me in Find friends**; and a link to Privacy settings. Esc or ‹ goes back.
 
 ### Settings (⚙)
 ```

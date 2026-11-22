@@ -32,6 +32,7 @@ struct ProfileView: View {
           VStack(alignment: .leading, spacing: 2) {
             Text(me?.name ?? handle).font(theme.title)
             if me?.name != nil { Text("@\(handle)").foregroundStyle(theme.secondary) }
+            status(me?.presence).padding(.top, 4)
           }
           HStack(spacing: 18) {
             stat(Format.tokens(me?.tokens), "tokens, all time")
@@ -91,6 +92,33 @@ struct ProfileView: View {
         .font(theme.font(12))
         .padding(16)
       }
+    }
+  }
+
+  // Your own status, as close friends see it, under your name.
+  @ViewBuilder private func status(_ presence: Presence?) -> some View {
+    if model.settings?.invisible == true {
+      Label {
+        Text("Invisible — friends see you as offline")
+      } icon: {
+        Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: 7, height: 7)
+      }
+      .font(theme.small).foregroundStyle(theme.secondary)
+    } else if let presence, presence.status != "offline" {
+      HStack(spacing: 6) {
+        if presence.status == "idle" {
+          HalfDot(color: theme.idle).frame(width: 7, height: 7)
+        } else {
+          Circle().fill(theme.inTool).frame(width: 7, height: 7)
+        }
+        let detail = Format.detail(presence)
+        Text([Format.what(presence), detail].filter { !$0.isEmpty }.joined(separator: " · "))
+          .lineLimit(2)
+      }
+      .font(theme.small).foregroundStyle(theme.secondary)
+    } else {
+      Text(model.me?.connection == "online" ? "Offline" : "Connecting…")
+        .font(theme.small).foregroundStyle(theme.tertiary)
     }
   }
 
