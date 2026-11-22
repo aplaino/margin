@@ -96,7 +96,7 @@ Test matrix — each row run on both machines, in both directions:
 Results are recorded in `docs/TESTING.md`. **Done when** every row passes.
 
 ### Review
-What worked, what felt wrong, and what comes next, then production (signed app, Homebrew, monitoring, backups) and a private beta.
+What worked, what felt wrong, and what comes next, then production (signed app, Homebrew, monitoring, backups) and a private beta. Crash and error reports already reach the server (DESIGN.md, Settings → Crash reports); read them with `bun run crashes [days]`.
 
 ## 5. Engineering practices
 

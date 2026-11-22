@@ -1,7 +1,7 @@
-import { timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SQL } from 'bun';
+import { tokenMatches } from './limits';
 
 // Margin.app updates: release zips on disk, an appcast for Sparkle, and /download for the
 // first install. Releases are uploaded with a token; Sparkle verifies each zip with the
@@ -34,12 +34,6 @@ const json = (body: unknown, status = 200) => Response.json(body, { status });
 const esc = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const zipName = (build: number) => `Margin-${build}.zip`;
 const imageName = (build: number) => `Margin-${build}.dmg`;
-
-function tokenMatches(header: string | null, token: string) {
-  const given = Buffer.from(header?.match(/^Bearer (\S+)$/)?.[1] ?? '');
-  const expected = Buffer.from(token);
-  return given.length === expected.length && timingSafeEqual(given, expected);
-}
 
 export function updates(sql: SQL, options: UpdateOptions) {
   mkdirSync(options.dir, { recursive: true });

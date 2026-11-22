@@ -37,6 +37,7 @@ import {
   withoutLocalDetails,
 } from './presence';
 import { type FetchRepo, originRepo, repoClassifier } from './repo';
+import { Reports } from './reports';
 import { Sessions } from './sessions';
 import { PREKEY_BATCH, Signal } from './signal';
 import { Store } from './store';
@@ -69,6 +70,9 @@ export type DaemonOptions = {
   tokenScanMs?: number;
   localModels?: LocalModelSources;
   localModelMs?: number;
+  // The app's version, for crash reports, and where macOS keeps crash reports (tests).
+  version?: string;
+  crashLogs?: string;
 };
 
 const KeyCount = v.object({ remaining: Count });
@@ -146,6 +150,40 @@ export async function startDaemon(options: DaemonOptions) {
     for (const socket of subscribers) write(socket, value);
   };
 
+  const reports = new Reports(paths.home, options.version ?? 'dev', options.crashLogs);
+  // What mustn't leave this Mac in a report: your handle, friends' handles and names, repo
+  // overrides, and local folders and session ids.
+  const reportSecrets = () => [
+    ...localSecrets(sessions.list()),
+    ...(account()?.handle ? [account()?.handle ?? ''] : []),
+    ...store.friends().flatMap((f) => [f.handle, ...(f.name ? [f.name] : [])]),
+    ...Object.keys(store.settings().repos).flatMap((repo) => [repo, ...repo.split('/')]),
+  ];
+  // Being offline isn't a problem worth reporting.
+  const offline = (e: unknown) =>
+    e instanceof Error &&
+    (e.name === 'TimeoutError' ||
+      e.name === 'AbortError' ||
+      /Connection|ECONN|Socket|ENOTFOUND|ENETUNREACH|EHOSTUNREACH/i.test(
+        String((e as { code?: unknown }).code ?? ''),
+      ));
+  // A serious error: logged as before, and kept as a report the app offers to send.
+  const problem = (what: string, e?: unknown) => {
+    log(what, e);
+    if (offline(e)) return;
+    const error = e instanceof Error ? e : undefined;
+    reports.add(
+      {
+        component: 'margind',
+        kind: 'error',
+        what: error ? `${what} (${error.name})` : what,
+        detail: [error?.stack ?? '', '', 'recent log:', reports.logTail()].join('\n'),
+      },
+      reportSecrets(),
+    );
+    push({ type: 'reports', ...reports.state() });
+  };
+
   const savedTokens = () => store.getJson<Record<string, number>>('friendTokens') ?? {};
 
   function roster(): Friend[] {
@@ -218,7 +256,7 @@ export async function startDaemon(options: DaemonOptions) {
       next = { ...next, full };
     } catch {
       // Fail closed: status (and tokens) only.
-      log('withheld activity that failed the privacy check');
+      problem('withheld activity that failed the privacy check');
       next = buildView({ status, tokens, settings });
     }
     if (mine !== generation) return;
@@ -254,7 +292,7 @@ export async function startDaemon(options: DaemonOptions) {
         await recompute();
       }
     } catch (e) {
-      log('token scan failed', e);
+      problem('token scan failed', e);
     }
   }
 
@@ -275,7 +313,7 @@ export async function startDaemon(options: DaemonOptions) {
       store.upsertFriend(friend.handle, friend.name);
       if (store.friend(friend.handle)?.identityKey) continue;
       // One friend's bad or missing keys don't stop the rest of the sync.
-      await fetchBundle(friend.handle).catch((e) => log('could not pin a friend’s keys', e));
+      await fetchBundle(friend.handle).catch((e) => problem('could not pin a friend’s keys', e));
     }
     push({ type: 'roster', friends: roster() });
     push({ type: 'requests', requests });
@@ -330,7 +368,7 @@ export async function startDaemon(options: DaemonOptions) {
       text = cleanChat(await signal.decrypt(frame.from, frame.ciphertext));
     } catch (e) {
       // Retrying can't help (wrong key, forged sender, replay): drop it rather than jam the queue.
-      log('dropped a message that could not be decrypted', e);
+      problem('dropped a message that could not be decrypted', e);
       return ack();
     }
     if (!text) return ack();
@@ -375,7 +413,7 @@ export async function startDaemon(options: DaemonOptions) {
       }
     };
     // Frames are handled in order, so a message never races the friend sync it needs.
-    frames = frames.then(handle).catch((e) => log(`handling ${frame.t} failed`, e));
+    frames = frames.then(handle).catch((e) => problem(`handling ${frame.t} failed`, e));
   }
   let frames: Promise<unknown> = Promise.resolve();
 
@@ -515,9 +553,19 @@ export async function startDaemon(options: DaemonOptions) {
         write(socket, { type: 'tools', tools: toolStatus(options.tools) });
         write(socket, { type: 'roster', friends: roster() });
         write(socket, { type: 'requests', requests });
+        if (reports.state().count) write(socket, { type: 'reports', ...reports.state() });
         return undefined;
       case 'ping':
         return { protocol: PROTOCOL };
+      case 'reports.send': {
+        const sent = await reports.send(options.server);
+        push({ type: 'reports', ...reports.state() });
+        return { sent };
+      }
+      case 'reports.discard':
+        reports.discard();
+        push({ type: 'reports', ...reports.state() });
+        return undefined;
       case 'login':
         void login().catch((e) => {
           log('sign-in failed', e);
@@ -613,7 +661,8 @@ export async function startDaemon(options: DaemonOptions) {
           }
         },
         (e) => {
-          if (!(e instanceof ApiError || e instanceof DaemonError)) log(`${request.op} failed`, e);
+          if (!(e instanceof ApiError || e instanceof DaemonError || e instanceof ToolError))
+            problem(`${request.op} failed`, e);
           if (e instanceof ApiError && e.status === 426) {
             connectionState = 'update-required';
             push(selfPush());
@@ -632,8 +681,9 @@ export async function startDaemon(options: DaemonOptions) {
   try {
     if (repointTools(options.tools).length) log('pointed tool hooks at where Margin is now');
   } catch (e) {
-    log('could not update tool hooks', e);
+    problem('could not update tool hooks', e);
   }
+  reports.scanMacCrashes(reportSecrets());
   await refreshTokens();
   await recompute();
   connect();
@@ -658,6 +708,7 @@ export async function startDaemon(options: DaemonOptions) {
   return {
     store,
     signal,
+    reportSecrets,
     async stop() {
       stopped = true;
       clearInterval(heartbeat);

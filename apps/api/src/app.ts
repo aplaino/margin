@@ -17,6 +17,8 @@ import {
 } from '@margin/protocol';
 import type { Server, ServerWebSocket, SQL } from 'bun';
 import * as v from 'valibot';
+import { type CrashOptions, crashes } from './crashes';
+import { limiter } from './limits';
 import { type UpdateOptions, updates } from './updates';
 
 // The server holds identity, the friend graph, public key bundles and ciphertext in
@@ -31,6 +33,7 @@ export type Options = {
   fetchGithubUser?: (token: string) => Promise<GithubUser | null>;
   retentionMs?: number;
   updates?: UpdateOptions;
+  crashes?: CrashOptions;
   // Serves the website at / and its two assets.
   site?: (req: Request, url: URL) => Response | null;
 };
@@ -102,23 +105,10 @@ async function githubUser(token: string): Promise<GithubUser | null> {
   return { id: user.id, login: user.login, name: user.name ?? null };
 }
 
-// Fixed-window limiter per account and action.
-function limiter(limit: number, windowMs: number) {
-  const hits = new Map<string, { count: number; resetAt: number }>();
-  return (key: string) => {
-    const now = Date.now();
-    const entry = hits.get(key);
-    if (!entry || entry.resetAt <= now) {
-      hits.set(key, { count: 1, resetAt: now + windowMs });
-      return true;
-    }
-    return ++entry.count <= limit;
-  };
-}
-
 export function createApp(sql: SQL, options: Options = {}) {
   const fetchGithubUser = options.fetchGithubUser ?? githubUser;
   const updateRoutes = options.updates ? updates(sql, options.updates) : undefined;
+  const crashRoutes = crashes(sql, options.crashes);
   const retentionMs = options.retentionMs ?? RETENTION_MS;
   const online = new Map<string, Online>();
   const limits = {
@@ -315,6 +305,8 @@ export function createApp(sql: SQL, options: Options = {}) {
     if (method === 'GET' && path === '/health') return json({ ok: true });
     const update = await updateRoutes?.(req, url);
     if (update) return update;
+    const crash = await crashRoutes(req, url);
+    if (crash) return crash;
     const page = options.site?.(req, url);
     if (page) return page;
     if (method === 'GET' && path === '/config') {

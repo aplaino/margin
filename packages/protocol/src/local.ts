@@ -59,6 +59,9 @@ export const Request = v.variant('op', [
   v.object({ op: v.literal('event'), event: ReporterEvent }),
   v.object({ op: v.literal('subscribe') }),
   v.object({ op: v.literal('ping') }),
+  // Crash and error reports waiting on this Mac: send them, or throw them away.
+  v.object({ op: v.literal('reports.send') }),
+  v.object({ op: v.literal('reports.discard') }),
   v.object({ op: v.literal('login') }),
   v.object({ op: v.literal('logout') }),
   v.object({ op: v.literal('send'), to: Handle, text: ChatText }),
@@ -127,6 +130,8 @@ export const Push = v.variant('type', [
     v.object({ type: v.literal('login'), state: v.literal('failed'), error: v.string() }),
   ]),
   v.object({ type: v.literal('settings'), settings: Settings }),
+  // How many reports are waiting, and whether one is a crash (the app asks after a crash).
+  v.object({ type: v.literal('reports'), count: Count, crash: v.boolean() }),
   v.object({
     type: v.literal('tools'),
     tools: v.array(v.object({ tool: Tool, found: v.boolean(), connected: v.boolean() })),

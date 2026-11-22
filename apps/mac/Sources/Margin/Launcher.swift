@@ -58,6 +58,10 @@ final class Launcher {
     var environment = ProcessInfo.processInfo.environment
     if let server = Launcher.setting("MarginServer") { environment["MARGIN_SERVER"] = server }
     if let clientId = Launcher.setting("MarginGitHubClientID") { environment["MARGIN_GITHUB_CLIENT_ID"] = clientId }
+    // For crash reports.
+    if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
+      environment["MARGIN_APP_VERSION"] = version
+    }
     // margind exits if Margin goes away without stopping it (a crash or a kill).
     environment["MARGIN_PARENT_PID"] = String(ProcessInfo.processInfo.processIdentifier)
     process.environment = environment

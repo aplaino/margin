@@ -33,6 +33,9 @@ final class AppModel {
   var moveError: String?
   // The how-it-works pages, opened again from Settings.
   var showGuide = false
+  // Crash and error reports waiting on this Mac.
+  var reports = (count: 0, crash: false)
+  private var askingAboutReports = false
 
   var expanded = false
   var stripHovered = false
@@ -143,6 +146,9 @@ final class AppModel {
       conversations[with] = messages
     case .result(let op, let ok, let data, let error):
       results[op] = (ok, ok ? data?.note : error)
+    case .reports(let count, let crash):
+      reports = (count, crash)
+      handleReports()
     case .export(let data):
       results["account.export"] = (true, nil)
       NSApp.activate()
@@ -229,6 +235,36 @@ final class AppModel {
       let object = try? JSONSerialization.jsonObject(with: data)
     else { return }
     request("settings.set", ["settings": object])
+  }
+
+  // Always send, never send, or ask after a crash (errors that aren't crashes wait and go
+  // with the next report you send, or from Settings).
+  private func handleReports() {
+    guard reports.count > 0 else { return }
+    switch prefs.crashReports {
+    case "always": request("reports.send")
+    case "never": request("reports.discard")
+    default: if reports.crash, !askingAboutReports { askAboutReports() }
+    }
+  }
+
+  private func askAboutReports() {
+    askingAboutReports = true
+    defer { askingAboutReports = false }
+    let previous = NSWorkspace.shared.frontmostApplication
+    NSApp.activate()
+    let alert = NSAlert()
+    alert.messageText = "Margin quit unexpectedly"
+    alert.informativeText =
+      "Send a report so it can be fixed? It has the app and macOS versions, what went wrong and recent background log lines. Paths, names, repos and messages are removed first; it never includes your code, prompts or chats."
+    alert.addButton(withTitle: "Send Report")
+    alert.addButton(withTitle: "Don’t Send")
+    alert.showsSuppressionButton = true
+    alert.suppressionButton?.title = "Always send reports"
+    let send = alert.runModal() == .alertFirstButtonReturn
+    if send, alert.suppressionButton?.state == .on { prefs.crashReports = "always" }
+    request(send ? "reports.send" : "reports.discard")
+    previous?.activate()
   }
 
   func setNotifications(_ on: Bool) {

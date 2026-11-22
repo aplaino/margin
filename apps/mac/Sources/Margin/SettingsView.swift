@@ -102,6 +102,26 @@ struct SettingsView: View {
           }
         }
 
+        Picker("Crash reports", selection: $prefs.crashReports) {
+          Text("Ask after a crash").tag("ask")
+          Text("Always send").tag("always")
+          Text("Never send").tag("never")
+        }
+        .control("Crash reports", choice: $prefs.crashReports, from: ["ask", "always", "never"])
+        Text("A report has the app and macOS versions, what went wrong and recent background log lines, with paths, names, repos and messages removed.")
+          .font(theme.caption).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
+        if model.reports.count > 0 {
+          HStack(spacing: 12) {
+            Text(model.reports.count == 1 ? "1 report waiting" : "\(model.reports.count) reports waiting")
+              .foregroundStyle(theme.secondary)
+            Spacer()
+            Button("Send") { model.request("reports.send") }.buttonStyle(.link)
+              .control("Send reports") { model.request("reports.send") }
+            Button("Discard") { model.request("reports.discard") }.buttonStyle(.link)
+              .control("Discard reports") { model.request("reports.discard") }
+          }
+        }
+
         SectionLabel("Notifications").padding(.top, 6)
         Picker("New messages", selection: $prefs.alert) {
           Text("Peek with a preview").tag("preview")

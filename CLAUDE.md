@@ -19,4 +19,6 @@ Running it locally: `bun run dev` starts the server (dev sign-in) on 127.0.0.1:8
 
 Releasing: `bun run release` (clean, committed tree) builds Margin.app for https://margin-api.fly.dev, signs the zip with the Sparkle EdDSA key in this Mac's Keychain (account `margin`), and uploads it with the release token (Keychain service `margin-release`). Installed copies update themselves at launch and hourly. First installs: https://margin-api.fly.dev/download. Losing the Sparkle key means installed copies can no longer be updated: keep a backup (`apps/mac/.build/artifacts/sparkle/Sparkle/bin/generate_keys --account margin -x <file>`, stored somewhere safe, never in the repo).
 
+Crash reports: `bun run crashes [days]` lists what installs have sent (scrubbed, anonymous install ids), read with the release token in the Keychain.
+
 Server: Fly.io app `margin-api` (one machine in `ord` with the `margin_data` volume for release zips), Neon Postgres in us-east-2 (`DATABASE_URL` is a Fly secret). Deploy with `fly deploy --ha=false`.

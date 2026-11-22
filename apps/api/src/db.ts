@@ -43,6 +43,14 @@ const MIGRATIONS: string[][] = [
       build BIGINT PRIMARY KEY, version TEXT NOT NULL, signature TEXT NOT NULL, length BIGINT NOT NULL,
       min_system TEXT NOT NULL, created_at BIGINT NOT NULL)`,
   ],
+  // Crash and error reports, scrubbed on the Mac, from an anonymous install id; kept 90 days.
+  [
+    `CREATE TABLE crash_reports (
+      id TEXT PRIMARY KEY, install TEXT NOT NULL, version TEXT NOT NULL, os TEXT NOT NULL,
+      component TEXT NOT NULL, kind TEXT NOT NULL, what TEXT NOT NULL, detail TEXT NOT NULL,
+      at BIGINT NOT NULL, received_at BIGINT NOT NULL)`,
+    `CREATE INDEX crash_reports_received ON crash_reports (received_at)`,
+  ],
 ];
 
 export const TABLES = [
@@ -56,6 +64,7 @@ export const TABLES = [
   'reports',
   'queued_messages',
   'releases',
+  'crash_reports',
   'schema_migrations',
 ];
 

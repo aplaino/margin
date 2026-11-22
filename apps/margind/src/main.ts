@@ -3,6 +3,7 @@ import { startDaemon } from './daemon';
 import { keychainKey } from './keychain';
 import { paths } from './paths';
 import { runHook } from './reporters/hook';
+import { Reports } from './reports';
 import { defaultSources } from './tokens';
 
 // Files margind creates are private to you.
@@ -24,6 +25,30 @@ if (command !== undefined) {
   process.exit(2);
 }
 
+// An unexpected error is kept as a crash report (the app offers to send it), then margind
+// exits and Margin.app starts it again.
+const version = process.env.MARGIN_APP_VERSION ?? 'dev';
+let secrets = (): string[] => [];
+const crashed = (e: unknown) => {
+  try {
+    const reports = new Reports(where.home, version);
+    const error = e instanceof Error ? e : new Error(typeof e);
+    reports.add(
+      {
+        component: 'margind',
+        kind: 'crash',
+        what: error.name,
+        detail: [error.stack ?? error.name, '', 'recent log:', reports.logTail()].join('\n'),
+      },
+      secrets(),
+    );
+  } catch {}
+  console.error(`[margind] crashed (${e instanceof Error ? e.name : typeof e})`);
+  process.exit(1);
+};
+process.on('uncaughtException', crashed);
+process.on('unhandledRejection', crashed);
+
 const daemon = await startDaemon({
   paths: where,
   keys: keychainKey,
@@ -32,7 +57,9 @@ const daemon = await startDaemon({
   githubClientId: process.env.MARGIN_GITHUB_CLIENT_ID,
   tools: { home: homedir(), dataHome: where.home, socket: where.socket, self },
   tokenSources: defaultSources(),
+  version,
 });
+secrets = daemon.reportSecrets;
 console.error('[margind] running');
 
 // Started by Margin.app: stop if the app goes away without stopping us (a crash or a kill),

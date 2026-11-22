@@ -1,5 +1,15 @@
 import * as v from 'valibot';
-import { Ciphertext, Count, Handle, MessageId, Name, PublicPresence, Timestamp } from './common';
+import {
+  Ciphertext,
+  Count,
+  Handle,
+  MessageId,
+  Name,
+  NoControl,
+  NoControlText,
+  PublicPresence,
+  Timestamp,
+} from './common';
 
 const Base64Key = v.pipe(v.string(), v.base64(), v.maxLength(64));
 const KeyId = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(0xffffff));
@@ -24,6 +34,20 @@ export type PeerBundle = v.InferOutput<typeof PeerBundle>;
 
 export const Requests = v.object({ incoming: v.array(Handle), outgoing: v.array(Handle) });
 export type Requests = v.InferOutput<typeof Requests>;
+
+// A crash or serious error, scrubbed on the Mac before it's sent. `install` is a random id
+// per install, never tied to an account, so one Mac's reports can be told from many.
+export const CrashReport = v.strictObject({
+  install: v.pipe(v.string(), v.uuid()),
+  version: v.pipe(v.string(), v.minLength(1), v.maxLength(40), NoControl),
+  os: v.pipe(v.string(), v.maxLength(80), NoControl),
+  component: v.picklist(['app', 'margind']),
+  kind: v.picklist(['crash', 'error']),
+  what: v.pipe(v.string(), v.minLength(1), v.maxLength(200), NoControl),
+  detail: v.pipe(v.string(), v.maxLength(48_000), NoControlText),
+  at: Timestamp,
+});
+export type CrashReport = v.InferOutput<typeof CrashReport>;
 
 export const Config = v.object({ protocol: v.number(), githubClientId: v.nullable(v.string()) });
 export type Config = v.InferOutput<typeof Config>;

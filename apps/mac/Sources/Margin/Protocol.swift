@@ -102,6 +102,8 @@ enum Push {
   case result(op: String, ok: Bool, data: ResultData?, error: String?)
   // Your account export, pretty-printed for saving to a file.
   case export(Data)
+  // Crash and error reports waiting on this Mac.
+  case reports(count: Int, crash: Bool)
 
   private struct Envelope: Decodable {
     var type: String
@@ -122,6 +124,10 @@ enum Push {
     var messages: [ChatMessage]
   }
   private struct ResultPayload: Decodable { var data: ResultData? }
+  private struct ReportsPayload: Decodable {
+    var count: Int
+    var crash: Bool
+  }
 
   static func decode(_ data: Data) -> Push? {
     let decoder = JSONDecoder()
@@ -144,6 +150,7 @@ enum Push {
     case "requests": return payload(RequestsPayload.self).map { .requests($0.requests) }
     case "message": return payload(MessagePayload.self).map { .message($0.message) }
     case "history": return payload(HistoryPayload.self).map { .history(with: $0.with, messages: $0.messages) }
+    case "reports": return payload(ReportsPayload.self).map { .reports(count: $0.count, crash: $0.crash) }
     case "result":
       if envelope.op == "account.export", envelope.ok == true,
         let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],

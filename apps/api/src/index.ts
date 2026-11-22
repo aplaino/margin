@@ -36,6 +36,7 @@ const app = createApp(sql, {
     releaseToken: process.env.RELEASE_TOKEN,
     publicUrl: process.env.MARGIN_PUBLIC_URL,
   },
+  crashes: { readToken: process.env.RELEASE_TOKEN },
 });
 const server = Bun.serve({
   port: Number(process.env.PORT ?? 8787),
