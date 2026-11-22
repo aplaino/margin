@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { PROTOCOL, type ServerFrame } from '@margin/protocol';
+import { migrate, openDb } from '../src/db';
 import { type Api, bundle, ciphertext, startApi, uuid } from './harness';
 
 let api: Api;
@@ -108,6 +109,42 @@ describe('friends', () => {
       'friends',
     );
     expect((await maya.call('/friends/requests')).body).toEqual({ incoming: [], outgoing: [] });
+  });
+
+  test('requests sent at the same moment make friends, not two crossed requests', async () => {
+    const maya = await api.user('maya');
+    const leo = await api.user('leo');
+    await Promise.all([
+      maya.call('/friends/requests', { body: { handle: 'leo' } }),
+      leo.call('/friends/requests', { body: { handle: 'maya' } }),
+    ]);
+    expect(
+      (await maya.call('/friends')).body.friends.map((f: { handle: string }) => f.handle),
+    ).toEqual(['leo']);
+    expect((await maya.call('/friends/requests')).body).toEqual({ incoming: [], outgoing: [] });
+    expect((await leo.call('/friends/requests')).body).toEqual({ incoming: [], outgoing: [] });
+  });
+
+  test('crossed requests left by the old race are made into friendships', async () => {
+    const sql = openDb();
+    await migrate(sql);
+    const now = Date.now();
+    await sql`INSERT INTO friend_requests ${sql([
+      { from_id: 'a', to_id: 'b', created_at: now },
+      { from_id: 'b', to_id: 'a', created_at: now },
+      { from_id: 'a', to_id: 'c', created_at: now },
+    ])}`;
+    const [{ last }] = await sql`SELECT MAX(version) AS last FROM schema_migrations`;
+    await sql`DELETE FROM schema_migrations WHERE version = ${last}`;
+    await migrate(sql);
+    const friendships: unknown = await sql`SELECT a_id, b_id FROM friendships ORDER BY a_id`;
+    expect(friendships).toEqual([
+      { a_id: 'a', b_id: 'b' },
+      { a_id: 'b', b_id: 'a' },
+    ]);
+    const left: unknown = await sql`SELECT from_id, to_id FROM friend_requests`;
+    expect(left).toEqual([{ from_id: 'a', to_id: 'c' }]);
+    await sql.close();
   });
 
   test('declining clears the request for both', async () => {

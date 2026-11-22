@@ -498,6 +498,10 @@ export function createApp(sql: SQL, options: Options = {}) {
       // Unknown and blocked handles get the same answer, so a block can't be detected.
       if (!peer || peer.id === me.id || (await blockedEitherWay(me.id, peer.id))) throw notFound();
       if (await areFriends(me.id, peer.id)) return json({ status: 'friends' });
+      await sql`INSERT INTO friend_requests ${sql({ from_id: me.id, to_id: peer.id, created_at: Date.now() })}
+        ON CONFLICT DO NOTHING`;
+      // Looked for after saving ours: when both ask at the same moment, whichever looks second
+      // finds the other's, so the two never end up waiting on each other.
       const [reverse] = await sql`
         SELECT 1 AS ok FROM friend_requests WHERE from_id = ${peer.id} AND to_id = ${me.id}`;
       if (reverse) {
@@ -505,8 +509,6 @@ export function createApp(sql: SQL, options: Options = {}) {
         await friendsChanged(me, peer);
         return json({ status: 'friends' });
       }
-      await sql`INSERT INTO friend_requests ${sql({ from_id: me.id, to_id: peer.id, created_at: Date.now() })}
-        ON CONFLICT DO NOTHING`;
       sendTo(peer.id, { t: 'friends-changed' });
       return json({ status: 'requested' });
     }

@@ -61,6 +61,17 @@ const MIGRATIONS: string[][] = [
   ],
   // Marks a queued message as a control (Undo Send and the like), delivered as its own frame.
   [`ALTER TABLE queued_messages ADD COLUMN control BOOLEAN NOT NULL DEFAULT FALSE`],
+  // Two people who asked each other at the same moment were left with crossed requests;
+  // a mutual request is a friendship.
+  [
+    `INSERT INTO friendships (a_id, b_id, created_at)
+      SELECT r.from_id, r.to_id, r.created_at FROM friend_requests r
+      JOIN friend_requests s ON s.from_id = r.to_id AND s.to_id = r.from_id
+      WHERE true ON CONFLICT DO NOTHING`,
+    `DELETE FROM friend_requests WHERE EXISTS (
+      SELECT 1 FROM friend_requests s
+      WHERE s.from_id = friend_requests.to_id AND s.to_id = friend_requests.from_id)`,
+  ],
 ];
 
 export const TABLES = [
