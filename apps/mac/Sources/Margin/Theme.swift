@@ -78,7 +78,7 @@ enum ThemeStyle: String, CaseIterable, Identifiable {
   case graphite, glass, paper, terminal, contrast, classic, gel, modernGlass, midnight, custom
   var id: String { rawValue }
 
-  var name: String {
+  var name: LocalizedStringResource {
     switch self {
     case .graphite: "Graphite"
     case .glass: "Glass"
@@ -263,7 +263,18 @@ enum ThemeStyle: String, CaseIterable, Identifiable {
 enum Accent: String, CaseIterable, Identifiable {
   case blue, purple, pink, red, orange, yellow, green, graphite
   var id: String { rawValue }
-  var name: String { rawValue.capitalized }
+  var name: LocalizedStringResource {
+    switch self {
+    case .blue: "Blue"
+    case .purple: "Purple"
+    case .pink: "Pink"
+    case .red: "Red"
+    case .orange: "Orange"
+    case .yellow: "Yellow"
+    case .green: "Green"
+    case .graphite: "Graphite"
+    }
+  }
   var color: Color {
     switch self {
     case .blue: Color(red: 10 / 255, green: 132 / 255, blue: 1)
@@ -362,7 +373,14 @@ struct Pinstripes: View {
 enum DotShape: String, Codable, CaseIterable, Identifiable {
   case circle, square, diamond, ring
   var id: String { rawValue }
-  var name: String { rawValue.capitalized }
+  var name: LocalizedStringResource {
+    switch self {
+    case .circle: "Circle"
+    case .square: "Square"
+    case .diamond: "Diamond"
+    case .ring: "Ring"
+    }
+  }
 }
 
 // The outline of a presence dot.

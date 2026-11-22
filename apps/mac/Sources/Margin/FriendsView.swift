@@ -39,10 +39,12 @@ struct FriendsView: View {
     }
   }
 
-  private func empty(_ title: String, action: String, perform: @escaping () -> Void) -> some View {
+  private func empty(
+    _ title: LocalizedStringResource, action: LocalizedStringResource, perform: @escaping () -> Void
+  ) -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(title).font(theme.bodyBold)
-      Button(action, action: perform).buttonStyle(.link).font(theme.small)
+      Button(action: perform) { Text(action) }.buttonStyle(.link).font(theme.small)
     }
     .padding(8)
   }

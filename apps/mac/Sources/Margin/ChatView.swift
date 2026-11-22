@@ -88,7 +88,7 @@ struct ChatView: View {
         .onSubmit(send)
         .onAppear { focused = model.drawerFocused }
       if let error = model.results["send"], !error.ok {
-        Text(error.message ?? "Couldn’t send").font(theme.caption).foregroundStyle(theme.danger)
+        (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
       }
       Text("End-to-end encrypted").font(theme.font(10)).foregroundStyle(theme.tertiary).padding(.bottom, 8)
@@ -109,7 +109,7 @@ struct ChatView: View {
         Text("Compare it with \(name) in person or on a call. If both of you see the same digits, your messages are only readable by the two of you.")
           .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
       } else if let result = model.results["safety"], !result.ok {
-        Text(result.message ?? "Couldn’t get the safety number").font(theme.caption).foregroundStyle(theme.danger)
+        (result.message.map { Text(verbatim: $0) } ?? Text("Couldn’t get the safety number")).font(theme.caption).foregroundStyle(theme.danger)
       } else {
         Text("Working it out…").font(theme.caption).foregroundStyle(theme.secondary)
       }
@@ -124,15 +124,15 @@ struct ChatView: View {
     let alert = NSAlert()
     switch action {
     case .remove:
-      alert.messageText = "Remove \(name) as a friend?"
-      alert.informativeText = "You’ll stop seeing each other’s activity and can’t message until one of you adds the other again. Your chat history stays on this Mac."
-      alert.addButton(withTitle: "Remove")
+      alert.messageText = String(localized: "Remove \(name) as a friend?")
+      alert.informativeText = String(localized: "You’ll stop seeing each other’s activity and can’t message until one of you adds the other again. Your chat history stays on this Mac.")
+      alert.addButton(withTitle: String(localized: "Remove"))
     case .block:
-      alert.messageText = "Block \(name)?"
-      alert.informativeText = "You’ll stop being friends, they can’t message you or find you, and anything they sent that you haven’t received is deleted. To them it looks as if you’re not on Margin. You can unblock in Settings → Privacy."
-      alert.addButton(withTitle: "Block")
+      alert.messageText = String(localized: "Block \(name)?")
+      alert.informativeText = String(localized: "You’ll stop being friends, they can’t message you or find you, and anything they sent that you haven’t received is deleted. To them it looks as if you’re not on Margin. You can unblock in Settings → Privacy.")
+      alert.addButton(withTitle: String(localized: "Block"))
     }
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: String(localized: "Cancel"))
     alert.buttons.first?.hasDestructiveAction = true
     guard alert.runModal() == .alertFirstButtonReturn else { return }
     model.request(action == .remove ? "friend.remove" : "block", ["handle": handle])
@@ -141,15 +141,15 @@ struct ChatView: View {
   private func report(_ name: String) {
     NSApp.activate()
     let alert = NSAlert()
-    alert.messageText = "Report \(name)?"
-    alert.informativeText = "Reports go to whoever runs Margin, with your handle and theirs and the reason you give. Messages stay encrypted and aren’t included."
+    alert.messageText = String(localized: "Report \(name)?")
+    alert.informativeText = String(localized: "Reports go to whoever runs Margin, with your handle and theirs and the reason you give. Messages stay encrypted and aren’t included.")
     let reason = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
-    reason.placeholderString = "What happened (optional)"
+    reason.placeholderString = String(localized: "What happened (optional)")
     alert.accessoryView = reason
     alert.showsSuppressionButton = true
-    alert.suppressionButton?.title = "Also block \(name)"
-    alert.addButton(withTitle: "Report")
-    alert.addButton(withTitle: "Cancel")
+    alert.suppressionButton?.title = String(localized: "Also block \(name)")
+    alert.addButton(withTitle: String(localized: "Report"))
+    alert.addButton(withTitle: String(localized: "Cancel"))
     alert.window.initialFirstResponder = reason
     guard alert.runModal() == .alertFirstButtonReturn else { return }
     let text = String(reason.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))

@@ -85,8 +85,18 @@ struct HandleField: View {
           .control("send", press: send)
       }
       if let sent, let result = model.results["friend.request"] {
-        Text(result.ok ? "Request sent to \(sent)." : (result.message == "not found" ? "No Margin user called \(sent)." : result.message ?? "Couldn’t send"))
-          .font(theme.caption).foregroundStyle(result.ok ? theme.secondary : theme.danger)
+        Group {
+          if result.ok {
+            Text("Request sent to \(sent).")
+          } else if result.message == "not found" {
+            Text("No Margin user called \(sent).")
+          } else if let message = result.message {
+            Text(verbatim: message)
+          } else {
+            Text("Couldn’t send")
+          }
+        }
+        .font(theme.caption).foregroundStyle(result.ok ? theme.secondary : theme.danger)
       }
     }
   }
@@ -123,7 +133,7 @@ struct FindFriends: View {
           VStack(alignment: .leading, spacing: 1) {
             Text(person.displayName).fontWeight(.medium).lineLimit(1)
             if person.name != nil {
-              Text("@\(person.handle)").font(theme.caption).foregroundStyle(theme.secondary).lineLimit(1)
+              Text(verbatim: "@\(person.handle)").font(theme.caption).foregroundStyle(theme.secondary).lineLimit(1)
             }
           }
           Spacer()

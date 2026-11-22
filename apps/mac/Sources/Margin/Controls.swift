@@ -58,17 +58,17 @@ private struct Outlined: ViewModifier {
 
 // A checkbox ↑/↓ can reach, named by its title unless that isn't unique.
 struct Check: View {
-  var title: String
+  var title: LocalizedStringResource
   var isOn: Binding<Bool>
   var id: String?
 
-  init(_ title: String, isOn: Binding<Bool>, id: String? = nil) {
+  init(_ title: LocalizedStringResource, isOn: Binding<Bool>, id: String? = nil) {
     self.title = title
     self.isOn = isOn
     self.id = id
   }
 
   var body: some View {
-    Toggle(title, isOn: isOn).control(id ?? title, toggle: isOn)
+    Toggle(isOn: isOn) { Text(title) }.control(id ?? String(localized: title), toggle: isOn)
   }
 }

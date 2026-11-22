@@ -43,11 +43,16 @@ struct GuideView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
-  private var title: String {
-    ["The strip", "Opening it", "Moving it", "What friends see"][page]
+  private var title: LocalizedStringResource {
+    switch page {
+    case 0: "The strip"
+    case 1: "Opening it"
+    case 2: "Moving it"
+    default: "What friends see"
+    }
   }
 
-  private var text: String {
+  private var text: LocalizedStringResource {
     switch page {
     case 0:
       "A dot for each friend who’s coding right now: solid when they’re in a tool, half-filled when they’re idle. The number underneath is your unread messages, and the strip glows once when one arrives."
@@ -60,14 +65,15 @@ struct GuideView: View {
     }
   }
 
+  // "Hover over the strip, click it or press ⌥M to open the drawer.", in the language's own list style.
   private var openWays: String {
     var ways: [String] = []
-    if model.prefs.openOnHover { ways.append("hover over the strip") }
-    if model.prefs.openOnClick { ways.append("click it") }
-    if model.prefs.openOnHotkey { ways.append("press ⌥M") }
-    guard let first = ways.first else { return "Turn on a way to open it in Settings." }
-    let list = ways.count == 1 ? first : ways.dropLast().joined(separator: ", ") + " or " + (ways.last ?? "")
-    return list.prefix(1).uppercased() + list.dropFirst() + " to open the drawer."
+    if model.prefs.openOnHover { ways.append(String(localized: "hover over the strip")) }
+    if model.prefs.openOnClick { ways.append(String(localized: "click it")) }
+    if model.prefs.openOnHotkey { ways.append(String(localized: "press ⌥M")) }
+    guard !ways.isEmpty else { return String(localized: "Turn on a way to open it in Settings.") }
+    let sentence = String(localized: "\(ways.formatted(.list(type: .or))) to open the drawer.")
+    return sentence.prefix(1).uppercased() + sentence.dropFirst()
   }
 
   @ViewBuilder private var illustration: some View {
@@ -99,8 +105,8 @@ struct GuideView: View {
       }
     default:
       VStack(alignment: .leading, spacing: 6) {
-        Label("Claude Code · maya/tidepool", systemImage: "checkmark").font(theme.caption)
-        Label("claude-opus-5-5 · 3h 4m", systemImage: "checkmark").font(theme.caption)
+        Label { Text(verbatim: "Claude Code · maya/tidepool") } icon: { Image(systemName: "checkmark") }.font(theme.caption)
+        Label { Text(verbatim: "claude-opus-5-5 · 3h 4m") } icon: { Image(systemName: "checkmark") }.font(theme.caption)
         Label("48.1M tokens", systemImage: "checkmark").font(theme.caption)
         Label("code, prompts, files", systemImage: "xmark").font(theme.caption).foregroundStyle(theme.tertiary)
       }

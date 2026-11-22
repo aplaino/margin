@@ -113,7 +113,7 @@ struct PanelView: View {
     .padding(.top, 14)
   }
 
-  private func tab(_ title: String, _ value: Tab) -> some View {
+  private func tab(_ title: LocalizedStringResource, _ value: Tab) -> some View {
     Button {
       model.tab = value
     } label: {
@@ -132,8 +132,8 @@ struct PanelView: View {
 }
 
 struct StateView: View {
-  var title: String
-  var text: String
+  var title: LocalizedStringResource
+  var text: LocalizedStringResource
   @Environment(\.theme) private var theme
 
   var body: some View {
@@ -149,10 +149,11 @@ struct StateView: View {
 }
 
 struct SectionLabel: View {
-  var text: String
+  var text: LocalizedStringResource
   @Environment(\.theme) private var theme
-  init(_ text: String) { self.text = text }
+  init(_ text: LocalizedStringResource) { self.text = text }
   var body: some View {
-    Text(text.uppercased()).font(theme.section).kerning(0.6).foregroundStyle(theme.tertiary)
+    // textCase follows the language, so Greek capitals drop their accents.
+    Text(text).textCase(.uppercase).font(theme.section).kerning(0.6).foregroundStyle(theme.tertiary)
   }
 }

@@ -72,7 +72,7 @@ struct WelcomeView: View {
     .frame(width: 440, height: 470)
   }
 
-  private func place(_ title: String, _ detail: String, menuBar: Bool) -> some View {
+  private func place(_ title: LocalizedStringResource, _ detail: LocalizedStringResource, menuBar: Bool) -> some View {
     let selected = model.prefs.menuBar == menuBar
     return Button {
       model.prefs.menuBar = menuBar
@@ -90,7 +90,7 @@ struct WelcomeView: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(title)
+    .accessibilityLabel(Text(title))
     .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }

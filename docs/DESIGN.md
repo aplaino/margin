@@ -228,6 +228,12 @@ Claude Code, Codex, OpenCode, Gemini CLI, Qwen Code, Factory, CodeBuddy, Qoder, 
 | Theme | Graphite, System appearance, blue accent |
 | Audience | Everyone (not close friends only) |
 | Connected tools | Chosen during first launch |
+| Language | The Mac's own (System Settings → General → Language & Region), English otherwise |
+| Token total | Millions (118.7M) |
+
+## 9a. Languages (agreed with the owner 2026-11-22)
+
+The Mac app speaks English, Spanish, Simplified Chinese, Japanese and Greek, following the Mac's language order; System Settings → General → Language & Region → Applications can set Margin alone. There's no language menu in Margin. Names, handles, repos, messages, tool and model names stay as they are, and so do the error messages margind sends (English for now). The website stays in English. Translations were drafted by Claude and need a native speaker's read before a release that advertises them.
 
 ## 10. Distribution
 

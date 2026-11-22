@@ -17,6 +17,8 @@ Working rules for this project:
 
 Running it locally: `bun run dev` starts the server (dev sign-in) on 127.0.0.1:8787, the owner's margind (real data folder and token count), simulated friends, and opens Margin.app. Server and simulated friends keep their data in `.dev/`. To start over, delete `.dev/` and `~/Library/Application Support/Margin` together (keeping one without the other makes sign-in fail: the server already has a different identity key for the account). `bun run app` only builds `apps/mac/build/Margin.app`.
 
+Languages: every visible string in the Mac app is localizable (`Text("…")`, `LocalizedStringResource` parameters, `String(localized:)` for AppKit and computed copy; `.verbatim(...)` for names). After changing copy, run `bun run strings` to sync `apps/mac/Resources/Localizable.xcstrings`, then translate the new keys into es, zh-Hans, ja and el. `bun run app` compiles the catalog into the app.
+
 Releasing: `bun run release` (clean, committed tree) builds Margin.app for https://margin-api.fly.dev, signs the zip with the Sparkle EdDSA key in this Mac's Keychain (account `margin`), and uploads it with the release token (Keychain service `margin-release`). Installed copies update themselves at launch and hourly. First installs: https://margin-api.fly.dev/download. Losing the Sparkle key means installed copies can no longer be updated: keep a backup (`apps/mac/.build/artifacts/sparkle/Sparkle/bin/generate_keys --account margin -x <file>`, stored somewhere safe, never in the repo).
 
 Crash reports: `bun run crashes [days]` lists what installs have sent (scrubbed, anonymous install ids), read with the release token in the Keychain.

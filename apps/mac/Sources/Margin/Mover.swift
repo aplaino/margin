@@ -9,7 +9,7 @@ enum Mover {
     case copy(String)
     var errorDescription: String? {
       switch self {
-      case .copy(let reason): "Couldn’t move Margin: \(reason). Drag it into Applications instead."
+      case .copy(let reason): String(localized: "Couldn’t move Margin: \(reason). Drag it into Applications instead.")
       }
     }
   }

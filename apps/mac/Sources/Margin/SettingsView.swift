@@ -8,7 +8,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
   case account, general, appearance, placement, notifications, privacy, tools
   var id: String { rawValue }
 
-  var title: String {
+  var title: LocalizedStringResource {
     switch self {
     case .account: "Account"
     case .general: "General"
@@ -182,14 +182,14 @@ struct SettingsView: View {
   }
 
   // A row with a switch, the way System Settings shows on and off.
-  private func switchRow(_ label: String, _ isOn: Binding<Bool>, last: Bool = false) -> some View {
+  private func switchRow(_ label: LocalizedStringResource, _ isOn: Binding<Bool>, last: Bool = false) -> some View {
     SettingsRow(label: label, last: last) {
-      Toggle(label, isOn: isOn).toggleStyle(.switch).labelsHidden()
+      Toggle(isOn: isOn) { Text(label) }.toggleStyle(.switch).labelsHidden()
     }
-    .control(label, toggle: isOn)
+    .control(String(localized: label), toggle: isOn)
   }
 
-  private func note(_ text: String) -> some View {
+  private func note(_ text: LocalizedStringResource) -> some View {
     Text(text).font(theme.caption).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
       .padding(.horizontal, 2).padding(.top, 2)
   }
@@ -222,15 +222,18 @@ struct SettingsView: View {
     let online = model.onlineFriends.count
     return VStack(alignment: .leading, spacing: 4) {
       SettingsGroup {
-        SettingsRow(label: model.me?.name ?? "Signed in as") {
-          Text("@\(model.me?.handle ?? "")").foregroundStyle(theme.secondary)
+        SettingsRow(label: model.me?.name.map { .verbatim($0) } ?? "Signed in as") {
+          Text(verbatim: "@\(model.me?.handle ?? "")").foregroundStyle(theme.secondary)
         }
         SettingsRow(label: "Status") { status.foregroundStyle(theme.secondary) }
         SettingsRow(label: "Tokens") {
           Text(model.prefs.tokenTotal(model.me?.tokens)).foregroundStyle(theme.secondary).monospacedDigit()
         }
         SettingsRow(label: "Friends", last: true) {
-          Text("\(model.friends.count)" + (online > 0 ? " · \(online) online" : "")).foregroundStyle(theme.secondary)
+          Group {
+            if online > 0 { Text("\(model.friends.count) · \(online) online") } else { Text(verbatim: "\(model.friends.count)") }
+          }
+          .foregroundStyle(theme.secondary)
         }
       }
       SettingsGroup("Your data") {
@@ -298,7 +301,7 @@ struct SettingsView: View {
           .control("Crash reports", choice: $prefs.crashReports, from: ["ask", "always", "never"])
         }
         if model.reports.count > 0 {
-          SettingsRow(label: model.reports.count == 1 ? "1 waiting" : "\(model.reports.count) waiting", last: true) {
+          SettingsRow(label: "\(model.reports.count) waiting", last: true) {
             HStack(spacing: 10) {
               Button("Send") { model.request("reports.send") }.buttonStyle(.link)
                 .control("Send reports") { model.request("reports.send") }
@@ -375,12 +378,19 @@ struct SettingsView: View {
             }
           }
         }
-        note(
-          Prefs.dockEdge == prefs.edge && prefs.position == nil
-            ? "Drag the strip along either edge, or across to the other side. It starts near the top because your Dock is on the \(prefs.edge)."
-            : "Drag the strip along either edge, or across to the other side. Fading needs hover to open Margin, so you can find the strip by pointing at the edge.")
+        note(edgeNote)
       }
     }
+  }
+
+  private var edgeNote: LocalizedStringResource {
+    let prefs = model.prefs
+    guard Prefs.dockEdge == prefs.edge && prefs.position == nil else {
+      return "Drag the strip along either edge, or across to the other side. Fading needs hover to open Margin, so you can find the strip by pointing at the edge."
+    }
+    return prefs.edge == "left"
+      ? "Drag the strip along either edge, or across to the other side. It starts near the top because your Dock is on the left."
+      : "Drag the strip along either edge, or across to the other side. It starts near the top because your Dock is on the right."
   }
 
   private var notifications: some View {
@@ -440,7 +450,7 @@ struct SettingsView: View {
         last: settings.audience != "close" || model.friends.isEmpty)
       if settings.audience == "close" {
         ForEach(Array(model.friends.enumerated()), id: \.element.id) { index, friend in
-          SettingsRow(label: friend.displayName, last: index == model.friends.count - 1) {
+          SettingsRow(label: .verbatim(friend.displayName), last: index == model.friends.count - 1) {
             Toggle(
               friend.displayName,
               isOn: Binding(
@@ -471,7 +481,7 @@ struct SettingsView: View {
     if !model.blocked.isEmpty {
       SettingsGroup("Blocked") {
         ForEach(Array(model.blocked.enumerated()), id: \.element) { index, handle in
-          SettingsRow(label: handle, last: index == model.blocked.count - 1) {
+          SettingsRow(label: .verbatim(handle), last: index == model.blocked.count - 1) {
             Button("Unblock") { model.request("unblock", ["handle": handle]) }.buttonStyle(.link)
               .control("unblock:\(handle)") { model.request("unblock", ["handle": handle]) }
           }
@@ -480,7 +490,7 @@ struct SettingsView: View {
     }
     SettingsGroup("Repo overrides") {
       ForEach(settings.repos.keys.sorted(), id: \.self) { repo in
-        SettingsRow(label: repo) {
+        SettingsRow(label: .verbatim(repo)) {
           HStack(spacing: 8) {
             Text(settings.repos[repo] == "hidden" ? "Hidden" : "Private").foregroundStyle(theme.secondary)
             Button {
@@ -527,11 +537,11 @@ struct SettingsView: View {
   private func confirmDelete() {
     NSApp.activate()
     let alert = NSAlert()
-    alert.messageText = "Delete your Margin account?"
-    alert.informativeText =
-      "Your friends, keys and anything waiting on the server are deleted. Chat history on this Mac stays until you remove Margin."
-    alert.addButton(withTitle: "Delete")
-    alert.addButton(withTitle: "Cancel")
+    alert.messageText = String(localized: "Delete your Margin account?")
+    alert.informativeText = String(
+      localized: "Your friends, keys and anything waiting on the server are deleted. Chat history on this Mac stays until you remove Margin.")
+    alert.addButton(withTitle: String(localized: "Delete"))
+    alert.addButton(withTitle: String(localized: "Cancel"))
     alert.buttons.first?.hasDestructiveAction = true
     if alert.runModal() == .alertFirstButtonReturn { model.request("account.delete") }
   }
@@ -577,7 +587,7 @@ struct ThemeTile: View {
       }
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(style.name) theme")
+    .accessibilityLabel("\(String(localized: style.name)) theme")
     .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }

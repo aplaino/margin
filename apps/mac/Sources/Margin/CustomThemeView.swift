@@ -68,7 +68,7 @@ struct CustomThemeView: View {
             }
             SettingsRow(label: "Weight") {
               Picker("Weight", selection: weight) {
-                Text("Light").tag("light")
+                Text(LocalizedStringResource("Light weight", defaultValue: "Light", comment: "Font weight")).tag("light")
                 Text("Regular").tag("regular")
                 Text("Medium").tag("medium")
               }
@@ -121,11 +121,11 @@ struct CustomThemeView: View {
       PresenceDot(.tool, size: theme.rowDot)
       PresenceDot(.idle, size: theme.rowDot)
       PresenceDot(.offline, size: theme.rowDot)
-      Text("2").font(theme.font(10, bold: true)).foregroundStyle(theme.onUnread)
+      Text(verbatim: "2").font(theme.font(10, bold: true)).foregroundStyle(theme.onUnread)
         .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16)
         .background(Capsule().fill(theme.unread))
       Spacer()
-      Text("Aa").font(theme.title)
+      Text(verbatim: "Aa").font(theme.title)
     }
     .padding(10)
     .background(RoundedRectangle(cornerRadius: theme.nested(16)).fill(theme.surface))
@@ -158,7 +158,7 @@ struct CustomThemeView: View {
   }
 
   private func colour(
-    _ title: String, _ key: WritableKeyPath<CustomTheme, String?>, _ current: Color, last: Bool = false
+    _ title: LocalizedStringResource, _ key: WritableKeyPath<CustomTheme, String?>, _ current: Color, last: Bool = false
   ) -> some View {
     ColorRow(
       label: title,
@@ -169,8 +169,9 @@ struct CustomThemeView: View {
   }
 
   private func slider(
-    _ title: String, _ key: WritableKeyPath<CustomTheme, Double?>, _ current: Double, _ range: ClosedRange<Double>,
-    step: Double, percent: Bool = false, ends: (String, String)? = nil, last: Bool = false
+    _ title: LocalizedStringResource, _ key: WritableKeyPath<CustomTheme, Double?>, _ current: Double,
+    _ range: ClosedRange<Double>, step: Double, percent: Bool = false,
+    ends: (LocalizedStringResource, LocalizedStringResource)? = nil, last: Bool = false
   ) -> some View {
     let value = Binding(
       get: { model.prefs.customTheme[keyPath: key] ?? current },
@@ -185,15 +186,15 @@ struct CustomThemeView: View {
       Slider(value: value, in: range, step: step) {
         Text(title)
       } minimumValueLabel: {
-        Text(ends?.0 ?? "").font(theme.caption)
+        if let ends { Text(ends.0).font(theme.caption) }
       } maximumValueLabel: {
-        Text(ends?.1 ?? "").font(theme.caption)
+        if let ends { Text(ends.1).font(theme.caption) }
       }
       .labelsHidden()
       .padding(.bottom, 6)
       if !last { Divider().overlay(theme.divider) }
     }
-    .control(title + String(describing: key)) {} adjust: { delta in
+    .control(String(localized: title) + String(describing: key)) {} adjust: { delta in
       value.wrappedValue = (value.wrappedValue + Double(delta) * step).clamped(to: range)
     }
   }

@@ -9,7 +9,7 @@ enum TokenUnit: String, CaseIterable {
   case greek, omega, japanese, chinese, elemental, binary, hexadecimal, english, flags, yesNo, emojier, tritetrated
   case precisePrime
 
-  var title: String {
+  var title: LocalizedStringResource {
     switch self {
     case .exact: "Exact"
     case .auto: "Auto"
@@ -117,24 +117,28 @@ enum Format {
     case "cursor": "Cursor"
     case "ollama": "Ollama"
     case "lm-studio": "LM Studio"
-    case "shell": "terminal"
+    case "shell": String(localized: "terminal")
     default: id ?? ""
     }
   }
 
+  // "3h 4m", in the language's own short units.
   static func duration(since ms: Double, now: Date = .now) -> String {
     let minutes = max(0, Int((now.timeIntervalSince1970 * 1000 - ms) / 60_000))
-    if minutes < 60 { return "\(minutes)m" }
-    return "\(minutes / 60)h \(minutes % 60)m"
+    let formatter = DateComponentsFormatter()
+    formatter.allowedUnits = minutes < 60 ? [.minute] : [.hour, .minute]
+    formatter.unitsStyle = .abbreviated
+    formatter.zeroFormattingBehavior = .pad
+    return formatter.string(from: TimeInterval(minutes * 60)) ?? ""
   }
 
   static func ago(_ ms: Double, now: Date = .now) -> String {
     guard ms > 0 else { return "" }
     let minutes = max(0, Int((now.timeIntervalSince1970 * 1000 - ms) / 60_000))
-    if minutes < 1 { return "just now" }
-    if minutes < 60 { return "\(minutes)m ago" }
-    if minutes < 60 * 24 { return "\(minutes / 60)h ago" }
-    return "\(minutes / (60 * 24))d ago"
+    if minutes < 1 { return String(localized: "just now") }
+    if minutes < 60 { return String(localized: "\(minutes)m ago") }
+    if minutes < 60 * 24 { return String(localized: "\(minutes / 60)h ago") }
+    return String(localized: "\(minutes / (60 * 24))d ago")
   }
 
   static func time(_ ms: Double) -> String {
@@ -144,20 +148,22 @@ enum Format {
     formatter.dateStyle = Calendar.current.isDateInToday(date) ? .none : .short
     formatter.timeStyle = .short
     let time = formatter.string(from: date)
-    return Calendar.current.isDateInToday(date) ? "Today \(time)" : time
+    return Calendar.current.isDateInToday(date) ? String(localized: "Today \(time)") : time
   }
 
   // "Claude Code · maya/tidepool-ui", "idle · OpenCode · private project", "online"
   static func what(_ presence: Presence) -> String {
     let idle = presence.status == "idle"
-    guard let activity = presence.activity else { return idle ? "idle" : "online" }
+    let state = idle ? String(localized: "idle") : String(localized: "online")
+    guard let activity = presence.activity else { return state }
     var parts: [String] = []
-    if idle { parts.append("idle") }
+    if idle { parts.append(state) }
     if let tool = activity.tool { parts.append(Format.tool(tool)) }
     if let project = activity.project {
-      parts.append(project.visibility == "public" ? (project.repo ?? "public repo") : "private project")
+      parts.append(
+        project.visibility == "public" ? (project.repo ?? String(localized: "public repo")) : String(localized: "private project"))
     }
-    return parts.isEmpty ? (idle ? "idle" : "online") : parts.joined(separator: " · ")
+    return parts.isEmpty ? state : parts.joined(separator: " · ")
   }
 
   // "claude-opus-5-5 · 3h 4m"

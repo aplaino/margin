@@ -21,7 +21,7 @@ struct SetupView: View {
 
   private var welcome: some View {
     Group {
-      Text("Margin").font(theme.font(20, bold: true, heading: true))
+      Text(verbatim: "Margin").font(theme.font(20, bold: true, heading: true))
       Text("See what your friends are building, right here at the edge of your screen.")
         .foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
       Text("Friends only see the tool, the model, your token count, and the repo when it’s public. Never your code, prompts, files or branches.")
@@ -94,7 +94,7 @@ struct SetupView: View {
     model.tab = .friends
   }
 
-  private func primary(_ title: String, action: @escaping () -> Void) -> some View {
+  private func primary(_ title: LocalizedStringResource, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       Text(title).fontWeight(.semibold).foregroundStyle(theme.onAccent)
         .frame(maxWidth: .infinity).padding(.vertical, 10)
@@ -112,7 +112,7 @@ struct ToolToggles: View {
     VStack(alignment: .leading, spacing: 6) {
       ForEach(model.tools) { tool in
         HStack {
-          Check(Format.tool(tool.tool) == "terminal" ? "Shell (zsh)" : Format.tool(tool.tool), isOn: Binding(
+          Check(tool.tool == "shell" ? "Shell (zsh)" : .verbatim(Format.tool(tool.tool)), isOn: Binding(
             get: { model.tools.first { $0.tool == tool.tool }?.connected == true },
             set: { model.request($0 ? "tools.connect" : "tools.disconnect", ["tool": tool.tool]) }
           ))

@@ -187,7 +187,7 @@ final class AppModel {
     // Metadata only: who, never what.
     let content = UNMutableNotificationContent()
     content.title = "Margin"
-    content.body = "New message from \(friend(message.peer)?.displayName ?? message.peer)"
+    content.body = String(localized: "New message from \(friend(message.peer)?.displayName ?? message.peer)")
     UNUserNotificationCenter.current().add(
       UNNotificationRequest(identifier: message.id, content: content, trigger: nil))
   }
@@ -268,13 +268,13 @@ final class AppModel {
     let previous = NSWorkspace.shared.frontmostApplication
     NSApp.activate()
     let alert = NSAlert()
-    alert.messageText = "Margin quit unexpectedly"
-    alert.informativeText =
-      "Send a report so it can be fixed? It has the app and macOS versions, what went wrong and recent background log lines. Paths, names, repos and messages are removed first; it never includes your code, prompts or chats."
-    alert.addButton(withTitle: "Send Report")
-    alert.addButton(withTitle: "Don’t Send")
+    alert.messageText = String(localized: "Margin quit unexpectedly")
+    alert.informativeText = String(
+      localized: "Send a report so it can be fixed? It has the app and macOS versions, what went wrong and recent background log lines. Paths, names, repos and messages are removed first; it never includes your code, prompts or chats.")
+    alert.addButton(withTitle: String(localized: "Send Report"))
+    alert.addButton(withTitle: String(localized: "Don’t Send"))
     alert.showsSuppressionButton = true
-    alert.suppressionButton?.title = "Always send reports"
+    alert.suppressionButton?.title = String(localized: "Always send reports")
     let send = alert.runModal() == .alertFirstButtonReturn
     if send, alert.suppressionButton?.state == .on { prefs.crashReports = "always" }
     request(send ? "reports.send" : "reports.discard")

@@ -32,6 +32,8 @@ app="$mac/build/Margin.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" "$app/Contents/Resources"
 cp "$mac/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
+# Translations: <language>.lproj/Localizable.strings(dict), picked by the Mac's language.
+xcrun xcstringstool compile "$mac/Resources/Localizable.xcstrings" --output-directory "$app/Contents/Resources" >/dev/null
 cp "$binary" "$app/Contents/MacOS/Margin"
 ditto "$(dirname "$binary")/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 bun build --compile --target=bun-darwin-arm64 "$root/apps/margind/src/main.ts" \
@@ -42,6 +44,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key><string>dev.margin.app</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>es</string><string>zh-Hans</string><string>ja</string><string>el</string></array>
   <key>CFBundleName</key><string>Margin</string>
   <key>CFBundleDisplayName</key><string>Margin</string>
   <key>CFBundleExecutable</key><string>Margin</string>

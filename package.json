@@ -16,7 +16,8 @@
     "app": "scripts/build-app.sh",
     "package": "scripts/package.sh",
     "release": "scripts/release.sh",
-    "crashes": "bun scripts/crashes.ts"
+    "crashes": "bun scripts/crashes.ts",
+    "strings": "scripts/strings.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",

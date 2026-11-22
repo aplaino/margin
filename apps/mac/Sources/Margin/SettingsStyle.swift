@@ -5,11 +5,11 @@ import SwiftUI
 // and its control on the right of each row.
 
 struct SettingsGroup<Content: View>: View {
-  var title: String?
+  var title: LocalizedStringResource?
   @ViewBuilder var content: () -> Content
   @Environment(\.theme) private var theme
 
-  init(_ title: String? = nil, @ViewBuilder content: @escaping () -> Content) {
+  init(_ title: LocalizedStringResource? = nil, @ViewBuilder content: @escaping () -> Content) {
     self.title = title
     self.content = content
   }
@@ -26,8 +26,13 @@ struct SettingsGroup<Content: View>: View {
   }
 }
 
+extension LocalizedStringResource {
+  // A name, handle or repo where a label is expected: shown as it is, in every language.
+  static func verbatim(_ text: String) -> LocalizedStringResource { "\(text)" }
+}
+
 struct SettingsRow<Control: View>: View {
-  var label: String
+  var label: LocalizedStringResource
   var last = false
   @ViewBuilder var control: () -> Control
   @Environment(\.theme) private var theme
@@ -62,7 +67,7 @@ struct AppearanceTiles: View {
     .control("Appearance", choice: $selection, from: ["system", "light", "dark"])
   }
 
-  private func tile(_ name: String, _ value: String) -> some View {
+  private func tile(_ name: LocalizedStringResource, _ value: String) -> some View {
     let selected = selection == value
     return Button {
       selection = value
@@ -85,7 +90,7 @@ struct AppearanceTiles: View {
       }
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(name) appearance")
+    .accessibilityLabel("\(String(localized: name)) appearance")
     .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }
@@ -139,7 +144,7 @@ struct AccentRow: View {
               .overlay { if selection == accent { Circle().fill(.white).frame(width: 6, height: 6) } }
           }
           .buttonStyle(.plain)
-          .accessibilityLabel("\(accent.name) accent")
+          .accessibilityLabel("\(String(localized: accent.name)) accent")
           .accessibilityAddTraits(selection == accent ? .isSelected : [])
         }
       }
@@ -154,7 +159,7 @@ struct AccentRow: View {
 // system colour picker. (SwiftUI's ColorPicker can't bring the colour window forward from the
 // drawer, which never activates Margin on its own.)
 struct ColorRow: View {
-  var label: String
+  var label: LocalizedStringResource
   @Binding var color: Color
   var last = false
   @State private var open = false
@@ -183,8 +188,8 @@ struct ColorRow: View {
             .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(open ? theme.accent : .clear, lineWidth: 2).padding(-3))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(label) colour")
-        .control("colour:\(label)") {
+        .accessibilityLabel("\(String(localized: label)) colour")
+        .control("colour:\(String(localized: label))") {
           open.toggle()
           hex = color.hex
         }
