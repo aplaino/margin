@@ -740,8 +740,9 @@ final class DrawerController {
     case kVK_DownArrow:
       model.moveCursor(1)
     case kVK_Space, kVK_Return, kVK_ANSI_KeypadEnter:
-      guard let control else { return false }
-      control.press()
+      // With nothing outlined the key does nothing, rather than reaching SwiftUI, which would
+      // press whichever button it has focused (the account card, at the top of Settings).
+      control?.press()
     case kVK_LeftArrow, kVK_RightArrow:
       guard let adjust = control?.adjust else { return false }
       adjust(event.keyCode == kVK_LeftArrow ? -1 : 1)

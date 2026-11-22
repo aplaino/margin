@@ -99,7 +99,7 @@ struct PanelView: View {
         tab(model.requests.incoming.isEmpty ? "Add" : "Add (\(model.requests.incoming.count))", .add)
         Spacer()
         Button {
-          model.tab = .settings
+          model.showTab(.settings)
         } label: {
           Image(systemName: "gearshape").font(theme.font(13))
             .foregroundStyle(model.tab == .settings ? theme.text : theme.secondary)
@@ -117,7 +117,7 @@ struct PanelView: View {
 
   private func tab(_ title: LocalizedStringResource, _ value: Tab) -> some View {
     Button {
-      model.tab = value
+      model.showTab(value)
     } label: {
       Text(title)
         .lineLimit(1).minimumScaleFactor(0.8)
