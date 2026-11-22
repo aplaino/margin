@@ -108,6 +108,7 @@ What worked, what felt wrong, and what comes next, then production (signed app, 
 ## 6. Hosting and distribution
 
 - **Fly.io** (api) + **Neon** (Postgres) — decided.
+- **Open source** under AGPL-3.0-or-later (owner's call, 2026-11-22): the repo is public, the bundled libsignal-node is GPL-3.0, and AGPL also keeps modified servers open.
 - Signed, notarized direct download + Homebrew; not the Mac App Store (Margin installs hooks into other tools' config files).
 - Apple Developer Program before the beta (ad-hoc signed builds until then).
 - **Open:** domain (`margin.dev`, `getmargin.app`, `usemargin.dev` — check availability).

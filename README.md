@@ -47,3 +47,9 @@ bun run dev     # local server, your margind, simulated friends, and Margin.app
 ```
 
 `docs/DESIGN.md` describes the drawer, `docs/PLAN.md` the phases and scope, and `docs/KNOWLEDGE.md` what was learned about each tool's hooks.
+
+## License
+
+Margin is free software under the [GNU Affero General Public License v3.0 or later](LICENSE). You can use, change and share it; if you distribute a modified Margin, or run a modified server for other people, you must offer its source under the same license.
+
+It includes [libsignal-node](https://github.com/WhiskeySockets/libsignal-node) (GPL-3.0), [Sparkle](https://github.com/sparkle-project/Sparkle) (MIT) and number notations ported from [Antimatter Dimensions' notations library](https://github.com/antimatter-dimensions/notations) (MIT, see `apps/mac/Sources/Margin/Notations.swift`).
