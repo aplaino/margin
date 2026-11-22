@@ -123,6 +123,13 @@ export function createApp(sql: SQL, options: Options = {}) {
 
   const presenceFor = (entry: Online | undefined, viewerId: string) =>
     entry?.targeted?.get(viewerId) ?? entry?.presence;
+  // What a friend can tell about someone: their view while they're online or idle, nothing
+  // while they're offline or invisible. Offline is only ever sent as a change from this, so
+  // nobody learns that an invisible friend is connected, or when they connect or leave.
+  const visibleTo = (entry: Online | undefined, viewerId: string) => {
+    const presence = presenceFor(entry, viewerId);
+    return presence && presence.status !== 'offline' ? presence : undefined;
+  };
 
   function sendTo(accountId: string, frame: ServerFrame) {
     const data = JSON.stringify(frame);
@@ -185,8 +192,8 @@ export function createApp(sql: SQL, options: Options = {}) {
     sendTo(a.id, { t: 'friends-changed' });
     sendTo(b.id, { t: 'friends-changed' });
     if (!(await areFriends(a.id, b.id))) return;
-    const pa = presenceFor(online.get(a.id), b.id);
-    const pb = presenceFor(online.get(b.id), a.id);
+    const pa = visibleTo(online.get(a.id), b.id);
+    const pb = visibleTo(online.get(b.id), a.id);
     if (pa) sendTo(b.id, { t: 'presence', from: a.handle, presence: pa });
     if (pb) sendTo(a.id, { t: 'presence', from: b.handle, presence: pb });
   }
@@ -346,14 +353,17 @@ export function createApp(sql: SQL, options: Options = {}) {
     if (method === 'DELETE' && path === '/me') {
       const friends = await friendIds(me.id);
       await deleteAccount(me.id);
-      for (const socket of online.get(me.id)?.sockets ?? []) socket.close(4002, 'account deleted');
+      const entry = online.get(me.id);
+      for (const socket of entry?.sockets ?? []) socket.close(4002, 'account deleted');
       online.delete(me.id);
       for (const id of friends) {
-        sendTo(id, {
-          t: 'presence',
-          from: me.handle,
-          presence: { status: 'offline', at: Date.now() },
-        });
+        if (visibleTo(entry, id)) {
+          sendTo(id, {
+            t: 'presence',
+            from: me.handle,
+            presence: { status: 'offline', at: Date.now() },
+          });
+        }
         sendTo(id, { t: 'friends-changed' });
       }
       return json({ ok: true });
@@ -589,15 +599,21 @@ export function createApp(sql: SQL, options: Options = {}) {
           const peer = await accountByHandle(handle);
           if (peer && (await areFriends(me.id, peer.id))) targeted.set(peer.id, frame.presence);
         }
+        const before = new Map([...targeted.keys()].map((id) => [id, visibleTo(entry, id)]));
+        // An empty list ends the close-friends view: they see the default one again.
         entry.targeted = targeted;
         for (const id of targeted.keys()) {
-          sendTo(id, { t: 'presence', from: me.handle, presence: frame.presence });
+          if (frame.presence.status !== 'offline' || before.get(id)) {
+            sendTo(id, { t: 'presence', from: me.handle, presence: frame.presence });
+          }
         }
         return;
       }
+      const friends = (await friendIds(me.id)).filter((id) => !entry.targeted?.has(id));
+      const before = new Map(friends.map((id) => [id, visibleTo(entry, id)]));
       entry.presence = frame.presence;
-      for (const id of await friendIds(me.id)) {
-        if (!entry.targeted?.has(id)) {
+      for (const id of friends) {
+        if (frame.presence.status !== 'offline' || before.get(id)) {
           sendTo(id, { t: 'presence', from: me.handle, presence: frame.presence });
         }
       }
@@ -650,7 +666,7 @@ export function createApp(sql: SQL, options: Options = {}) {
     const friends = await sql`
       SELECT a.id, a.handle FROM friendships f JOIN accounts a ON a.id = f.b_id WHERE f.a_id = ${me.id}`;
     for (const friend of friends) {
-      const presence = presenceFor(online.get(friend.id), me.id);
+      const presence = visibleTo(online.get(friend.id), me.id);
       if (presence)
         ws.send(
           JSON.stringify({ t: 'presence', from: friend.handle, presence } satisfies ServerFrame),
@@ -679,6 +695,7 @@ export function createApp(sql: SQL, options: Options = {}) {
     if (!entry?.sockets.delete(ws) || entry.sockets.size > 0) return;
     online.delete(me.id);
     for (const id of await friendIds(me.id)) {
+      if (!visibleTo(entry, id)) continue;
       sendTo(id, {
         t: 'presence',
         from: me.handle,

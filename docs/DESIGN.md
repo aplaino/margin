@@ -110,6 +110,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │      End-to-end encrypted    │
 └──────────────────────────────┘
 ```
+- Under the name: what they're doing, or "offline · last seen 4h ago". Last seen is the last time they were online or idle, kept across restarts; going invisible looks exactly like going offline then, and staying invisible never refreshes it.
 - Theirs on the left, yours on the right; history loads when the chat opens.
 - Enter sends; Esc goes back to the list. Opening a chat marks it read.
 - Copying: right-click a message → Copy, or with the field empty press ↑ to outline your last message, ↑/↓ to pick another, and ⌘C to copy the whole message. ↓ past the last message, Esc, or typing returns to the field. Text inside a message can still be selected with the pointer.

@@ -26,7 +26,9 @@ test('serves the page and its assets with a strict content policy', async () => 
 test('the page loads nothing from anywhere else', async () => {
   const html = await (await fetch(`${api.base}/`)).text();
   expect(html).toContain('<h1>Margin</h1>');
-  expect(html.match(/(src|href)="(https?:)?\/\//g)).toBeNull();
+  // Scripts, images, styles and fonts all come from here; a link someone chooses to follow is fine.
+  expect(html.match(/src="(https?:)?\/\//g)).toBeNull();
+  expect(html.match(/<link[^>]*href="(https?:)?\/\//g)).toBeNull();
 });
 
 test('answers HEAD too, for link previews and uptime checks', async () => {

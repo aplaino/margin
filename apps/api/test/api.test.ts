@@ -254,12 +254,57 @@ describe('presence', () => {
     expect(await c.unexpected(presenceFrom('maya'))).toEqual([]);
   });
 
+  test('an invisible friend is never seen connecting, staying or leaving', async () => {
+    const maya = await api.user('maya');
+    const leo = await api.user('leo');
+    await api.befriend(maya, leo);
+    const l = await leo.connect();
+    const m = await maya.connect();
+
+    // Invisible from the start, with the 30-second repeats: nothing reaches Leo.
+    m.send({ t: 'presence', presence: { status: 'offline', at: 1 } });
+    m.send({ t: 'presence', presence: { status: 'offline', at: 2 } });
+    expect(await l.unexpected(presenceFrom('maya'))).toEqual([]);
+    const later = await leo.connect();
+    expect(await later.unexpected(presenceFrom('maya'))).toEqual([]);
+
+    // Going online and then invisible is news once.
+    m.send({ t: 'presence', presence: { status: 'online', at: 3 } });
+    expect((await l.next(presenceFrom('maya'))).presence).toEqual({ status: 'online', at: 3 });
+    m.send({ t: 'presence', presence: { status: 'offline', at: 4 } });
+    expect((await l.next(presenceFrom('maya'))).presence).toEqual({ status: 'offline', at: 4 });
+    m.send({ t: 'presence', presence: { status: 'offline', at: 5 } });
+    m.ws.close();
+    expect(await l.unexpected(presenceFrom('maya'))).toEqual([]);
+  });
+
+  test('an empty close-friends list ends their view, so they see invisible too', async () => {
+    const maya = await api.user('maya');
+    const close = await api.user('close');
+    await api.befriend(maya, close);
+    const m = await maya.connect();
+    const c = await close.connect();
+
+    const full = { status: 'online' as const, at: 2, activity: { tool: 'claude-code' as const } };
+    m.send({ t: 'presence', presence: full, to: ['close'] });
+    m.send({ t: 'presence', presence: { status: 'online', at: 2 } });
+    expect((await c.next(presenceFrom('maya'))).presence).toEqual(full);
+
+    m.send({ t: 'presence', presence: { status: 'offline', at: 3 }, to: [] });
+    m.send({ t: 'presence', presence: { status: 'offline', at: 3 } });
+    expect((await c.next(presenceFrom('maya'))).presence).toEqual({ status: 'offline', at: 3 });
+    const later = await close.connect();
+    expect(await later.unexpected(presenceFrom('maya'))).toEqual([]);
+  });
+
   test('friends see offline when the last socket closes', async () => {
     const maya = await api.user('maya');
     const leo = await api.user('leo');
     await api.befriend(maya, leo);
     const l = await leo.connect();
     const m = await maya.connect();
+    m.send({ t: 'presence', presence: { status: 'online', at: 1 } });
+    await l.next(presenceFrom('maya'));
     m.ws.close();
     const frame = await l.next(presenceFrom('maya'));
     expect(frame.t === 'presence' && frame.presence.status).toBe('offline');

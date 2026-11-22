@@ -255,6 +255,30 @@ describe('two users, two daemons, one server', () => {
     );
   });
 
+  test('close friends stop seeing activity the moment you go invisible', async () => {
+    await maya.app.request({
+      op: 'settings.set',
+      settings: { audience: 'close', closeFriends: ['leo'] },
+    });
+    await leo.app.until(friendIn('maya', (f) => f.presence.activity?.tool === 'claude-code'));
+
+    await maya.app.request({ op: 'settings.set', settings: { invisible: true } });
+    const roster = await leo.app.next(friendIn('maya', (f) => f.presence.status === 'offline'));
+    expect(friendOf(roster, 'maya')?.presence.activity).toBeUndefined();
+    // Staying invisible doesn't refresh when Leo last saw her.
+    const seen = friendOf(roster, 'maya')?.lastSeenAt ?? 0;
+    expect(seen).toBeGreaterThan(0);
+    await Bun.sleep(1000);
+    const later = await leo.app.next(friendIn('maya', (f) => f.presence.status === 'offline'));
+    expect(friendOf(later, 'maya')?.lastSeenAt).toBe(seen);
+
+    await maya.app.request({
+      op: 'settings.set',
+      settings: { invisible: false, audience: 'everyone', closeFriends: [] },
+    });
+    await leo.app.until(friendIn('maya', (f) => f.presence.status === 'online'));
+  });
+
   test('end-to-end encrypted chat both ways, with unread counts', async () => {
     const sent = (await maya.app.request({
       op: 'send',
@@ -318,6 +342,23 @@ describe('two users, two daemons, one server', () => {
     ]);
     const [{ n }] = await sql`SELECT COUNT(*) AS n FROM queued_messages`;
     expect(Number(n)).toBe(0);
+  });
+
+  test('when a friend was last online survives a restart', async () => {
+    leo.app.close();
+    await leo.daemon.stop();
+    const offline = await maya.app.until(friendIn('leo', (f) => f.presence.status === 'offline'));
+    const seen = friendOf(offline, 'leo')?.lastSeenAt ?? 0;
+    expect(seen).toBeGreaterThan(Date.now() - 60_000);
+
+    maya.app.close();
+    await maya.daemon.stop();
+    maya = await startUser('maya');
+    const roster = await maya.app.until(friendIn('leo', (f) => f.presence.status === 'offline'));
+    expect(friendOf(roster, 'leo')?.lastSeenAt).toBe(seen);
+
+    leo = await startUser('leo');
+    await maya.app.until(friendIn('leo', (f) => f.presence.status === 'online'));
   });
 
   test('safety numbers match on both Macs', async () => {

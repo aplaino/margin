@@ -129,13 +129,19 @@ export async function startDaemon(options: DaemonOptions) {
   if (saved && saved.server !== options.server) {
     store.setAccount(undefined);
     for (const friend of store.friends()) store.removeFriend(friend.handle);
+    store.delete('friendLastSeen');
   }
   const signal = new Signal(store);
   const sessions = new Sessions(options.isAlive);
   const classify = repoClassifier(options.fetchRepo);
   const idle = options.idle ?? idleSeconds;
   const subscribers = new Set<Socket>();
-  const friendPresence = new Map<string, { presence: PublicPresence; lastSeenAt: number }>();
+  const friendPresence = new Map<string, { presence: PublicPresence; receivedAt: number }>();
+  // When each friend was last online or idle, kept across restarts for the offline list.
+  const lastSeen = new Map(
+    Object.entries(store.getJson<Record<string, number>>('friendLastSeen') ?? {}),
+  );
+  let lastSeenSavedAt = 0;
   let requests: Requests = { incoming: [], outgoing: [] };
   let connection: Connection | undefined;
   let connectionState: ConnectionState | 'update-required' = 'offline';
@@ -200,7 +206,7 @@ export async function startDaemon(options: DaemonOptions) {
     const lastTokens = savedTokens();
     return store.friends().map((f) => {
       const seen = friendPresence.get(f.handle);
-      const fresh = seen && now - seen.lastSeenAt < STALE_MS;
+      const fresh = seen && now - seen.receivedAt < STALE_MS;
       const known = seen?.presence.tokens ?? lastTokens[f.handle];
       const presence: PublicPresence = fresh
         ? {
@@ -216,7 +222,7 @@ export async function startDaemon(options: DaemonOptions) {
         handle: f.handle,
         ...(f.name ? { name: f.name } : {}),
         presence,
-        lastSeenAt: seen?.lastSeenAt ?? 0,
+        lastSeenAt: lastSeen.get(f.handle) ?? 0,
         unread: store.unread(f.handle),
       };
     });
@@ -280,6 +286,7 @@ export async function startDaemon(options: DaemonOptions) {
   // treat 90 s of silence as offline). The server caps how often presence may be sent.
   let lastSent = '';
   let lastSentAt = 0;
+  let closeViewSent = false;
   function sendPresence(force = false) {
     if (!view || !connection?.connected) return;
     const key = JSON.stringify({
@@ -290,7 +297,12 @@ export async function startDaemon(options: DaemonOptions) {
     if (!force && key === lastSent && Date.now() - lastSentAt < 25_000) return;
     lastSent = key;
     lastSentAt = Date.now();
-    if (view.close.length) connection.send({ t: 'presence', presence: view.full, to: view.close });
+    // An empty list ends the close-friends view (invisible, or close friends only turned off),
+    // so close friends don't keep seeing the activity they saw before.
+    if (view.close.length || closeViewSent) {
+      connection.send({ t: 'presence', presence: view.full, to: view.close });
+    }
+    closeViewSent = view.close.length > 0;
     connection.send({ t: 'presence', presence: view.basic });
   }
 
@@ -317,6 +329,7 @@ export async function startDaemon(options: DaemonOptions) {
       if (!current.has(handle)) {
         store.removeFriend(handle);
         friendPresence.delete(handle);
+        lastSeen.delete(handle);
       }
     }
     for (const friend of friends) {
@@ -355,7 +368,20 @@ export async function startDaemon(options: DaemonOptions) {
 
   async function onPresence(from: string, presence: PublicPresence) {
     if (!store.friend(from)) return;
-    friendPresence.set(from, { presence, lastSeenAt: Date.now() });
+    const now = Date.now();
+    const before = friendPresence.get(from);
+    friendPresence.set(from, { presence, receivedAt: now });
+    // Online and idle say they were here; offline only marks the moment they left.
+    const wasHere =
+      before && before.presence.status !== 'offline' && now - before.receivedAt < STALE_MS;
+    if (presence.status !== 'offline' || wasHere) {
+      lastSeen.set(from, now);
+      // Saved when they leave, and at most once a minute while they're here.
+      if (presence.status === 'offline' || now - lastSeenSavedAt > 60_000) {
+        store.setJson('friendLastSeen', Object.fromEntries(lastSeen));
+        lastSeenSavedAt = now;
+      }
+    }
     // Going offline carries no count, so the last one is kept for the offline list. Online
     // without one means they've chosen to hide it, so it's forgotten.
     if (presence.status !== 'offline') {
@@ -478,6 +504,8 @@ export async function startDaemon(options: DaemonOptions) {
     connection = undefined;
     store.setAccount(undefined);
     friendPresence.clear();
+    lastSeen.clear();
+    store.delete('friendLastSeen');
     requests = { incoming: [], outgoing: [] };
     connectionState = 'offline';
     pushAll();

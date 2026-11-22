@@ -153,6 +153,7 @@ enum Format {
 
   // "Claude Code · maya/tidepool-ui", "idle · OpenCode · private project", "online"
   static func what(_ presence: Presence) -> String {
+    if presence.status == "offline" { return String(localized: "offline") }
     let idle = presence.status == "idle"
     let state = idle ? String(localized: "idle") : String(localized: "online")
     guard let activity = presence.activity else { return state }

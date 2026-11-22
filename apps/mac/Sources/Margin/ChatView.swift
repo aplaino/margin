@@ -25,7 +25,15 @@ struct ChatView: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(friend?.displayName ?? handle).font(theme.bodyBold)
           if let friend {
-            Text(Format.what(friend.presence)).font(theme.caption).foregroundStyle(theme.secondary).lineLimit(1)
+            Group {
+              let ago = Format.ago(friend.lastSeenAt)
+              if friend.isOnline || ago.isEmpty {
+                Text(Format.what(friend.presence))
+              } else {
+                Text("offline · last seen \(ago)")
+              }
+            }
+            .font(theme.caption).foregroundStyle(theme.secondary).lineLimit(1)
             if let tokens = friend.presence.tokens {
               Text("\(Format.tokens(tokens)) tokens").font(theme.mono).foregroundStyle(theme.tertiary)
             }
