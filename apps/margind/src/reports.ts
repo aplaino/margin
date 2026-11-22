@@ -48,8 +48,17 @@ export function scrub(text: string, secrets: string[] = [], home = homedir()) {
 // why margind's log leaves their messages out too.
 export function stackOf(e: unknown, own = false) {
   if (!(e instanceof Error)) return typeof e;
-  const frames = (e.stack ?? '').split('\n').filter((line) => /^\s+at /.test(line));
-  return [own ? `${e.name}: ${e.message}` : e.name, ...frames].join('\n');
+  // The stack starts with "name: message", and the message can span lines that look like
+  // frames, so it's cut off exactly; a stack that doesn't start that way gives no frames.
+  const stack = e.stack ?? '';
+  const header = e.message ? `${e.name}: ${e.message}` : e.name;
+  const frames = stack.startsWith(header)
+    ? stack
+        .slice(header.length)
+        .split('\n')
+        .filter((line) => /^\s+at /.test(line))
+    : [];
+  return [own ? header : e.name, ...frames].join('\n');
 }
 
 export class Reports {

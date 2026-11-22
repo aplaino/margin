@@ -43,8 +43,10 @@ export function crashes(sql: SQL, options: CrashOptions = {}) {
   const retentionMs = options.retentionMs ?? RETENTION_MS;
   const perInstall = limiter(30, 24 * 60 * 60_000);
   const perAddress = limiter(100, 60 * 60_000);
-  // The install id is the sender's to choose, so a cap on everything bounds what's stored.
-  const overall = limiter(1000, 60 * 60_000);
+  // The install id is the sender's to choose, so new ids share one hourly allowance; installs
+  // already heard from today keep their own budget, so a flood of made-up ids can't lock
+  // them out.
+  const newInstalls = limiter(1000, 60 * 60_000);
 
   async function receive(req: Request) {
     if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY)
@@ -62,7 +64,8 @@ export function crashes(sql: SQL, options: CrashOptions = {}) {
     const report = parsed.output;
     // Fly puts the caller's address here; anything else counts as one unknown caller.
     const address = req.headers.get('fly-client-ip') ?? 'unknown';
-    if (!overall('all') || !perAddress(address) || !perInstall(report.install))
+    const admitted = perInstall.seen(report.install) || newInstalls('all');
+    if (!admitted || !perAddress(address) || !perInstall(report.install))
       return json({ error: 'rate limited' }, 429);
     const now = Date.now();
     await sql`INSERT INTO crash_reports ${sql({ id: randomUUID(), ...report, received_at: now })}`;

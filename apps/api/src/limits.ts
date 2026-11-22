@@ -4,7 +4,9 @@ import { timingSafeEqual } from 'node:crypto';
 export function limiter(limit: number, windowMs: number) {
   const hits = new Map<string, { count: number; resetAt: number }>();
   let sweepAt = 0;
-  return (key: string) => {
+  // Whether a key has a window open now (it was seen within the last window).
+  const seen = (key: string) => (hits.get(key)?.resetAt ?? 0) > Date.now();
+  const hit = (key: string) => {
     const now = Date.now();
     // Forget finished windows now and then, so keys anyone can make up don't pile up.
     if (now >= sweepAt) {
@@ -18,6 +20,7 @@ export function limiter(limit: number, windowMs: number) {
     }
     return ++entry.count <= limit;
   };
+  return Object.assign(hit, { seen });
 }
 
 // A bearer token compared in constant time.

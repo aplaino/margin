@@ -58,6 +58,9 @@ describe('stacks', () => {
       'TypeError: cannot read maya-chen/stealth-launch',
     );
     expect(stackOf('a string')).toBe('string');
+    // A message with lines shaped like frames doesn't get through.
+    const sneaky = new Error('oops\n    at maya-chen/stealth-launch (secret)');
+    expect(stackOf(sneaky)).not.toContain('stealth-launch');
   });
 });
 
