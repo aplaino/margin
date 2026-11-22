@@ -50,6 +50,16 @@ describe('PublicPresence', () => {
     expect(ok(PublicPresence, presence)).toBe(false);
   });
 
+  test('a tool from a newer version is dropped, not the whole presence', () => {
+    const parsed = v.parse(PublicPresence, {
+      status: 'online',
+      at: 1,
+      activity: { tool: 'some-future-tool', model: 'qwen3-coder' },
+    });
+    expect(parsed.activity?.tool).toBeUndefined();
+    expect(parsed.activity?.model).toBe('qwen3-coder');
+  });
+
   test('rejects negative or fractional token counts', () => {
     expect(ok(PublicPresence, { status: 'idle', at: 1, tokens: -1 })).toBe(false);
     expect(ok(PublicPresence, { status: 'idle', at: 1, tokens: 1.5 })).toBe(false);

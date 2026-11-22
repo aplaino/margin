@@ -14,13 +14,26 @@ export type LocalSession = {
 
 // Tools whose process outlives your use of them (Codex's app-server, OpenCode's server,
 // a shell) end after a quiet spell. Claude Code ends when its process exits, or after an
-// hour without events if its process couldn't be found.
+// hour without events if its process couldn't be found. A local model server counts only
+// while it's answering requests.
 const QUIET_MS: Record<Tool, number> = {
   'claude-code': 60 * 60_000,
   codex: 15 * 60_000,
   opencode: 15 * 60_000,
+  'gemini-cli': 15 * 60_000,
+  'qwen-code': 15 * 60_000,
+  factory: 15 * 60_000,
+  codebuddy: 15 * 60_000,
+  qoder: 15 * 60_000,
+  'kimi-cli': 15 * 60_000,
+  cursor: 15 * 60_000,
+  ollama: 10 * 60_000,
+  'lm-studio': 10 * 60_000,
   shell: 10 * 60_000,
 };
+
+// What friends see when several are active: a coding tool, then a local model, then a shell.
+const RANK: Partial<Record<Tool, number>> = { shell: 0, ollama: 1, 'lm-studio': 1 };
 
 const alive = (pid: number) => {
   try {
@@ -73,9 +86,9 @@ export class Sessions {
     return changed;
   }
 
-  // Friends see one activity: an AI tool beats a bare shell, then the most recently active.
+  // Friends see one activity: the highest ranked, then the most recently active.
   current(): LocalSession | undefined {
-    const rank = (s: LocalSession) => (s.tool === 'shell' ? 0 : 1);
+    const rank = (s: LocalSession) => RANK[s.tool] ?? 2;
     return this.list().toSorted((a, b) => rank(b) - rank(a) || b.order - a.order)[0];
   }
 }

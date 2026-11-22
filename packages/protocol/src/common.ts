@@ -19,7 +19,21 @@ export type Handle = v.InferOutput<typeof Handle>;
 // Display name from GitHub, shown next to the handle.
 export const Name = v.pipe(v.string(), v.minLength(1), v.maxLength(64), NoControl);
 
-export const Tool = v.picklist(['claude-code', 'codex', 'opencode', 'shell']);
+export const Tool = v.picklist([
+  'claude-code',
+  'codex',
+  'opencode',
+  'gemini-cli',
+  'qwen-code',
+  'factory',
+  'codebuddy',
+  'qoder',
+  'kimi-cli',
+  'cursor',
+  'ollama',
+  'lm-studio',
+  'shell',
+]);
 export type Tool = v.InferOutput<typeof Tool>;
 
 export const Model = v.pipe(v.string(), v.regex(/^[A-Za-z0-9._:/@-]{1,80}$/));
@@ -46,7 +60,8 @@ export const PublicProject = v.variant('visibility', [
 // The only shape of activity that may leave the machine. Every field is optional
 // because the user can turn each one off.
 export const PublicActivity = v.object({
-  tool: v.optional(Tool),
+  // A tool added in a later version is dropped rather than failing the whole presence.
+  tool: v.optional(v.fallback(v.optional(Tool), undefined)),
   model: v.optional(Model),
   project: v.optional(PublicProject),
   // Session start, rounded down to the minute.
