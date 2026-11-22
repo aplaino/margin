@@ -47,16 +47,6 @@ struct ProfileView: View {
       }
       .edgeFade(8)
 
-      if !isMe, friend != nil {
-        Divider().overlay(theme.divider)
-        Button {
-          model.openChat(handle)
-        } label: {
-          Text("Message").frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent).tint(theme.accent).controlSize(.large)
-        .padding(12)
-      }
     }
   }
 

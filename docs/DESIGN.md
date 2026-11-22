@@ -60,7 +60,7 @@ Each trigger is switchable in settings, and the hotkey can be changed.
 
 **Focus:** opening Margin doesn't take keyboard focus from your work. It takes focus when you click into it, click its menu bar item (as any menu would), or open it with the hotkey; hovering or clicking the edge strip doesn't. Esc returns focus to the app you were in.
 
-**Keyboard (when the drawer has focus — opened with ⌥M or from the menu bar item, or once you click into it):** ↑/↓ move through friends or chats (the selected row is outlined in the accent colour and scrolled into view), Return opens the chat with the message field ready, Tab/⇧Tab step through Friends, Chats, Add and Settings, ⌘1–⌘4 jump to them, Esc goes back one level (chat → list → collapsed). On Add and Settings, ↑/↓ outline each control in turn, Space or Return toggles or presses it (or puts you in a text field), and ←/→ change a choice (appearance, theme, accent, new-message alert); Esc leaves a text field. While typing in a field, keys stay with the field. Outlines show only while you move with the keyboard, like focus rings: moving the pointer, clicking or scrolling in the drawer hides them (the mouse gets the hover highlight), and the next arrow press shows the outline where you were before moving on (owner's call 2026-11-22).
+**Keyboard (when the drawer has focus — opened with ⌥M or from the menu bar item, or once you click into it):** ↑/↓ move through friends or chats (the selected row is outlined in the accent colour and scrolled into view), Return does what a click does (a friend's profile on Friends, the chat with the message field ready on Chats; on a profile, Return opens the chat), Tab/⇧Tab step through Friends, Chats, Add and Settings, ⌘1–⌘4 jump to them, Esc goes back one level (chat → list → collapsed). On Add and Settings, ↑/↓ outline each control in turn, Space or Return toggles or presses it (or puts you in a text field), and ←/→ change a choice (appearance, theme, accent, new-message alert); Esc leaves a text field. While typing in a field, keys stay with the field. Outlines show only while you move with the keyboard, like focus rings: moving the pointer, clicking or scrolling in the drawer hides them (the mouse gets the hover highlight), and the next arrow press shows the outline where you were before moving on (owner's call 2026-11-22).
 
 ## 5. Expanded panel
 
@@ -96,7 +96,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 - Online first (in a tool, then idle), then offline in one line each with "last seen".
 - What they're doing wraps onto more lines rather than being cut off.
 - **Stats (agreed with the owner 2026-11-22):** one line on every online card, visible without opening anything: tokens today, tokens over the last 7 days ("wk"), time in a tool over the last 7 days (minutes under an hour, then whole hours) and how many of the last 14 days they used a tool ("9/14d"). Days follow the sender's local midnight. Each Mac works them out from its own log (the day's starting token total, and time while a tool session is open and you're not idle) and sends only the four numbers. The token numbers follow Privacy → Friends see → **tokens**, time and days follow **time**; with close friends only, everyone else gets the token numbers like the total. History from before the update isn't counted. Offline rows stay one line; the full breakdown is on their profile. No rankings or streaks.
-- Click a friend (online or offline) to open their profile; Return opens the chat straight away.
+- Click a friend (online or offline), or press Return on them, to open their profile.
 - Empty states: "No friends yet — Add someone by their GitHub handle" (with the Add tab highlighted); "Nobody's online right now".
 
 ### Profile (agreed with the owner 2026-11-22)
@@ -118,12 +118,10 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │ TODAY        Tokens · Prompts│
 │ ALL TIME     Tokens · Prompts│
 │ THIS WEEK    Sessions, Longest session, Mostly in, Model
-├──────────────────────────────┤
-│         [ Message ]          │
 └──────────────────────────────┘
 ```
-- Opened by clicking a friend on the Friends tab, or their name in the chat header; Esc or ‹ goes back (from a chat opened here, back to the profile). Return opens the chat.
-- Clicking your own token total at the top of the drawer opens **your** profile, exactly as friends see it: anything switched off under Privacy → Friends see says "Hidden", and while invisible it says friends see you as offline. No Message button.
+- Opened by clicking a friend on the Friends tab, or their name in the chat header; Esc or ‹ goes back (from a chat opened here, back to the profile). No Message button (owner's call 2026-11-22): Return opens the chat, and chats are on the Chats tab.
+- Clicking your own token total at the top of the drawer opens **your** profile, exactly as friends see it: anything switched off under Privacy → Friends see says "Hidden", and while invisible it says friends see you as offline. Return does nothing there.
 - Stats laid out like a game's stat sheet, in the app's own look: grouped rows, tabular numbers, no levels, XP, ranks or comparisons between friends.
 - **Prompts** count every prompt sent to a coding tool (from its prompt hook; never the text). Shell commands and local model requests don't count. **Sessions** are coding sessions started; **Longest session** is one session's time in a tool; **Mostly in** and **Model** are the tool and model with the most time this week.
 - Each group follows its Privacy → Friends see switch: tokens (today, week, the 14-day chart), **prompts** (a switch of its own, on by default), time (time, active days, sessions, longest), tool and model. With close friends only, everyone else gets the token and prompt numbers, like the token total.

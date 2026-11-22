@@ -750,9 +750,10 @@ final class DrawerController {
       model.moveSelection(-1)
     case kVK_DownArrow where list:
       model.moveSelection(1)
+    // Return does what a click does: a friend's profile on Friends, the chat on Chats.
     case kVK_Return where list, kVK_ANSI_KeypadEnter where list:
       guard model.keyboardNav, let handle = model.selected else { return false }
-      model.openChat(handle)
+      if model.tab == .chats { model.openChat(handle) } else { model.openProfile(handle) }
     case kVK_UpArrow:
       model.moveCursor(-1)
     case kVK_DownArrow:
