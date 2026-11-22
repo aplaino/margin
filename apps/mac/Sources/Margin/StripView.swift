@@ -1,7 +1,8 @@
 import SwiftUI
 
 // The always-visible strip: a dot per online friend (● in a tool, ◐ idle), +N past 12, and
-// the unread count. A new message pulses it once.
+// the unread count. A new message pulses it three times. With nobody online and nothing
+// unread it fades to a hairline at the screen edge, back to full while the pointer is on it.
 struct StripView: View {
   @Environment(AppModel.self) private var model
   @Environment(\.theme) private var theme
@@ -12,6 +13,7 @@ struct StripView: View {
   var body: some View {
     let online = model.onlineFriends
     let connected = model.me?.connection == "online"
+    let quiet = model.prefs.fadeWhenQuiet && model.signedIn && online.isEmpty && model.unreadTotal == 0 && !model.stripHovered
     VStack(spacing: theme.stripSpacing) {
       if !model.signedIn {
         Circle().strokeBorder(theme.offline, lineWidth: 1).frame(width: theme.dot, height: theme.dot)
@@ -33,9 +35,12 @@ struct StripView: View {
       }
     }
     .padding(.vertical, theme.stripPadding)
-    .frame(width: theme.stripWidth)
+    .frame(width: quiet ? 3 : theme.stripWidth)
     .frame(minHeight: 32)
     .themeSurface(shape, theme)
+    .opacity(quiet ? 0.25 : 1)
+    .frame(width: theme.stripWidth, alignment: model.prefs.edge == "left" ? .leading : .trailing)
+    .animation(.easeOut(duration: 0.2), value: quiet)
     .shadow(color: theme.unread.opacity(glow ? 0.9 : 0), radius: glow ? 6 : 0)
     // Three pulses for a new message.
     .onChange(of: model.pulse) {

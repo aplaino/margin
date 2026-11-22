@@ -33,6 +33,7 @@ final class AppModel {
   var showGuide = false
 
   var expanded = false
+  var stripHovered = false
   var tab: Tab = .friends
   var chatWith: String?
   // The friend picked with ↑/↓, highlighted in the list.

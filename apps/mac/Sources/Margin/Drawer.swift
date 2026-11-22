@@ -426,6 +426,7 @@ final class DrawerController {
   // MARK: opening and closing
 
   private func stripHover(_ inside: Bool) {
+    model.stripHovered = inside
     openTimer?.invalidate()
     guard inside, model.prefs.openOnHover, !model.expanded else { return }
     // A short intent delay, so passing over the edge doesn't open it.

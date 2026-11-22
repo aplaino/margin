@@ -32,6 +32,7 @@ struct SettingsView: View {
           Text("Near the top for now, because your Dock is on the \(prefs.edge).")
             .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
         }
+        Check("Fade the strip when nobody’s online", isOn: $prefs.fadeWhenQuiet)
 
         SectionLabel("Theme").padding(.top, 6)
         Picker("Appearance", selection: $prefs.appearance) {

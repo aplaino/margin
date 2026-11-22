@@ -38,6 +38,7 @@ Margin shows what your friends are building, from one fixed spot at the edge of 
 - More than 12 online friends: the first 12 dots, then `+N`.
 - **Unread count** below the dots when above zero.
 - **New message:** the strip pulses three times, the unread count becomes a filled badge until read, and a tab slides out beside the strip for about 4 seconds showing the sender and the first words ("Maya: want to pair…"). Hovering keeps the tab out; clicking it opens the chat. No tab while you're reading that chat. Settings → Notifications chooses **Peek with a preview** (default, the owner's choice), **Peek with the name**, or **Glow only**; the preview option notes that anyone looking at the screen can read it. macOS notifications stay off by default.
+- **Nobody online, nothing unread:** the strip fades to a faint hairline (3 px, 25% opacity) at the screen edge, so there's no dark notch when there's nothing to see. It stays in place and still opens on hover or click; it comes back to full strength while the pointer is on it and as soon as a friend comes online or a message arrives. On by default; Settings → Position → **Fade the strip when nobody's online** turns it off.
 - **Not signed in / daemon not running:** a single hollow ○ dot; expanding shows what to do.
 - **Click-through:** only the strip's own pixels take the pointer. Anything outside it, such as a window's scroll bar or resize edge, behaves as if Margin weren't there.
 - Colours follow light/dark mode; the strip is translucent so the window behind stays visible at the edges.
@@ -137,6 +138,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 │ POSITION                     │
 │ Drag the strip to move it.   │
 │ Reset position               │
+│ ☑ Fade when nobody's online  │
 │ THEME                        │
 │ [System | Light | Dark]      │
 │ ▢Graphite ▢Glass  ▢Paper     │
@@ -211,6 +213,7 @@ Claude Code, Codex, OpenCode and the shell (zsh/bash) report activity through ho
 | Hover intent delay | 250 ms |
 | Collapse after pointer leaves | 400 ms |
 | Max dots | 12, then +N |
+| Fade the strip when nobody's online | On |
 | macOS notifications | Off |
 | Invisible | Off |
 | Friends see | Tool, model, repo, time, tokens |

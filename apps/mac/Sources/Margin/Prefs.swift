@@ -25,12 +25,14 @@ final class Prefs {
   var notifications: Bool { didSet { defaults.set(notifications, forKey: "notifications") } }
   // New messages: "preview" (a tab with the name and first words), "name", or "glow" (strip only).
   var alert: String { didSet { defaults.set(alert, forKey: "alert") } }
+  // Thin the strip to a faint hairline while nobody's online and nothing is unread.
+  var fadeWhenQuiet: Bool { didSet { defaults.set(fadeWhenQuiet, forKey: "fadeWhenQuiet") } }
   var setupDone: Bool { didSet { defaults.set(setupDone, forKey: "setupDone") } }
 
   init() {
     defaults.register(defaults: [
       "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right",
-      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "setupDone": false,
+      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "fadeWhenQuiet": true, "setupDone": false,
     ])
     openOnHover = defaults.bool(forKey: "openOnHover")
     openOnClick = defaults.bool(forKey: "openOnClick")
@@ -42,6 +44,7 @@ final class Prefs {
     accent = Accent(rawValue: defaults.string(forKey: "accent") ?? "") ?? .blue
     notifications = defaults.bool(forKey: "notifications")
     alert = defaults.string(forKey: "alert") ?? "preview"
+    fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
     setupDone = defaults.bool(forKey: "setupDone")
   }
 
