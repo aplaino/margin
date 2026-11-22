@@ -30,64 +30,83 @@ struct CustomThemeView: View {
       Divider().overlay(theme.divider)
 
       ScrollView {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
           sample
 
-          SectionLabel("Start from").padding(.top, 4)
-          Picker("Start from", selection: $prefs.customTheme.base) {
-            ForEach(ThemeStyle.allCases.filter { $0 != .custom }) { style in Text(style.name).tag(style.rawValue) }
+          SettingsGroup("Start from") {
+            SettingsRow(label: "Theme", last: true) {
+              Picker("Start from", selection: $prefs.customTheme.base) {
+                ForEach(ThemeStyle.allCases.filter { $0 != .custom }) { style in Text(style.name).tag(style.rawValue) }
+              }
+              .labelsHidden().fixedSize()
+              .control(
+                "Start from", choice: $prefs.customTheme.base,
+                from: ThemeStyle.allCases.filter { $0 != .custom }.map(\.rawValue))
+            }
           }
-          .labelsHidden()
-          .control(
-            "Start from", choice: $prefs.customTheme.base,
-            from: ThemeStyle.allCases.filter { $0 != .custom }.map(\.rawValue))
 
-          SectionLabel("Colours").padding(.top, 6)
-          colour("Background", \.background, theme.background)
-          colour("Panels", \.surface, theme.surface)
-          colour("Text", \.text, theme.text)
-          colour("Borders", \.border, theme.border)
-          colour("Accent", \.accent, theme.accent)
-
-          SectionLabel("Text").padding(.top, 6)
-          Picker("Typeface", selection: typeface) {
-            Text("System").tag("system")
-            Text("Rounded").tag("rounded")
-            Text("Serif").tag("serif")
-            Text("Monospaced").tag("monospaced")
-            Divider()
-            ForEach(Self.families, id: \.self) { family in Text(family).tag(family) }
+          SettingsGroup("Colours") {
+            colour("Background", \.background, theme.background)
+            colour("Panels", \.surface, theme.surface)
+            colour("Text", \.text, theme.text)
+            colour("Borders", \.border, theme.border)
+            colour("Accent", \.accent, theme.accent, last: true)
           }
-          .control("Typeface", choice: typeface, from: Self.typefaces)
-          Picker("Weight", selection: weight) {
-            Text("Light").tag("light")
-            Text("Regular").tag("regular")
-            Text("Medium").tag("medium")
-          }
-          .pickerStyle(.segmented)
-          .control("Weight", choice: weight, from: ["light", "regular", "medium"])
-          slider("Size", \.textScale, theme.textScale, 0.85...1.25, step: 0.05, percent: true)
 
-          SectionLabel("Shapes").padding(.top, 6)
-          slider("Roundness", \.roundness, roundness, 0...1, step: 0.1, ends: ("Square", "Round"))
-          Check(
-            "Frosted glass",
-            isOn: Binding(get: { theme.glass != nil }, set: { model.prefs.customTheme.glass = $0 }))
-
-          SectionLabel("Dots").padding(.top, 6)
-          Picker("Shape", selection: dotShape) {
-            ForEach(DotShape.allCases) { shape in Text(shape.name).tag(shape) }
+          SettingsGroup("Text") {
+            SettingsRow(label: "Typeface") {
+              Picker("Typeface", selection: typeface) {
+                Text("System").tag("system")
+                Text("Rounded").tag("rounded")
+                Text("Serif").tag("serif")
+                Text("Monospaced").tag("monospaced")
+                Divider()
+                ForEach(Self.families, id: \.self) { family in Text(family).tag(family) }
+              }
+              .labelsHidden().frame(maxWidth: 130)
+              .control("Typeface", choice: typeface, from: Self.typefaces)
+            }
+            SettingsRow(label: "Weight") {
+              Picker("Weight", selection: weight) {
+                Text("Light").tag("light")
+                Text("Regular").tag("regular")
+                Text("Medium").tag("medium")
+              }
+              .labelsHidden().fixedSize()
+              .control("Weight", choice: weight, from: ["light", "regular", "medium"])
+            }
+            slider("Size", \.textScale, theme.textScale, 0.85...1.25, step: 0.05, percent: true, last: true)
           }
-          .pickerStyle(.segmented)
-          .control("Dot shape", choice: dotShape, from: DotShape.allCases)
-          slider("Size", \.dotScale, Double(theme.rowDot / 7), 0.8...1.8, step: 0.1, percent: true)
-          colour("In a tool", \.inTool, theme.inTool)
-          colour("Idle", \.idle, theme.idle)
-          colour("Unread", \.unread, theme.unread)
+
+          SettingsGroup("Shapes") {
+            slider("Roundness", \.roundness, roundness, 0...1, step: 0.1, ends: ("Square", "Round"))
+            SettingsRow(label: "Frosted glass", last: true) {
+              Toggle(
+                "Frosted glass",
+                isOn: Binding(get: { theme.glass != nil }, set: { model.prefs.customTheme.glass = $0 })
+              )
+              .toggleStyle(.switch).labelsHidden()
+              .control("Frosted glass") { model.prefs.customTheme.glass = theme.glass == nil }
+            }
+          }
+
+          SettingsGroup("Dots") {
+            SettingsRow(label: "Shape") {
+              Picker("Shape", selection: dotShape) {
+                ForEach(DotShape.allCases) { shape in Text(shape.name).tag(shape) }
+              }
+              .labelsHidden().fixedSize()
+              .control("Dot shape", choice: dotShape, from: DotShape.allCases)
+            }
+            slider("Size", \.dotScale, Double(theme.rowDot / 7), 0.8...1.8, step: 0.1, percent: true)
+            colour("In a tool", \.inTool, theme.inTool)
+            colour("Idle", \.idle, theme.idle)
+            colour("Unread", \.unread, theme.unread, last: true)
+          }
           Text("Idle dots stay half-filled whatever their colour, so they never depend on colour alone.")
             .font(theme.caption).foregroundStyle(theme.tertiary).fixedSize(horizontal: false, vertical: true)
+            .padding(.top, 4)
         }
-        .toggleStyle(.checkbox)
         .controlSize(.small)
         .font(theme.font(12))
         .padding(16)
@@ -137,28 +156,31 @@ struct CustomThemeView: View {
     Binding(get: { theme.dotShape }, set: { model.prefs.customTheme.dotShape = $0 })
   }
 
-  private func colour(_ title: String, _ key: WritableKeyPath<CustomTheme, String?>, _ current: Color) -> some View {
-    ColorPicker(
-      title,
-      selection: Binding(
+  private func colour(
+    _ title: String, _ key: WritableKeyPath<CustomTheme, String?>, _ current: Color, last: Bool = false
+  ) -> some View {
+    ColorRow(
+      label: title,
+      color: Binding(
         get: { Color(hex: model.prefs.customTheme[keyPath: key]) ?? current },
         set: { model.prefs.customTheme[keyPath: key] = $0.hex }),
-      supportsOpacity: false)
+      last: last)
   }
 
   private func slider(
     _ title: String, _ key: WritableKeyPath<CustomTheme, Double?>, _ current: Double, _ range: ClosedRange<Double>,
-    step: Double, percent: Bool = false, ends: (String, String)? = nil
+    step: Double, percent: Bool = false, ends: (String, String)? = nil, last: Bool = false
   ) -> some View {
     let value = Binding(
       get: { model.prefs.customTheme[keyPath: key] ?? current },
       set: { model.prefs.customTheme[keyPath: key] = $0 })
-    return VStack(alignment: .leading, spacing: 2) {
+    return VStack(alignment: .leading, spacing: 0) {
       HStack {
         Text(title)
         Spacer()
         if percent { Text("\(Int((value.wrappedValue * 100).rounded()))%").foregroundStyle(theme.secondary) }
       }
+      .padding(.top, 6)
       Slider(value: value, in: range, step: step) {
         Text(title)
       } minimumValueLabel: {
@@ -167,6 +189,8 @@ struct CustomThemeView: View {
         Text(ends?.1 ?? "").font(theme.caption)
       }
       .labelsHidden()
+      .padding(.bottom, 6)
+      if !last { Divider().overlay(theme.divider) }
     }
     .control(title + String(describing: key)) {} adjust: { delta in
       value.wrappedValue = (value.wrappedValue + Double(delta) * step).clamped(to: range)

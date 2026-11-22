@@ -145,8 +145,10 @@ The top line of the drawer (your token total and @handle, with ›) opens your p
 │ Drag the strip to move it.   │
 │ Reset position               │
 │ ☑ Fade when nobody's online  │
+│ APPEARANCE  (grouped cards,  │
+│ like System Settings)        │
+│ [▢Auto] [▢Light] [▢Dark]     │
 │ THEME                        │
-│ [System | Light | Dark]      │
 │ ▢Graphite ▢Glass  ▢Paper     │
 │ ▢Terminal ▢Contrast ▢Classic │
 │ ▢Gel  ▢Modern Glass ▢Midnight│
@@ -186,7 +188,9 @@ The top line of the drawer (your token total and @handle, with ›) opens your p
     - **Midnight**: the 2018-era deep charcoal dark mode with a little vibrancy; always dark (the window is dark too, so system controls match).
   - **Custom**: opens the editor (also Settings → Edit custom theme…). One custom theme, saved on the Mac: **Start from** any theme, then change **Colours** (background, panels, text, borders, accent), **Text** (system, rounded, serif, monospaced or any installed typeface; light, regular or medium; 85–125% size), **Shapes** (roundness from square to round; frosted glass on or off) and **Dots** (circle, square, diamond or ring; 80–180% size; colours for in a tool, idle and unread). Changes apply at once; anything unchanged follows the starting theme's light and dark versions; **Reset** clears the changes.
 
-  The **accent** (blue, green, orange, purple, graphite) is separate and works with every theme (a custom theme can override it): your chat bubbles, buttons and the selected tab. Presence dots are green for in a tool and amber for idle unless a custom theme changes them, and then the chosen colours and shape apply everywhere (strip, menu bar, rows, profile). Idle is always half-filled, so it never depends on colour alone. Every colour, font, size and shape comes from the theme definition (`apps/mac/Sources/Margin/Theme.swift`, `CustomTheme.swift`); nothing is hard-coded in views, so adding a theme is adding a value.
+  Laid out like System Settings → Appearance (owner's call, 2026-11-22): titled groups on rounded cards, label left and control right; **Appearance** as three picture tiles (Auto, Light, Dark), the theme gallery, and **Accent colour** as a row of circles (blue, purple, pink, red, orange, yellow, green, graphite) with a white centre on the selected one and its name underneath. The custom theme editor uses the same cards; each colour is a swatch that opens a palette in place, with a hex box and **Other…** for the macOS colour window (Margin is brought forward for it, and a hover-opened drawer stays open while it's showing; SwiftUI's own colour picker can't open from the drawer).
+
+  The **accent** is separate and works with every theme (a custom theme can override it): your chat bubbles, buttons and the selected tab. Presence dots are green for in a tool and amber for idle unless a custom theme changes them, and then the chosen colours and shape apply everywhere (strip, menu bar, rows, profile). Idle is always half-filled, so it never depends on colour alone. Every colour, font, size and shape comes from the theme definition (`apps/mac/Sources/Margin/Theme.swift`, `CustomTheme.swift`); nothing is hard-coded in views, so adding a theme is adding a value.
 - **Privacy:** as in KNOWLEDGE.md — invisible, which fields friends see, close friends only (others see online/idle), per-repo "hidden" or "always private".
 
 ## 6. First launch

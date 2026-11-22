@@ -255,15 +255,20 @@ enum ThemeStyle: String, CaseIterable, Identifiable {
   }
 }
 
+// In System Settings' order.
 enum Accent: String, CaseIterable, Identifiable {
-  case blue, green, orange, purple, graphite
+  case blue, purple, pink, red, orange, yellow, green, graphite
   var id: String { rawValue }
+  var name: String { rawValue.capitalized }
   var color: Color {
     switch self {
     case .blue: Color(red: 10 / 255, green: 132 / 255, blue: 1)
-    case .green: Color(red: 40 / 255, green: 160 / 255, blue: 70 / 255)
-    case .orange: Color(red: 1, green: 149 / 255, blue: 0)
     case .purple: Color(red: 175 / 255, green: 82 / 255, blue: 222 / 255)
+    case .pink: Color(red: 1, green: 55 / 255, blue: 95 / 255)
+    case .red: Color(red: 1, green: 59 / 255, blue: 48 / 255)
+    case .orange: Color(red: 1, green: 149 / 255, blue: 0)
+    case .yellow: Color(red: 1, green: 204 / 255, blue: 0)
+    case .green: Color(red: 40 / 255, green: 160 / 255, blue: 70 / 255)
     case .graphite: Color(red: 128 / 255, green: 128 / 255, blue: 133 / 255)
     }
   }

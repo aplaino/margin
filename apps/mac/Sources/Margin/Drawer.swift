@@ -681,7 +681,8 @@ final class DrawerController {
 
   private func panelHover(_ inside: Bool) {
     closeTimer?.invalidate()
-    guard !inside, model.expanded, openedByHover, !panel.isKeyWindow else { return }
+    // Not while you're picking a colour in the colour window.
+    guard !inside, model.expanded, openedByHover, !panel.isKeyWindow, !ColorPanel.shared.isOpen else { return }
     closeTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self] _ in
       MainActor.assumeIsolated { self?.collapse() }
     }

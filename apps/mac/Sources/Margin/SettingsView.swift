@@ -49,43 +49,30 @@ struct SettingsView: View {
           Check("Fade the strip when nobody’s online", isOn: $prefs.fadeWhenQuiet)
         }
 
-        SectionLabel("Theme").padding(.top, 6)
-        Picker("Appearance", selection: $prefs.appearance) {
-          Text("System").tag("system")
-          Text("Light").tag("light")
-          Text("Dark").tag("dark")
+        SettingsGroup("Appearance") {
+          AppearanceTiles(selection: $prefs.appearance)
         }
-        .pickerStyle(.segmented).labelsHidden()
-        .control("Appearance", choice: $prefs.appearance, from: ["system", "light", "dark"])
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
-          ForEach(ThemeStyle.allCases) { style in
-            ThemeTile(style: style, selected: prefs.style == style) {
-              prefs.style = style
-              if style == .custom { model.showThemeEditor = true }
+        SettingsGroup("Theme") {
+          LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            ForEach(ThemeStyle.allCases) { style in
+              ThemeTile(style: style, selected: prefs.style == style) {
+                prefs.style = style
+                if style == .custom { model.showThemeEditor = true }
+              }
             }
           }
-        }
-        .control("Theme", choice: $prefs.style, from: Array(ThemeStyle.allCases))
-        .padding(.vertical, 4)
-        if prefs.style == .custom {
-          Button("Edit custom theme…") { model.showThemeEditor = true }.buttonStyle(.link)
-            .control("Edit custom theme") { model.showThemeEditor = true }
-        }
-        HStack(spacing: 8) {
-          Text("Accent")
-          Spacer()
-          ForEach(Accent.allCases) { accent in
-            Button {
-              prefs.accent = accent
-            } label: {
-              Circle().fill(accent.color).frame(width: 16, height: 16)
-                .overlay(Circle().strokeBorder(theme.text, lineWidth: prefs.accent == accent ? 2 : 0))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(accent.rawValue.capitalized) accent")
+          .control("Theme", choice: $prefs.style, from: Array(ThemeStyle.allCases))
+          .padding(.vertical, 8)
+          if prefs.style == .custom {
+            Divider().overlay(theme.divider)
+            Button("Edit custom theme…") { model.showThemeEditor = true }.buttonStyle(.link)
+              .control("Edit custom theme") { model.showThemeEditor = true }
+              .padding(.vertical, 6)
           }
         }
-        .control("Accent", choice: $prefs.accent, from: Array(Accent.allCases))
+        SettingsGroup("Accent colour") {
+          AccentRow(selection: $prefs.accent)
+        }
 
         SectionLabel("Connected tools").padding(.top, 6)
         ToolToggles()
