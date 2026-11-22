@@ -540,14 +540,14 @@ export async function startDaemon(options: DaemonOptions) {
   }
 
   // The server keeps the one setting it needs: whether you can be found. A choice made on
-  // this Mac is sent on every connection and whenever it changes; a Mac that hasn't made one
-  // (a new install) takes the server's instead of overwriting it, and damaged settings never
-  // change it.
+  // this Mac is sent on every connection and whenever it's set; a Mac that hasn't made one
+  // (a new install) takes the server's instead of overwriting it. Damaged settings show you
+  // as unfindable, so the server is told so too.
   function syncFindable() {
     if (!account()) return;
     const settings = store.settings();
-    if (settings.damaged) return;
-    const chosen = store.getJson<Partial<Settings>>('settings')?.findable !== undefined;
+    const chosen =
+      settings.damaged || store.getJson<Partial<Settings>>('settings')?.findable !== undefined;
     const request = chosen
       ? api().call(null, 'PUT', '/me/findable', { findable: settings.findable })
       : api()
@@ -565,7 +565,7 @@ export async function startDaemon(options: DaemonOptions) {
     const { damaged: _, ...settings } = next as Settings & { damaged?: true };
     store.saveSettings(settings);
     push({ type: 'settings', settings: store.settings() });
-    if (patch.findable !== undefined && patch.findable !== current.findable) syncFindable();
+    if (patch.findable !== undefined) syncFindable();
     void recompute();
     return store.settings();
   }
