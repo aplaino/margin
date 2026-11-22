@@ -637,6 +637,7 @@ export function createApp(sql: SQL, options: Options = {}) {
           from_id: me.id,
           sent_at: sentAt,
           ciphertext: JSON.stringify(frame.ciphertext),
+          control: frame.control ?? false,
         })} ON CONFLICT DO NOTHING RETURNING id`;
       if (!inserted) {
         // A retry of our own message is fine; someone else's id is not.
@@ -644,7 +645,7 @@ export function createApp(sql: SQL, options: Options = {}) {
         if (existing?.from_id !== me.id) return reject('duplicate id');
       } else {
         sendTo(peer.id, {
-          t: 'message',
+          t: frame.control ? 'control' : 'message',
           id: frame.id,
           from: me.handle,
           sentAt,
@@ -692,11 +693,11 @@ export function createApp(sql: SQL, options: Options = {}) {
 
     await sql`DELETE FROM queued_messages WHERE sent_at < ${Date.now() - retentionMs}`;
     const queued = await sql`
-      SELECT q.id, q.sent_at, q.ciphertext, a.handle FROM queued_messages q JOIN accounts a ON a.id = q.from_id
-      WHERE q.to_id = ${me.id} ORDER BY q.sent_at`;
+      SELECT q.id, q.sent_at, q.ciphertext, q.control, a.handle FROM queued_messages q
+      JOIN accounts a ON a.id = q.from_id WHERE q.to_id = ${me.id} ORDER BY q.sent_at`;
     for (const q of queued) {
       const frame: ServerFrame = {
-        t: 'message',
+        t: q.control ? 'control' : 'message',
         id: q.id,
         from: q.handle,
         sentAt: Number(q.sent_at),

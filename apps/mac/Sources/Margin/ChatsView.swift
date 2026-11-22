@@ -89,6 +89,9 @@ struct ChatRow: View {
 
   // The last message on one line; yours start with "You:".
   private var preview: Text {
+    if last.unsent {
+      return last.incoming ? Text("\(friend.displayName) unsent a message") : Text("You unsent a message")
+    }
     let text = last.text.replacingOccurrences(of: "\n", with: " ")
     return last.incoming ? Text(verbatim: text) : Text("You: \(text)")
   }

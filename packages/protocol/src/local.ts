@@ -68,6 +68,10 @@ export const Request = v.variant('op', [
   v.object({ op: v.literal('login') }),
   v.object({ op: v.literal('logout') }),
   v.object({ op: v.literal('send'), to: Handle, text: ChatText }),
+  // Delete a message from this Mac; Undo Send one of yours (within a day) for both of you;
+  // delete a whole conversation from this Mac.
+  v.object({ op: v.literal('delete'), id: MessageId }),
+  v.object({ op: v.literal('unsend'), id: MessageId }),
   v.object({
     op: v.literal('history'),
     with: Handle,
@@ -75,6 +79,7 @@ export const Request = v.variant('op', [
     limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(200))),
   }),
   HandleOp('read'),
+  HandleOp('chat.delete'),
   HandleOp('friend.request'),
   HandleOp('friend.accept'),
   HandleOp('friend.decline'),
@@ -114,10 +119,11 @@ export const ChatMessage = v.object({
   id: MessageId,
   peer: Handle,
   direction: v.picklist(['in', 'out']),
-  text: ChatText,
+  // Empty once unsent.
+  text: v.union([ChatText, v.literal('')]),
   sentAt: Timestamp,
-  // Outgoing only: "queued" until the server has it.
-  state: v.optional(v.picklist(['queued', 'sent'])),
+  // Outgoing: "queued" until the server has it. Either way: "unsent" once Undo Send removed it.
+  state: v.optional(v.picklist(['queued', 'sent', 'unsent'])),
 });
 export type ChatMessage = v.InferOutput<typeof ChatMessage>;
 

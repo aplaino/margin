@@ -209,6 +209,34 @@
         }
       }
     },
+    "%@ unsent a message": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ anuló el envío de un mensaje"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 撤回了一条信息"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@がメッセージの送信を取り消しました"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ο χρήστης %@ αναίρεσε την αποστολή ενός μηνύματος"
+          }
+        }
+      }
+    },
     "%@, %@": {
       "localizations": {
         "en": {
@@ -825,6 +853,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部"
+          }
+        }
+      }
+    },
+    "All messages with %@ are removed from this Mac. They keep their copy.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los mensajes con %@ se eliminan de este Mac. Esa persona conserva su copia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与 %@ 的所有信息都会从这台 Mac 上删除。对方仍保留自己的副本。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@とのすべてのメッセージがこのMacから削除されます。相手側のコピーは残ります。"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Όλα τα μηνύματα με τον χρήστη %@ αφαιρούνται από αυτό το Mac. Ο άλλος κρατά το δικό του αντίγραφο."
           }
         }
       }
@@ -2005,6 +2061,34 @@
         }
       }
     },
+    "Couldn’t unsend": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo anular el envío"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法撤回"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信を取り消せませんでした"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Δεν ήταν δυνατή η αναίρεση αποστολής"
+          }
+        }
+      }
+    },
     "Crash reports": {
       "localizations": {
         "el": {
@@ -2229,6 +2313,90 @@
         }
       }
     },
+    "Delete Conversation…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar conversación…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除对话…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会話を削除…"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή συνομιλίας…"
+          }
+        }
+      }
+    },
+    "Delete the conversation with %@?": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar la conversación con %@?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除与 %@ 的对话吗？"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@との会話を削除しますか？"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή της συνομιλίας με τον χρήστη %@;"
+          }
+        }
+      }
+    },
+    "Delete this message?": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar este mensaje?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除这条信息吗？"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このメッセージを削除しますか？"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή αυτού του μηνύματος;"
+          }
+        }
+      }
+    },
     "Delete your Margin account?": {
       "localizations": {
         "el": {
@@ -2253,6 +2421,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "要删除你的 Margin 账户吗？"
+          }
+        }
+      }
+    },
+    "Delete…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除…"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Διαγραφή…"
           }
         }
       }
@@ -2959,16 +3155,16 @@
     },
     "For 1 hour": {
       "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Για 1 ώρα"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Durante 1 hora"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 小时"
           }
         },
         "ja": {
@@ -2977,10 +3173,10 @@
             "value": "1時間"
           }
         },
-        "el": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Για 1 ώρα"
+            "value": "1 小时"
           }
         }
       }
@@ -3765,6 +3961,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "隐身"
+          }
+        }
+      }
+    },
+    "It’s removed from this Mac. %@ keeps their copy.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se elimina de este Mac. %@ conserva su copia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它会从这台 Mac 上删除。%@ 仍保留自己的副本。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacから削除されます。%@側のコピーは残ります。"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αφαιρείται από αυτό το Mac. Ο χρήστης %@ κρατά το δικό του αντίγραφο."
           }
         }
       }
@@ -4933,16 +5157,16 @@
     },
     "Off": {
       "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Όχι"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "No"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关闭"
           }
         },
         "ja": {
@@ -4951,10 +5175,10 @@
             "value": "オフ"
           }
         },
-        "el": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Όχι"
+            "value": "关闭"
           }
         }
       }
@@ -5241,16 +5465,16 @@
     },
     "Pause alerts": {
       "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Παύση ειδοποιήσεων"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Pausar avisos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂停提醒"
           }
         },
         "ja": {
@@ -5259,10 +5483,10 @@
             "value": "通知を一時停止"
           }
         },
-        "el": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Παύση ειδοποιήσεων"
+            "value": "暂停提醒"
           }
         }
       }
@@ -6084,16 +6308,16 @@
     },
     "Resume": {
       "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Συνέχιση"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Reanudar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "恢复"
           }
         },
         "ja": {
@@ -6102,10 +6326,10 @@
             "value": "再開"
           }
         },
-        "el": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Συνέχιση"
+            "value": "恢复"
           }
         }
       }
@@ -7790,6 +8014,34 @@
         }
       }
     },
+    "Undo Send": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deshacer envío"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤回"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信を取り消す"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αναίρεση αποστολής"
+          }
+        }
+      }
+    },
     "Unit": {
       "localizations": {
         "el": {
@@ -7848,16 +8100,16 @@
     },
     "Until %@": {
       "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μέχρι %@"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Hasta %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "直到 %@"
           }
         },
         "ja": {
@@ -7866,26 +8118,26 @@
             "value": "%@まで"
           }
         },
-        "el": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Μέχρι %@"
+            "value": "直到 %@"
           }
         }
       }
     },
     "Until tomorrow morning": {
       "localizations": {
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Μέχρι αύριο το πρωί"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
             "value": "Hasta mañana por la mañana"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "直到明天早上"
           }
         },
         "ja": {
@@ -7894,10 +8146,10 @@
             "value": "明日の朝まで"
           }
         },
-        "el": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Μέχρι αύριο το πρωί"
+            "value": "直到明天早上"
           }
         }
       }
@@ -8234,6 +8486,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "你可以随时在“设置”中更改。"
+          }
+        }
+      }
+    },
+    "You unsent a message": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anulaste el envío de un mensaje"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你撤回了一条信息"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージの送信を取り消しました"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Αναιρέσατε την αποστολή ενός μηνύματος"
           }
         }
       }

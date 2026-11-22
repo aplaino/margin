@@ -152,6 +152,12 @@ async function connectApp(path: string) {
   };
 }
 
+// The error a request failed with, or "ok".
+const failure = (request: Promise<unknown>) =>
+  request.then(
+    () => 'ok',
+    (e: Error) => e.message,
+  );
 const friendIn = (handle: string, match: (f: Friend) => boolean) => (p: Push) =>
   p.type === 'roster' && p.friends.some((f) => f.handle === handle && match(f));
 const friendOf = (p: Push, handle: string) =>
@@ -425,6 +431,49 @@ describe('two users, two daemons, one server', () => {
     expect(now.safety).toBe(leos.safety);
     expect(now.safety).not.toBe(before.safety);
   }, 15_000);
+
+  test('Undo Send removes a message for both; Delete removes it only here', async () => {
+    const sent = (await maya.app.request({ op: 'send', to: 'leo', text: 'wrong chat, sorry' })) as {
+      id: string;
+    };
+    await leo.app.until(
+      (p) => p.type === 'message' && p.message.id === sent.id && p.message.text !== '',
+    );
+    await maya.app.request({ op: 'unsend', id: sent.id });
+    const gone = await leo.app.until<Extract<Push, { type: 'message' }>>(
+      (p) => p.type === 'message' && p.message.id === sent.id && p.message.state === 'unsent',
+    );
+    expect(gone.message.text).toBe('');
+    expect(maya.daemon.store.message(sent.id)).toMatchObject({ text: '', state: 'unsent' });
+    expect(JSON.stringify(leo.daemon.store.history('maya'))).not.toContain('wrong chat');
+    expect(await failure(maya.app.request({ op: 'unsend', id: sent.id }))).toContain(
+      'own messages',
+    );
+
+    // Older than a day: only Delete is left.
+    const old = crypto.randomUUID();
+    maya.daemon.store.saveMessage({
+      id: old,
+      peer: 'leo',
+      direction: 'out',
+      text: 'from last week',
+      sentAt: Date.now() - 7 * 24 * 60 * 60_000,
+      state: 'sent',
+    });
+    expect(await failure(maya.app.request({ op: 'unsend', id: old }))).toContain('24 hours');
+
+    // Delete: gone from Leo's Mac, still on Maya's; then the whole conversation, Leo's only.
+    const kept = (await maya.app.request({ op: 'send', to: 'leo', text: 'keep this one' })) as {
+      id: string;
+    };
+    await leo.app.until((p) => p.type === 'message' && p.message.id === kept.id);
+    await leo.app.request({ op: 'delete', id: kept.id });
+    expect(leo.daemon.store.message(kept.id)).toBeUndefined();
+    expect(maya.daemon.store.message(kept.id)?.text).toBe('keep this one');
+    await leo.app.request({ op: 'chat.delete', handle: 'maya' });
+    expect(leo.daemon.store.history('maya')).toEqual([]);
+    expect(maya.daemon.store.history('leo').length).toBeGreaterThan(0);
+  });
 
   test('removing a friend clears them on both sides', async () => {
     const gone = (user: User, handle: string) =>

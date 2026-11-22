@@ -232,8 +232,42 @@ final class AppModel {
   }
 
   func copy(_ message: ChatMessage) {
+    guard !message.unsent else { return }
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(message.text, forType: .string)
+  }
+
+  // Like Messages: Delete removes it from this Mac only, after asking.
+  func delete(_ message: ChatMessage) {
+    let name = friend(message.peer)?.displayName ?? message.peer
+    NSApp.activate()
+    let alert = NSAlert()
+    alert.messageText = String(localized: "Delete this message?")
+    alert.informativeText = String(localized: "It’s removed from this Mac. \(name) keeps their copy.")
+    alert.addButton(withTitle: String(localized: "Delete"))
+    alert.addButton(withTitle: String(localized: "Cancel"))
+    alert.buttons.first?.hasDestructiveAction = true
+    guard alert.runModal() == .alertFirstButtonReturn else { return }
+    if cursor == message.id { cursor = nil }
+    request("delete", ["id": message.id])
+  }
+
+  func undoSend(_ message: ChatMessage) {
+    request("unsend", ["id": message.id])
+  }
+
+  func deleteConversation(_ handle: String) {
+    let name = friend(handle)?.displayName ?? handle
+    NSApp.activate()
+    let alert = NSAlert()
+    alert.messageText = String(localized: "Delete the conversation with \(name)?")
+    alert.informativeText = String(localized: "All messages with \(name) are removed from this Mac. They keep their copy.")
+    alert.addButton(withTitle: String(localized: "Delete"))
+    alert.addButton(withTitle: String(localized: "Cancel"))
+    alert.buttons.first?.hasDestructiveAction = true
+    guard alert.runModal() == .alertFirstButtonReturn else { return }
+    cursor = nil
+    request("chat.delete", ["handle": handle])
   }
 
   func showTab(_ next: Tab) {

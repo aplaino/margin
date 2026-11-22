@@ -6,6 +6,7 @@ import {
   type ClientFrame,
   CONTROL,
   Config,
+  Control,
   Count,
   Directory,
   Findable,
@@ -99,6 +100,9 @@ const log = (what: string, e?: unknown) => {
 };
 
 // Received chat text keeps newlines, tabs and joiners; every other control or format character goes.
+// How long after sending a message you can still Undo Send.
+const UNSEND_MS = 24 * 60 * 60_000;
+
 function cleanChat(text: string) {
   const cleaned = text.replace(CONTROL, (c) => ('\t\n‌‍'.includes(c) ? c : '')).slice(0, 4000);
   return cleaned.trim() ? cleaned : null;
@@ -447,6 +451,71 @@ export async function startDaemon(options: DaemonOptions) {
     push({ type: 'roster', friends: roster() });
   }
 
+  // A control from a friend: an Undo Send is honoured for their own message, if it was
+  // asked for within a day of sending (a little longer, for clocks and slow delivery).
+  async function onControl(frame: Extract<ServerFrame, { t: 'control' }>) {
+    const ack = () => connection?.send({ t: 'ack', id: frame.id });
+    if (!store.friend(frame.from)) return ack();
+    let control: Control;
+    try {
+      control = v.parse(Control, JSON.parse(await signal.decrypt(frame.from, frame.ciphertext)));
+    } catch (e) {
+      problem('dropped a control that could not be read', e);
+      return ack();
+    }
+    const original = store.message(control.id);
+    if (
+      original?.peer === frame.from &&
+      original.direction === 'in' &&
+      original.state !== 'unsent' &&
+      frame.sentAt - original.sentAt <= UNSEND_MS + 5 * 60_000
+    ) {
+      store.unsend(control.id);
+      chatChanged(frame.from, control.id);
+    }
+    ack();
+  }
+
+  // The app redraws a changed message in place; the Chats tab and unread counts follow.
+  function chatChanged(peer: string, id?: string) {
+    const message = id ? store.message(id) : undefined;
+    if (message) push({ type: 'message', message });
+    else push({ type: 'history', with: peer, messages: store.history(peer) });
+    push(chats());
+    push({ type: 'roster', friends: roster() });
+  }
+
+  // Undo Send: tells the friend's margind to remove it too. One still waiting to leave this
+  // Mac never goes.
+  async function unsend(id: string) {
+    const message = store.message(id);
+    if (message?.direction !== 'out' || message.state === 'unsent') {
+      throw new DaemonError('Only your own messages can be unsent');
+    }
+    if (Date.now() - message.sentAt > UNSEND_MS) {
+      throw new DaemonError('Messages can only be unsent within 24 hours');
+    }
+    const to = message.peer;
+    if (!store.friend(to)) throw new DaemonError(`${to} isn’t your friend`);
+    store.dequeue(id);
+    if (!signal.hasSession(to) && !store.bundle(to)) await fetchBundle(to);
+    const control: Control = { t: 'unsend', id };
+    const ciphertext = await signal.encrypt(to, JSON.stringify(control), store.bundle(to));
+    const frame: ClientFrame = {
+      t: 'send',
+      id: crypto.randomUUID(),
+      to,
+      ciphertext,
+      control: true,
+    };
+    store.transaction(() => {
+      store.unsend(id);
+      store.enqueue(frame.id, to, frame);
+    });
+    chatChanged(to, id);
+    connection?.send(frame);
+  }
+
   // At most 20 resend requests a minute to each friend.
   const resendAsks = new Map<string, number[]>();
   function askToResend(from: string, id: string) {
@@ -496,6 +565,8 @@ export async function startDaemon(options: DaemonOptions) {
           return onPresence(frame.from, frame.presence);
         case 'message':
           return onMessage(frame);
+        case 'control':
+          return onControl(frame);
         case 'reset':
           return onReset(frame.from, frame.id);
         case 'accepted': {
@@ -716,6 +787,20 @@ export async function startDaemon(options: DaemonOptions) {
         write(socket, { type: 'history', with: request.with, messages });
         return undefined;
       }
+      case 'delete': {
+        const message = store.message(request.id);
+        if (!message) return undefined;
+        store.deleteMessage(request.id);
+        store.dequeue(request.id);
+        chatChanged(message.peer);
+        return undefined;
+      }
+      case 'unsend':
+        return unsend(request.id);
+      case 'chat.delete':
+        store.deleteChat(request.handle);
+        chatChanged(request.handle);
+        return undefined;
       case 'read':
         store.markRead(request.handle);
         push({ type: 'roster', friends: roster() });

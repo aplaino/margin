@@ -43,6 +43,7 @@ struct ChatView: View {
         Menu {
           Button("Safety Number") { showSafety() }
           Divider()
+          Button("Delete Conversation…") { model.deleteConversation(handle) }
           Button("Remove Friend…") { confirm(.remove, friend?.displayName ?? handle) }
           Button("Block…") { confirm(.block, friend?.displayName ?? handle) }
           Button("Report…") { report(friend?.displayName ?? handle) }
@@ -92,6 +93,10 @@ struct ChatView: View {
         .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
         .onSubmit(send)
         .onAppear { focused = model.drawerFocused }
+      if let error = model.results["unsend"], !error.ok {
+        (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t unsend")).font(theme.caption).foregroundStyle(theme.danger)
+          .padding(.bottom, 4)
+      }
       if let error = model.results["send"], !error.ok {
         (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
@@ -185,7 +190,27 @@ struct ChatView: View {
     focused = true
   }
 
-  private func bubble(_ message: ChatMessage) -> some View {
+  // An unsent message leaves a quiet line where it was, as in Messages.
+  @ViewBuilder private func bubble(_ message: ChatMessage) -> some View {
+    if message.unsent {
+      let name = model.friend(handle)?.displayName ?? handle
+      Text(message.incoming ? "\(name) unsent a message" : "You unsent a message")
+        .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity)
+        .overlay {
+          RoundedRectangle(cornerRadius: theme.controlRadius + 3)
+            .strokeBorder(model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
+        }
+        .contextMenu {
+          Button("Delete…") { model.delete(message) }
+        }
+    } else {
+      sentBubble(message)
+    }
+  }
+
+  private func sentBubble(_ message: ChatMessage) -> some View {
     VStack(alignment: message.incoming ? .leading : .trailing, spacing: 2) {
       Text(message.text)
         .textSelection(.enabled)
@@ -206,6 +231,11 @@ struct ChatView: View {
         }
         .contextMenu {
           Button("Copy") { model.copy(message) }
+          if message.canUndoSend {
+            Button("Undo Send") { model.undoSend(message) }
+          }
+          Divider()
+          Button("Delete…") { model.delete(message) }
         }
       if message.state == "queued" {
         Text("Sending…").font(theme.font(10)).foregroundStyle(theme.tertiary)

@@ -122,6 +122,35 @@ describe('store', () => {
     ]);
   });
 
+  test('an unsent message keeps its place but not its text, and stops counting as unread', () => {
+    const store = new Store(':memory:', keys('u2'));
+    const id = crypto.randomUUID();
+    store.saveMessage({ id, peer: 'leo', direction: 'in', text: 'oops', sentAt: 1 });
+    expect(store.unread('leo')).toBe(1);
+    store.unsend(id);
+    expect(store.message(id)).toMatchObject({ text: '', state: 'unsent' });
+    expect(store.unread('leo')).toBe(0);
+    // The server confirming it afterwards doesn't bring it back.
+    store.setMessageState(id, 'sent');
+    expect(store.message(id)?.state).toBe('unsent');
+  });
+
+  test('deleting a message or a whole chat touches only this Mac’s copy of that chat', () => {
+    const store = new Store(':memory:', keys('del'));
+    const save = (peer: string, text: string, sentAt: number) =>
+      store.saveMessage({ id: crypto.randomUUID(), peer, direction: 'in', text, sentAt });
+    save('leo', 'one', 1);
+    save('leo', 'two', 2);
+    save('sam', 'hi', 3);
+    const [first] = store.history('leo');
+    store.deleteMessage(first?.id ?? '');
+    expect(store.history('leo').map((m) => m.text)).toEqual(['two']);
+    store.deleteChat('leo');
+    expect(store.history('leo')).toEqual([]);
+    expect(store.unread('leo')).toBe(0);
+    expect(store.history('sam').map((m) => m.text)).toEqual(['hi']);
+  });
+
   test('a saved message id is never stored twice', () => {
     const store = new Store(':memory:', keys('d'));
     const id = crypto.randomUUID();

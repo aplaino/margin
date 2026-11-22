@@ -84,7 +84,14 @@ export const ClientFrame = v.variant('t', [
     presence: PublicPresence,
     to: v.optional(v.pipe(v.array(Handle), v.maxLength(1000))),
   }),
-  v.object({ t: v.literal('send'), id: MessageId, to: Handle, ciphertext: Ciphertext }),
+  // `control`: an encrypted instruction between the two margind (Control), not chat text.
+  v.object({
+    t: v.literal('send'),
+    id: MessageId,
+    to: Handle,
+    ciphertext: Ciphertext,
+    control: v.optional(v.literal(true)),
+  }),
   v.object({ t: v.literal('ack'), id: MessageId }),
   // "I couldn't read your message `id`": the sender starts a new session and sends it again.
   v.object({ t: v.literal('reset'), to: Handle, id: MessageId }),
@@ -96,6 +103,14 @@ export const ServerFrame = v.variant('t', [
   v.object({ t: v.literal('presence'), from: Handle, presence: PublicPresence }),
   v.object({
     t: v.literal('message'),
+    id: MessageId,
+    from: Handle,
+    sentAt: Timestamp,
+    ciphertext: Ciphertext,
+  }),
+  // A Control from a friend. Its own frame, so a Margin too old to know it never shows it as chat.
+  v.object({
+    t: v.literal('control'),
     id: MessageId,
     from: Handle,
     sentAt: Timestamp,
@@ -115,3 +130,10 @@ export const ServerFrame = v.variant('t', [
   v.object({ t: v.literal('error'), error: v.pipe(v.string(), v.maxLength(200)) }),
 ]);
 export type ServerFrame = v.InferOutput<typeof ServerFrame>;
+
+// What a control frame carries once decrypted. Only the two margind ever read it.
+export const Control = v.variant('t', [
+  // Undo Send: remove a message you sent, for both of you.
+  v.object({ t: v.literal('unsend'), id: MessageId }),
+]);
+export type Control = v.InferOutput<typeof Control>;

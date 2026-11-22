@@ -772,6 +772,9 @@ final class DrawerController {
       model.cursor = ids[index + 1]
     case kVK_DownArrow, kVK_Escape:
       backToField(typing: nil)
+    case kVK_Delete, kVK_ForwardDelete:
+      guard let message = model.cursorMessage else { return false }
+      model.delete(message)
     default:
       // Arrow and function keys arrive as private-use characters, Return and Tab as controls.
       guard let typed = event.characters?.unicodeScalars.first,

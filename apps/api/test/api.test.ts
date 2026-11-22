@@ -389,6 +389,22 @@ describe('messages', () => {
     expect(await third.unexpected(messageFrom('maya'))).toEqual([]);
   });
 
+  test('a control is delivered as its own frame, live and from the queue', async () => {
+    const maya = await api.user('maya');
+    const leo = await api.user('leo');
+    await api.befriend(maya, leo);
+    const m = await maya.connect();
+    const queued = uuid();
+    m.send({ t: 'send', id: queued, to: 'leo', ciphertext, control: true });
+    await m.next((f) => f.t === 'accepted');
+    const l = await leo.connect();
+    expect(await l.next((f) => f.t === 'control')).toMatchObject({ id: queued, from: 'maya' });
+    const live = uuid();
+    m.send({ t: 'send', id: live, to: 'leo', ciphertext, control: true });
+    expect(await l.next((f) => f.t === 'control' && f.id === live)).toMatchObject({ from: 'maya' });
+    expect(await l.unexpected(messageFrom('maya'))).toEqual([]);
+  });
+
   test('a retry of the same id is accepted once; someone else reusing it is rejected', async () => {
     const maya = await api.user('maya');
     const leo = await api.user('leo');

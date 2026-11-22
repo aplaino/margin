@@ -259,8 +259,28 @@ export class Store {
       );
   }
 
+  // An unsent message stays unsent, whatever the server says about it afterwards.
   setMessageState(id: string, state: 'queued' | 'sent') {
-    this.db.query('UPDATE messages SET state = ? WHERE id = ?').run(state, id);
+    this.db
+      .query("UPDATE messages SET state = ? WHERE id = ? AND state IS NOT 'unsent'")
+      .run(state, id);
+  }
+
+  // Undo Send: the text is gone, a marker stays in its place.
+  unsend(id: string) {
+    this.db
+      .query("UPDATE messages SET state = 'unsent', body = ? WHERE id = ?")
+      .run(this.seal(''), id);
+  }
+
+  deleteMessage(id: string) {
+    this.db.query('DELETE FROM messages WHERE id = ?').run(id);
+  }
+
+  // The whole conversation, from this Mac. The friend keeps theirs.
+  deleteChat(peer: string) {
+    this.db.query('DELETE FROM messages WHERE peer = ?').run(peer);
+    this.db.query('DELETE FROM reads WHERE peer = ?').run(peer);
   }
 
   message(id: string): ChatMessage | undefined {
@@ -308,6 +328,7 @@ export class Store {
     const row = this.db
       .query<{ n: number }, [string, string]>(
         `SELECT COUNT(*) AS n FROM messages WHERE peer = ? AND direction = 'in'
+           AND state IS NOT 'unsent'
            AND sent_at > COALESCE((SELECT at FROM reads WHERE peer = ?), 0)`,
       )
       .get(peer, peer);
@@ -385,5 +406,5 @@ type MessageRow = {
   direction: 'in' | 'out';
   body: Uint8Array;
   sent_at: number;
-  state: 'queued' | 'sent' | null;
+  state: 'queued' | 'sent' | 'unsent' | null;
 };

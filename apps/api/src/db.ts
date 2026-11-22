@@ -59,6 +59,8 @@ const MIGRATIONS: string[][] = [
       to_id TEXT NOT NULL, from_id TEXT NOT NULL, message_id TEXT NOT NULL, sent_at BIGINT NOT NULL,
       PRIMARY KEY (to_id, from_id, message_id))`,
   ],
+  // Marks a queued message as a control (Undo Send and the like), delivered as its own frame.
+  [`ALTER TABLE queued_messages ADD COLUMN control BOOLEAN NOT NULL DEFAULT FALSE`],
 ];
 
 export const TABLES = [
