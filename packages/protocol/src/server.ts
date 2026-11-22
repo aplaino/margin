@@ -35,6 +35,22 @@ export type PeerBundle = v.InferOutput<typeof PeerBundle>;
 export const Requests = v.object({ incoming: v.array(Handle), outgoing: v.array(Handle) });
 export type Requests = v.InferOutput<typeof Requests>;
 
+// Find friends: people on Margin who let themselves be found, minus friends, anyone who has
+// blocked you and anyone you've blocked. `requested` is true when you've already asked.
+export const Directory = v.object({
+  people: v.pipe(
+    v.array(v.object({ handle: Handle, name: v.optional(Name), requested: v.boolean() })),
+    v.maxLength(100),
+  ),
+});
+export type Directory = v.InferOutput<typeof Directory>;
+
+export const Findable = v.object({ findable: v.boolean() });
+
+// The handles you've blocked, for unblocking.
+export const BlockList = v.object({ blocked: v.pipe(v.array(Handle), v.maxLength(10_000)) });
+export type BlockList = v.InferOutput<typeof BlockList>;
+
 // A crash or serious error, scrubbed on the Mac before it's sent. `install` is a random id
 // per install, never tied to an account, so one Mac's reports can be told from many.
 export const CrashReport = v.strictObject({

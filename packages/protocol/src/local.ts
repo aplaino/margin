@@ -40,6 +40,8 @@ export const Settings = v.object({
   // "close": only closeFriends see activity; everyone else sees online/idle.
   audience: v.picklist(['everyone', 'close']),
   closeFriends: v.array(Handle),
+  // Others on Margin can find you in Find friends.
+  findable: v.boolean(),
 });
 export type Settings = v.InferOutput<typeof Settings>;
 
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
   repos: {},
   audience: 'everyone',
   closeFriends: [],
+  findable: true,
 };
 
 export const ChatText = v.pipe(v.string(), v.minLength(1), v.maxLength(4000), NoControlText);
@@ -77,6 +80,14 @@ export const Request = v.variant('op', [
   HandleOp('friend.decline'),
   HandleOp('friend.remove'),
   HandleOp('block'),
+  HandleOp('unblock'),
+  // The safety number to compare with a friend, in person or on a call.
+  HandleOp('safety'),
+  v.object({ op: v.literal('blocks') }),
+  v.object({
+    op: v.literal('directory'),
+    query: v.optional(v.pipe(v.string(), v.maxLength(40), NoControl)),
+  }),
   v.object({
     op: v.literal('report'),
     handle: Handle,
@@ -114,7 +125,10 @@ export const Push = v.variant('type', [
   v.object({
     type: v.literal('self'),
     handle: v.optional(Handle),
+    name: v.optional(Name),
+    // What close friends see (everyone, without close friends), and what everyone else sees.
     presence: v.optional(PublicPresence),
+    basic: v.optional(PublicPresence),
     tokens: Count,
     connection: v.picklist(['signed-out', 'connecting', 'online', 'offline', 'update-required']),
     protocol: v.number(),

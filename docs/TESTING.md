@@ -13,7 +13,7 @@ As of 2026-11-21, commit `086b568`, Margin 0.1.61. Automated: **161 tests pass, 
 | Area | Automated | Two Macs | Status |
 |---|---|---|---|
 | Sign-in | Pass | Seen working (3 people, informal) | Run checklist §1 (sign out and back in) |
-| Friends | Pass | Request and accept seen working | **Blocked**: the app has no remove, block or report (see Gaps). Decline and mutual requests: checklist §2 |
+| Friends | Pass | Request and accept seen working | Checklist §2 (remove, block, report, unblock, safety number and Find friends added after 0.1.61) |
 | Presence | Pass | Seen working | Run checklist §3 (each tool you use, both directions, timing) |
 | Privacy | Pass | Not yet run | Checklist §4 |
 | Chat | Pass | Seen working (both ways) | Checklist §5 (offline delivery, restarts) |
@@ -27,8 +27,8 @@ As of 2026-11-21, commit `086b568`, Margin 0.1.61. Automated: **161 tests pass, 
 
 ## Gaps found while writing this
 
-1. **No remove, block or report in the app.** DESIGN.md puts them in a friend's chat header menu; margind (`friend.remove`, `block`, `report`) and the server (including unblock, `DELETE /blocks/:handle`) support them, but nothing in the drawer calls them. The Friends row can't pass until they're built.
-2. **No safety-number verification in the app.** PLAN.md's v1 includes it and the Signal layer computes matching safety numbers (tested), but the drawer never shows them.
+1. ~~No remove, block or report in the app.~~ Built: the chat header's ⋯ menu, and Unblock in Settings → Privacy.
+2. ~~No safety-number verification in the app.~~ Built: ⋯ → Safety Number; the e2e test checks both Macs show the same number.
 3. **Seen during testing, not a matrix row:** one message to the owner was dropped as undecryptable after switching between the dev and live servers (`dropped a message that could not be decrypted (SessionError)`). Watch for it in §5.
 
 ## Automated evidence
@@ -56,7 +56,12 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.61 or later (
 - [ ] A→B [ ] B→A — B sends A a request from **Add**; A sees it under Requests with ✓ and ✕. A **declines**: it disappears on both sides. B sends again, A **accepts**: each appears in the other's Friends list within a few seconds.
 - [ ] Mutual — with a third person C who isn't a friend of A: A and C each send the other a request at about the same time. They become friends straight away, no accept needed.
 - [ ] Unknown handle — A sends a request to a GitHub handle that has never used Margin: "No Margin user called …".
-- Remove, block and report: **not testable** until the chat header menu exists (Gaps).
+- [ ] Safety number — A and B each open the other's chat → ⋯ → **Safety Number**. Read them out: they're identical.
+- [ ] Remove — A: ⋯ → **Remove Friend…** → Remove. Each disappears from the other's Friends list; the chat closes. Add each other again.
+- [ ] Block and unblock — A: ⋯ → **Block…** → Block. B: A is gone from Friends, a request to A says "No Margin user called …", and A isn't in B's Find friends. A: Settings → Privacy → Blocked → **Unblock**; B can find and add A again.
+- [ ] Report — A: ⋯ → **Report…** with a reason. It confirms without error (reports reach the server's `reports` table).
+- [ ] Find friends — B opens **Add**: A (not yet a friend) is listed and searchable by handle or name; **Add** turns into "Requested". A turns off **Show me in Find friends** (Settings → Privacy or the profile): A disappears from B's list.
+- [ ] Profile — each: click the top line of the drawer. Your name, handle, tokens and friends are right, and **What friends see** matches what the other person sees on your row.
 
 ### 3. Presence (for each tool you use: Claude Code, Codex, OpenCode, Cursor, Gemini CLI, the shell…)
 - [ ] A→B [ ] B→A — A starts the tool and sends a prompt in a **public** GitHub repo. Within 5 seconds B's strip shows A's dot and B's drawer shows A's tool, model, repo name and time.

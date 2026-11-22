@@ -56,6 +56,8 @@ struct PrivacySettings: Codable, Equatable {
   var repos: [String: String]
   var audience: String
   var closeFriends: [String]
+  // Missing from an older margind, which means on.
+  var findable: Bool?
 }
 
 struct ToolState: Codable, Equatable, Identifiable {
@@ -72,13 +74,16 @@ struct Requests: Codable, Equatable {
 
 struct SelfInfo: Codable, Equatable {
   var handle: String?
+  var name: String?
+  // What close friends see, and what everyone else sees.
   var presence: Presence?
+  var basic: Presence?
   var tokens: Double
   var connection: String
   var protocol_: Int
 
   enum CodingKeys: String, CodingKey {
-    case handle, presence, tokens, connection
+    case handle, name, presence, basic, tokens, connection
     case protocol_ = "protocol"
   }
 }
@@ -86,6 +91,20 @@ struct SelfInfo: Codable, Equatable {
 struct ResultData: Decodable {
   var note: String?
   var id: String?
+  // Find friends, blocked handles, and a friend's safety number.
+  var people: [Person]?
+  var blocked: [String]?
+  var handle: String?
+  var safety: String?
+}
+
+// Someone in Find friends.
+struct Person: Codable, Equatable, Identifiable {
+  var handle: String
+  var name: String?
+  var requested: Bool
+  var id: String { handle }
+  var displayName: String { name ?? handle }
 }
 
 enum Push {

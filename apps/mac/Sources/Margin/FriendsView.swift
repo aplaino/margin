@@ -10,7 +10,9 @@ struct FriendsView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 2) {
           if model.friends.isEmpty {
-            empty("No friends yet", action: "Add someone by their GitHub handle") { model.tab = .add }
+            empty("No friends yet", action: "Find friends on Margin, or add someone by their GitHub handle") {
+              model.tab = .add
+            }
           } else {
             if model.onlineFriends.isEmpty {
               Text("Nobody’s online right now").font(theme.small).foregroundStyle(theme.secondary)

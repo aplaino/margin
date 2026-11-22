@@ -35,6 +35,11 @@ final class AppModel {
   var showGuide = false
   // Crash and error reports waiting on this Mac.
   var reports = (count: 0, crash: false)
+  // Find friends, the people you've blocked, and safety numbers shown so far.
+  var directory: [Person] = []
+  var blocked: [String] = []
+  var safety: [String: String] = [:]
+  var showProfile = false
   private var askingAboutReports = false
 
   var expanded = false
@@ -146,6 +151,11 @@ final class AppModel {
       conversations[with] = messages
     case .result(let op, let ok, let data, let error):
       results[op] = (ok, ok ? data?.note : error)
+      if ok, let people = data?.people { directory = people }
+      if ok, let list = data?.blocked { blocked = list }
+      if ok, let handle = data?.handle, let number = data?.safety { safety[handle] = number }
+      // A friend you removed or blocked has no chat to stay in.
+      if ok, op == "friend.remove" || op == "block" { chatWith = nil }
     case .reports(let count, let crash):
       reports = (count, crash)
       handleReports()
@@ -208,6 +218,7 @@ final class AppModel {
 
   func showTab(_ next: Tab) {
     chatWith = nil
+    showProfile = false
     cursor = nil
     tab = next
   }

@@ -320,6 +320,13 @@ describe('two users, two daemons, one server', () => {
     expect(Number(n)).toBe(0);
   });
 
+  test('safety numbers match on both Macs', async () => {
+    const mine = (await maya.app.request({ op: 'safety', handle: 'leo' })) as { safety: string };
+    const theirs = (await leo.app.request({ op: 'safety', handle: 'maya' })) as { safety: string };
+    expect(mine.safety).toMatch(/^[0-9a-f]{5}( [0-9a-f]{5}){3}$/);
+    expect(mine.safety).toBe(theirs.safety);
+  });
+
   test('removing a friend clears them on both sides', async () => {
     await maya.app.request({ op: 'friend.remove', handle: 'leo' });
     await leo.app.until((p) => p.type === 'roster' && !p.friends.some((f) => f.handle === 'maya'));
@@ -328,6 +335,21 @@ describe('two users, two daemons, one server', () => {
       (e: Error) => e.message,
     );
     expect(error).toBe('leo isn’t your friend');
+  });
+
+  test('a blocked person can’t find you, and unblocking undoes it', async () => {
+    const find = async (who: typeof maya, handle: string) =>
+      (
+        (await who.app.request({ op: 'directory', query: handle })) as {
+          people: { handle: string }[];
+        }
+      ).people.map((p) => p.handle);
+    expect(await find(leo, 'maya')).toEqual(['maya']);
+    await maya.app.request({ op: 'block', handle: 'leo' });
+    expect(await find(leo, 'maya')).toEqual([]);
+    expect(await maya.app.request({ op: 'blocks' })).toEqual({ blocked: ['leo'] });
+    expect(await maya.app.request({ op: 'unblock', handle: 'leo' })).toEqual({ blocked: [] });
+    expect(await find(leo, 'maya')).toEqual(['maya']);
   });
 
   test('stop both', async () => {

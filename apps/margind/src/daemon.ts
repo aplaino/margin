@@ -1,11 +1,13 @@
 import { chmodSync, existsSync, unlinkSync } from 'node:fs';
 import { createServer, type Socket } from 'node:net';
 import {
+  BlockList,
   type ChatMessage,
   type ClientFrame,
   CONTROL,
   Config,
   Count,
+  Directory,
   type Friend,
   FriendList,
   PeerBundle,
@@ -224,7 +226,8 @@ export async function startDaemon(options: DaemonOptions) {
     return {
       type: 'self',
       ...(a ? { handle: a.handle } : {}),
-      ...(view ? { presence: view.full } : {}),
+      ...(a?.name ? { name: a.name } : {}),
+      ...(view ? { presence: view.full, basic: view.basic } : {}),
       tokens,
       connection: !a ? 'signed-out' : connectionState,
       protocol: PROTOCOL,
@@ -458,6 +461,7 @@ export async function startDaemon(options: DaemonOptions) {
           void syncFriends()
             .then(() => topUpPreKeys())
             .catch((e) => log('sync after connecting failed', e));
+          syncFindable();
         }
       },
       onFrame,
@@ -534,12 +538,22 @@ export async function startDaemon(options: DaemonOptions) {
     return message;
   }
 
+  // The server keeps the one setting it needs: whether you can be found. Sent on every
+  // connection and whenever it changes.
+  function syncFindable() {
+    if (!account()) return;
+    void api()
+      .call(null, 'PUT', '/me/findable', { findable: store.settings().findable })
+      .catch((e) => log('could not update Find friends', e));
+  }
+
   function updateSettings(patch: Partial<Settings>) {
     const current = store.settings();
     const next = { ...current, ...patch, share: { ...current.share, ...patch.share } };
     const { damaged: _, ...settings } = next as Settings & { damaged?: true };
     store.saveSettings(settings);
     push({ type: 'settings', settings: store.settings() });
+    if (patch.findable !== undefined && patch.findable !== current.findable) syncFindable();
     void recompute();
     return store.settings();
   }
@@ -605,6 +619,22 @@ export async function startDaemon(options: DaemonOptions) {
         return api().call(null, 'DELETE', `/friends/${request.handle}`);
       case 'block':
         return api().call(null, 'POST', `/blocks/${request.handle}`);
+      case 'unblock':
+        await api().call(null, 'DELETE', `/blocks/${request.handle}`);
+        return api().call(BlockList, 'GET', '/blocks');
+      case 'blocks':
+        return api().call(BlockList, 'GET', '/blocks');
+      case 'directory':
+        return api().call(
+          Directory,
+          'GET',
+          `/directory?q=${encodeURIComponent(request.query ?? '')}`,
+        );
+      case 'safety': {
+        const key = store.friend(request.handle)?.identityKey;
+        if (!key) throw new DaemonError('Send a message first, so your keys are exchanged');
+        return { handle: request.handle, safety: signal.safetyNumber(key) };
+      }
       case 'report':
         return api().call(null, 'POST', '/reports', {
           handle: request.handle,

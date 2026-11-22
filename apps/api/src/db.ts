@@ -51,6 +51,8 @@ const MIGRATIONS: string[][] = [
       at BIGINT NOT NULL, received_at BIGINT NOT NULL)`,
     `CREATE INDEX crash_reports_received ON crash_reports (received_at)`,
   ],
+  // Find friends: whether others can find this account (on unless switched off).
+  [`ALTER TABLE accounts ADD COLUMN findable BOOLEAN NOT NULL DEFAULT TRUE`],
 ];
 
 export const TABLES = [

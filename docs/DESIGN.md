@@ -129,7 +129,11 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 ```
 - Requests go by GitHub handle; a mutual request makes you friends straight away.
 - Unknown and blocked handles get the same "not found" (blocks aren't observable).
-- Friend actions (remove, block, report) are in a friend's chat header menu.
+- **Find friends (agreed with the owner 2026-11-21):** below the requests, a search over everyone on Margin who can be found (handle or GitHub name), each with **Add**, or "Requested" once asked. It never shows you, your friends, anyone who switched it off, anyone who has blocked you or anyone you've blocked, and never shows activity. Everyone is findable by default (the owner's call); Settings → Privacy → **Show me in Find friends** (also on the profile) switches it off. The server keeps only that one flag; searches are limited to 300 an hour.
+- **Friend actions** are in the chat header's ⋯ menu: **Safety Number** (the 20-character fingerprint of both identity keys, the same on both Macs, to compare in person or on a call), **Remove Friend…**, **Block…** (also unfriends and deletes what they queued for you; to them you look like you're not on Margin) and **Report…** (an optional reason, with "Also block"). Remove and block ask first. Settings → Privacy lists who you've blocked, with **Unblock**.
+
+### Profile
+The top line of the drawer (your token total and @handle, with ›) opens your profile: your name and handle; tokens, friends and how many are online; **What friends see**, your row exactly as it goes out (with close friends only on, switch between what everyone sees and what close friends see); **Show me in Find friends**; and a link to Privacy settings. Esc or ‹ goes back.
 
 ### Settings (⚙)
 ```

@@ -162,12 +162,18 @@ struct SettingsView: View {
     .onChange(of: model.cursor) {
       if let cursor = model.cursor { proxy.scrollTo(cursor) }
     }
+    .onAppear { if model.signedIn { model.request("blocks") } }
     }
   }
 
   @ViewBuilder private func privacy(_ settings: PrivacySettings) -> some View {
     SectionLabel("Privacy").padding(.top, 6)
     Check("Invisible", isOn: bind(\.invisible))
+    Check(
+      "Show me in Find friends",
+      isOn: Binding(
+        get: { model.settings?.findable ?? true },
+        set: { on in model.updateSettings { $0.findable = on } }))
     Text("Friends see:").foregroundStyle(theme.secondary)
     FlowRow {
       Check("tool", isOn: bind(\.share.tool))
@@ -197,6 +203,17 @@ struct SettingsView: View {
           id: "close:\(friend.handle)"
         )
         .padding(.leading, 18)
+      }
+    }
+    if !model.blocked.isEmpty {
+      Text("Blocked").foregroundStyle(theme.secondary).padding(.top, 2)
+      ForEach(model.blocked, id: \.self) { handle in
+        HStack {
+          Text(handle).lineLimit(1)
+          Spacer()
+          Button("Unblock") { model.request("unblock", ["handle": handle]) }.buttonStyle(.link)
+            .control("unblock:\(handle)") { model.request("unblock", ["handle": handle]) }
+        }
       }
     }
     Text("Repo overrides").foregroundStyle(theme.secondary).padding(.top, 2)

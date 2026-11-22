@@ -1,8 +1,11 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
+  type BlockList,
   ClientFrame,
   CONTROL,
   type Config,
+  type Directory,
+  Findable,
   type FriendList,
   Handle,
   KeyBundle,
@@ -115,6 +118,7 @@ export function createApp(sql: SQL, options: Options = {}) {
     message: limiter(60, 60_000),
     presence: limiter(60, 60_000),
     request: limiter(20, 60 * 60_000),
+    directory: limiter(300, 60 * 60_000),
   };
 
   const presenceFor = (entry: Online | undefined, viewerId: string) =>
@@ -430,6 +434,47 @@ export function createApp(sql: SQL, options: Options = {}) {
       return json(list);
     }
     if (method === 'GET' && path === '/friends/requests') return json(await requestsOf(me));
+
+    // Find friends. Leaves out you, your friends, anyone who switched it off, anyone who has
+    // blocked you and anyone you've blocked, so a block never shows.
+    if (method === 'GET' && path === '/directory') {
+      if (!limits.directory(me.id)) throw new HttpError(429, 'rate limited');
+      const query = (url.searchParams.get('q') ?? '')
+        .toLowerCase()
+        .replace(/[^a-z0-9 -]/g, '')
+        .slice(0, 39);
+      const like = `%${query}%`;
+      const rows = await sql`
+        SELECT a.handle, a.name,
+          EXISTS (SELECT 1 FROM friend_requests r WHERE r.from_id = ${me.id} AND r.to_id = a.id) AS requested
+        FROM accounts a
+        WHERE a.id <> ${me.id} AND a.findable = TRUE
+          AND (a.handle LIKE ${like} OR LOWER(COALESCE(a.name, '')) LIKE ${like})
+          AND NOT EXISTS (SELECT 1 FROM friendships f WHERE f.a_id = ${me.id} AND f.b_id = a.id)
+          AND NOT EXISTS (SELECT 1 FROM blocks b
+            WHERE (b.blocker_id = a.id AND b.blocked_id = ${me.id}) OR (b.blocker_id = ${me.id} AND b.blocked_id = a.id))
+        ORDER BY a.handle LIMIT 100`;
+      const directory: Directory = {
+        people: rows.map((r: { handle: string; name: string | null; requested: unknown }) => ({
+          handle: r.handle,
+          ...(r.name ? { name: r.name } : {}),
+          requested: Boolean(Number(r.requested) || r.requested === true),
+        })),
+      };
+      return json(directory);
+    }
+    if (method === 'PUT' && path === '/me/findable') {
+      const { findable } = await parseBody(Findable, req);
+      await sql`UPDATE accounts SET findable = ${findable} WHERE id = ${me.id}`;
+      return json({ findable });
+    }
+    if (method === 'GET' && path === '/blocks') {
+      const rows = await sql`
+        SELECT a.handle FROM blocks b JOIN accounts a ON a.id = b.blocked_id
+        WHERE b.blocker_id = ${me.id} ORDER BY a.handle`;
+      const list: BlockList = { blocked: rows.map((r: { handle: string }) => r.handle) };
+      return json(list);
+    }
     if (method === 'POST' && path === '/friends/requests') {
       if (!limits.request(me.id)) throw new HttpError(429, 'rate limited');
       const { handle } = await parseBody(HandleBody, req);
