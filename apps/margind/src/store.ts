@@ -33,7 +33,15 @@ const MIGRATIONS = [
   `ALTER TABLE messages ADD COLUMN read_at INTEGER;`,
   // A link's preview, sealed like the text.
   `ALTER TABLE messages ADD COLUMN preview BLOB;`,
+  // What each outbox entry carries, for logging a refusal. Messages an earlier margind
+  // dropped from the outbox after a refusal were left "queued"; they failed.
+  `ALTER TABLE outbox ADD COLUMN kind TEXT;
+   UPDATE messages SET state = 'failed'
+     WHERE direction = 'out' AND state = 'queued' AND id NOT IN (SELECT id FROM outbox);`,
 ];
+
+// A chat message, the same message sent again under a new session, or a control.
+export type OutboxKind = 'message' | 'resend' | 'delivered' | 'read' | 'preview' | 'unsend';
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
@@ -234,13 +242,19 @@ export class Store {
     return row?.bundle ? JSON.parse(this.open(row.bundle).toString()) : undefined;
   }
 
-  // Forgets the friend and anything waiting to be sent to them. Chat history stays.
+  // Forgets the friend and anything waiting to be sent to them, which then failed. Chat
+  // history stays.
   // Removing someone ends the encrypted session too, as it does on their side. Switching
   // servers keeps it (keepSession), since the friends on the other server still have theirs.
   removeFriend(handle: string, { keepSession = false } = {}) {
     v.parse(Handle, handle);
     this.db.query('DELETE FROM friends WHERE handle = ?').run(handle);
     this.db.query('DELETE FROM outbox WHERE peer = ?').run(handle);
+    this.db
+      .query(
+        "UPDATE messages SET state = 'failed' WHERE peer = ? AND direction = 'out' AND state = 'queued'",
+      )
+      .run(handle);
     if (!keepSession) this.removeSignalSessions(handle);
   }
 
@@ -273,7 +287,7 @@ export class Store {
 
   // An unsent message stays unsent, and a delivered or read one doesn't go back, whatever
   // the server says about it afterwards.
-  setMessageState(id: string, state: 'queued' | 'sent') {
+  setMessageState(id: string, state: 'queued' | 'sent' | 'failed') {
     this.db
       .query(
         "UPDATE messages SET state = ? WHERE id = ? AND state NOT IN ('unsent', 'delivered', 'read')",
@@ -405,10 +419,12 @@ export class Store {
     return row.id;
   }
 
-  enqueue(id: string, peer: string, frame: unknown) {
+  enqueue(id: string, peer: string, frame: unknown, kind: OutboxKind) {
     this.db
-      .query('INSERT OR REPLACE INTO outbox (id, peer, frame, created_at) VALUES (?, ?, ?, ?)')
-      .run(id, peer, this.seal(JSON.stringify(frame)), Date.now());
+      .query(
+        'INSERT OR REPLACE INTO outbox (id, peer, frame, created_at, kind) VALUES (?, ?, ?, ?, ?)',
+      )
+      .run(id, peer, this.seal(JSON.stringify(frame)), Date.now(), kind);
   }
 
   outbox(): { id: string; peer: string; frame: unknown }[] {
@@ -420,8 +436,13 @@ export class Store {
       .map((r) => ({ id: r.id, peer: r.peer, frame: JSON.parse(this.open(r.frame).toString()) }));
   }
 
-  dequeue(id: string) {
-    this.db.query('DELETE FROM outbox WHERE id = ?').run(id);
+  // What it carried, if it was still waiting.
+  dequeue(id: string): OutboxKind | null | undefined {
+    return this.db
+      .query<{ kind: OutboxKind | null }, [string]>(
+        'DELETE FROM outbox WHERE id = ? RETURNING kind',
+      )
+      .get(id)?.kind;
   }
 
   tokenSource(path: string): { tokens: number; cursor: string | null } | undefined {
@@ -465,7 +486,7 @@ type MessageRow = {
   direction: 'in' | 'out';
   body: Uint8Array;
   sent_at: number;
-  state: 'queued' | 'sent' | 'delivered' | 'read' | 'unsent' | null;
+  state: 'queued' | 'sent' | 'delivered' | 'read' | 'unsent' | 'failed' | null;
   read_at: number | null;
   preview: Uint8Array | null;
 };

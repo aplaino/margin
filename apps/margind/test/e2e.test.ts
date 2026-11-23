@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { connect, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -577,12 +577,73 @@ describe('two users, two daemons, one server', () => {
     expect(JSON.stringify(maya.daemon.store.history('leo'))).not.toContain('Not this');
   });
 
+  test('a message the server refuses ends Not Delivered, and Try Again sends it', async () => {
+    // Leo removed Maya on the server, and her margind hasn't heard yet.
+    const pair = await sql`
+      SELECT f.* FROM friendships f JOIN accounts a ON a.id = f.a_id JOIN accounts b ON b.id = f.b_id
+      WHERE a.handle IN ('maya', 'leo') AND b.handle IN ('maya', 'leo')`;
+    for (const row of pair) {
+      await sql`DELETE FROM friendships WHERE a_id = ${row.a_id} AND b_id = ${row.b_id}`;
+    }
+
+    const errors = spyOn(console, 'error');
+    const sent = (await maya.app.request({
+      op: 'send',
+      to: 'leo',
+      text: 'still on for friday?',
+    })) as {
+      id: string;
+    };
+    await maya.app.until(
+      (p) => p.type === 'message' && p.message.id === sent.id && p.message.state === 'failed',
+    );
+    await maya.app.until(
+      (p) => p.type === 'chats' && p.chats.some((m) => m.id === sent.id && m.state === 'failed'),
+    );
+    expect(maya.daemon.store.outbox()).toEqual([]);
+    const logged = errors.mock.calls.map((c) => String(c[0]));
+    errors.mockRestore();
+    expect(logged).toContain('[margind] the server refused a message (not a friend)');
+    expect(logged.join('\n')).not.toMatch(new RegExp(`friday|leo|${sent.id}`));
+
+    // Friends again: Try Again sends it under the same id.
+    for (const row of pair) await sql`INSERT INTO friendships ${sql(row)}`;
+    await maya.app.request({ op: 'retry', id: sent.id });
+    await leo.app.until(
+      (p) =>
+        p.type === 'message' &&
+        p.message.id === sent.id &&
+        p.message.text === 'still on for friday?',
+    );
+    await maya.app.until(
+      (p) => p.type === 'message' && p.message.id === sent.id && p.message.state === 'delivered',
+    );
+    expect(await failure(maya.app.request({ op: 'retry', id: sent.id }))).toContain(
+      'wasn’t delivered',
+    );
+  });
+
   test('removing a friend clears them on both sides', async () => {
     const gone = (user: User, handle: string) =>
       user.app.next((p) => p.type === 'roster' && !p.friends.some((f) => f.handle === handle));
+    // One still waiting to leave Maya's Mac when she removes Leo won't go: it failed.
+    const waiting = crypto.randomUUID();
+    maya.daemon.store.transaction(() => {
+      maya.daemon.store.saveMessage({
+        id: waiting,
+        peer: 'leo',
+        direction: 'out',
+        text: 'never sent',
+        sentAt: Date.now(),
+        state: 'queued',
+      });
+      maya.daemon.store.enqueue(waiting, 'leo', {}, 'message');
+    });
     const removed = Promise.all([gone(maya, 'leo'), gone(leo, 'maya')]);
     await maya.app.request({ op: 'friend.remove', handle: 'leo' });
     await removed;
+    expect(maya.daemon.store.message(waiting)?.state).toBe('failed');
+    expect(maya.daemon.store.outbox()).toEqual([]);
     const error = await maya.app.request({ op: 'send', to: 'leo', text: 'hello?' }).then(
       () => 'sent',
       (e: Error) => e.message,
