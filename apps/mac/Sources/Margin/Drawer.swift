@@ -8,190 +8,37 @@ import os
 // 'subsystem == "dev.margin.app"'`). Only the drawer's state and frames, never names or text.
 private let drawerLog = Logger(subsystem: "dev.margin.app", category: "drawer")
 
-// A borderless panel that never activates Margin on its own; it becomes key only when a
-// text field needs the keyboard, or when opened with the hotkey.
-final class DrawerPanel: NSPanel {
-  var onEscape: (() -> Void)?
-  // Keys for moving around the drawer; true when handled. They're seen before any control
-  // or field, which decide for themselves through onKey whether to let them through.
-  var onKey: ((NSEvent) -> Bool)?
-  // The pointer moved, clicked or scrolled inside the drawer.
-  var onPointer: (() -> Void)?
-
-  override func sendEvent(_ event: NSEvent) {
-    if event.type == .keyDown, onKey?(event) == true { return }
-    if [.mouseMoved, .leftMouseDown, .rightMouseDown, .scrollWheel].contains(event.type) { onPointer?() }
-    super.sendEvent(event)
-  }
-
-  init(content: NSView) {
-    super.init(
-      contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-    isFloatingPanel = true
-    level = .floating
-    collectionBehavior = Self.everyDesktop
-    backgroundColor = .clear
-    isOpaque = false
-    hasShadow = false
-    hidesOnDeactivate = false
-    becomesKeyOnlyIfNeeded = true
-    isMovable = false
-    acceptsMouseMovedEvents = true
-    contentView = content
-  }
-
-  // On every desktop and over full-screen apps, never moved by Mission Control.
-  static let everyDesktop: NSWindow.CollectionBehavior = [
-    .canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle,
-  ]
-
-  override var canBecomeKey: Bool { true }
-  override var canBecomeMain: Bool { false }
-  override func cancelOperation(_ sender: Any?) { onEscape?() }
-
-  // Margin has no menu bar, which is where ⌘C, ⌘V and friends normally come from, so the
-  // drawer sends those actions to whatever has focus itself.
-  override func performKeyEquivalent(with event: NSEvent) -> Bool {
-    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-    guard flags.contains(.command), let key = event.charactersIgnoringModifiers?.lowercased() else {
-      return super.performKeyEquivalent(with: event)
-    }
-    if onKey?(event) == true { return true }
-    let action: Selector? =
-      switch (key, flags.contains(.shift)) {
-      case ("c", false): #selector(NSText.copy(_:))
-      case ("v", false): #selector(NSText.paste(_:))
-      case ("x", false): #selector(NSText.cut(_:))
-      case ("a", false): #selector(NSResponder.selectAll(_:))
-      case ("z", false): Selector(("undo:"))
-      case ("z", true): Selector(("redo:"))
-      default: nil
-      }
-    if let action, NSApp.sendAction(action, to: nil, from: self) { return true }
-    return super.performKeyEquivalent(with: event)
-  }
-}
-
-// Hosts SwiftUI and reports the pointer entering and leaving, even when Margin isn't active.
-class TrackingHostingView<Content: View>: NSHostingView<Content> {
-  var onHover: ((Bool) -> Void)?
-  private var area: NSTrackingArea?
-
-  override func updateTrackingAreas() {
-    super.updateTrackingAreas()
-    if let area { removeTrackingArea(area) }
-    let next = NSTrackingArea(
-      rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
-    addTrackingArea(next)
-    area = next
-  }
-
-  override func mouseEntered(with event: NSEvent) { onHover?(true) }
-  override func mouseExited(with event: NSEvent) { onHover?(false) }
-  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-}
-
-// The strip handles its own mouse: a click opens the drawer, a drag moves the strip along
-// the edge, or across to the other edge. Screen coordinates keep the drag steady while the
-// window itself moves.
-final class StripHostingView: TrackingHostingView<AnyView> {
-  var onPress: (() -> Void)?
-  var onClick: (() -> Void)?
-  var onDrag: ((NSPoint) -> Void)?
-  var onDragEnd: (() -> Void)?
-  private var downAt: NSPoint?
-  private var dragging = false
-
-  override func mouseDown(with event: NSEvent) {
-    downAt = NSEvent.mouseLocation
-    dragging = false
-    onPress?()
-  }
-
-  override func mouseDragged(with event: NSEvent) {
-    guard let downAt else { return }
-    let point = NSEvent.mouseLocation
-    if !dragging, hypot(point.x - downAt.x, point.y - downAt.y) > 3 { dragging = true }
-    if dragging { onDrag?(point) }
-  }
-
-  override func mouseUp(with event: NSEvent) {
-    if dragging { onDragEnd?() } else if downAt != nil { onClick?() }
-    downAt = nil
-    dragging = false
-  }
-}
-
-// Reports the pointer entering and leaving a view it doesn't own (the menu bar item's button).
-final class HoverTracker: NSResponder {
-  var onHover: ((Bool) -> Void)?
-  override func mouseEntered(with event: NSEvent) { onHover?(true) }
-  override func mouseExited(with event: NSEvent) { onHover?(false) }
-}
-
-// AppKit actions need an Objective-C target.
-final class ActionTarget: NSObject {
-  let action: () -> Void
-  init(_ action: @escaping () -> Void) { self.action = action }
-  @objc func fire() { action() }
-}
-
-// ⌥M from anywhere. Carbon hotkeys need no Accessibility permission.
-final class HotKey {
-  nonisolated(unsafe) private static var action: (() -> Void)?
-  private var ref: EventHotKeyRef?
-  private var handler: EventHandlerRef?
-
-  init(action: @escaping () -> Void) {
-    HotKey.action = action
-    var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-    InstallEventHandler(
-      GetApplicationEventTarget(),
-      { _, _, _ in
-        DispatchQueue.main.async { HotKey.action?() }
-        return noErr
-      }, 1, &spec, nil, &handler)
-  }
-
-  func set(enabled: Bool) {
-    if let ref {
-      UnregisterEventHotKey(ref)
-      self.ref = nil
-    }
-    guard enabled else { return }
-    let id = EventHotKeyID(signature: OSType(0x4D52_474E), id: 1)
-    RegisterEventHotKey(UInt32(kVK_ANSI_M), UInt32(optionKey), id, GetApplicationEventTarget(), 0, &ref)
-  }
-}
-
 @MainActor
 final class DrawerController {
-  private let model: AppModel
-  private let strip: DrawerPanel
-  private let panel: DrawerPanel
-  private let stripView: StripHostingView
-  private let panelView: TrackingHostingView<AnyView>
-  private let peekPanel: DrawerPanel
-  private let peekView: TrackingHostingView<AnyView>
-  private var peekTimer: Timer?
-  private let peekSize = CGSize(width: 250, height: 34)
-  private var stripSize = CGSize(width: 8, height: 32)
-  private var openTimer: Timer?
-  private var closeTimer: Timer?
-  private var openedByHover = false
-  private var previousApp: NSRunningApplication?
-  private var clickMonitor: Any?
-  private var hotKey: HotKey?
+  let model: AppModel
+  let strip: DrawerPanel
+  let panel: DrawerPanel
+  let stripView: StripHostingView
+  let panelView: TrackingHostingView<AnyView>
+  let peekPanel: DrawerPanel
+  let peekView: TrackingHostingView<AnyView>
+  var peekTimer: Timer?
+  let peekSize = CGSize(width: 250, height: 34)
+  var stripSize = CGSize(width: 8, height: 32)
+  var openTimer: Timer?
+  var closeTimer: Timer?
+  var openedByHover = false
+  var previousApp: NSRunningApplication?
+  var clickMonitor: Any?
+  var hotKey: HotKey?
   // The menu bar item, while Margin is placed there.
-  private var statusItem: NSStatusItem?
-  private let hoverTracker = HoverTracker()
-  private var clickTarget: ActionTarget?
-  private var hiddenTimer: Timer?
-  private var lastPlacement = ""
-  private var welcome: WelcomeWindow?
-  private var strandedCheck: Timer?
+  var statusItem: NSStatusItem?
+  let hoverTracker = HoverTracker()
+  var clickTarget: ActionTarget?
+  var hiddenTimer: Timer?
+  var lastPlacement = ""
+  // What the menu bar image last showed, so an update that changes nothing visible (friends'
+  // presence arrives every few seconds) doesn't render it again.
+  var lastMenuBarLook: MenuBarLook?
+  var welcome: WelcomeWindow?
+  var strandedCheck: Timer?
 
-  private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+  var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
   init(model: AppModel) {
     self.model = model
@@ -293,7 +140,7 @@ final class DrawerController {
 
   // First launch: say where Margin lives, then open the drawer there with the strip or menu
   // bar item pulsing, and carry on setup inside it (the welcome page is already done).
-  private func showWelcome() {
+  func showWelcome() {
     let window = WelcomeWindow(model: model) { [weak self] in
       guard let self else { return }
       self.model.prefs.welcomed = true
@@ -310,7 +157,7 @@ final class DrawerController {
   }
 
   // Re-applies settings that affect the windows whenever they change.
-  private func observePrefs() {
+  func observePrefs() {
     withObservationTracking {
       _ = (
         model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey,
@@ -327,7 +174,7 @@ final class DrawerController {
     applyPrefs()
   }
 
-  private func applyPrefs() {
+  func applyPrefs() {
     // A theme that's always dark gets a dark window too, so system controls match it.
     let appearance: NSAppearance? =
       switch model.prefs.alwaysDark ? "dark" : model.prefs.appearance {
@@ -345,145 +192,18 @@ final class DrawerController {
     lastPlacement = placement
   }
 
-  // MARK: the menu bar item
-
-  private func setMenuBar(_ on: Bool) {
-    guard on != (statusItem != nil) else { return }
-    if on {
-      let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-      // macOS remembers where you ⌘-drag it.
-      item.autosaveName = "Margin"
-      if let button = item.button {
-        button.imagePosition = .imageOnly
-        button.addTrackingArea(
-          NSTrackingArea(
-            rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: hoverTracker))
-        let target = ActionTarget { [weak self] in self?.stripClicked() }
-        button.target = target
-        button.action = #selector(ActionTarget.fire)
-        button.setAccessibilityLabel("Margin")
-        clickTarget = target
-      }
-      statusItem = item
-      drawMenuBar()
-    } else if let item = statusItem {
-      collapse()
-      NSStatusBar.system.removeStatusItem(item)
-      statusItem = nil
-      hiddenTimer?.invalidate()
-      model.menuBarHidden = false
-    }
-    resizeStrip()
-  }
-
-  // macOS tucks menu bar items that don't fit under the notch: after a moment there, Margin
-  // shows the edge strip until there's room again. When the whole menu bar is hidden (a
-  // full-screen app, or a menu bar set to hide), Margin hides with it and comes back with it.
-  private func menuBarVisibilityChanged() {
-    let crowdedOut = menuBarItemCrowdedOut
-    hiddenTimer?.invalidate()
-    if !crowdedOut {
-      guard model.menuBarHidden else { return }
-      model.menuBarHidden = false
-      place(movingDrawer: true)
-    } else {
-      hiddenTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { [weak self] _ in
-        MainActor.assumeIsolated {
-          guard let self, self.statusItem != nil else { return }
-          self.model.menuBarHidden = true
-          self.place(movingDrawer: true)
-        }
-      }
-    }
-  }
-
-  // Under the notch, or given no place in the menu bar at all. Being out of sight with the
-  // rest of the menu bar doesn't count.
-  private var menuBarItemCrowdedOut: Bool {
-    guard let window = statusItem?.button?.window else { return true }
-    guard let screen = window.screen, let left = screen.auxiliaryTopLeftArea,
-      let right = screen.auxiliaryTopRightArea
-    else { return false }
-    let notch = (screen.frame.minX + left.width)...(screen.frame.maxX - right.width)
-    return notch.contains(window.frame.midX)
-  }
-
-  private var inMenuBar: Bool { statusItem != nil && !model.menuBarHidden }
-
-  // Draws the item again whenever what it shows changes: friends and their status, unread,
-  // sign-in, connection, theme.
-  private func observeMenuBar() {
-    withObservationTracking {
-      _ = (
-        model.onlineFriends.map(\.presence.status), model.unreadTotal, model.signedIn, model.me?.connection,
-        model.prefs.style, model.prefs.accent, model.prefs.customTheme
-      )
-    } onChange: { [weak self] in
-      DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-          self?.drawMenuBar()
-          self?.observeMenuBar()
-        }
-      }
-    }
-  }
-
-  // Each observer re-registers only itself: one that renewed the other too stacked
-  // duplicates on every change, which multiplied until a message set off thousands of
-  // redraws and pinned the CPU.
-  private func observePulse() {
-    withObservationTracking {
-      _ = model.pulse
-    } onChange: { [weak self] in
-      DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-          self?.pulseMenuBar()
-          self?.observePulse()
-        }
-      }
-    }
-  }
-
-  // The image follows the menu bar's own light or dark look, which depends on the wallpaper,
-  // not on Margin's appearance setting. macOS sizes the item to the image.
-  private func drawMenuBar(glow: Double = 0) {
-    guard let button = statusItem?.button else { return }
-    let dark = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-    let renderer = ImageRenderer(
-      content: Themed(model: model) { MenuBarView(glow: glow) }.environment(\.colorScheme, dark ? .dark : .light))
-    renderer.scale = button.window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
-    guard let image = renderer.nsImage else { return }
-    image.isTemplate = false
-    button.image = image
-    // A wider item can push it (or others) under the notch.
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.menuBarVisibilityChanged() }
-  }
-
-  // Three pulses for a new message, like the strip: the glow rises and falls over half a
-  // second each, drawn at 30 frames a second.
-  private func pulseMenuBar() {
-    guard statusItem != nil else { return }
-    let frames = reduceMotion ? 0 : 45
-    for frame in 0...frames {
-      let t = Double(frame) / 30
-      let glow = frame == frames ? 0 : sin(.pi * (t.truncatingRemainder(dividingBy: 0.5) / 0.5))
-      DispatchQueue.main.asyncAfter(deadline: .now() + t) { [weak self] in self?.drawMenuBar(glow: glow) }
-    }
-  }
-  private var menuBarAnchor: NSRect? { inMenuBar ? statusItem?.button?.window?.frame : nil }
-
   // Where a window slides in from: up under the menu bar, or off the screen edge.
-  private func tucked(_ frame: NSRect) -> NSRect {
+  func tucked(_ frame: NSRect) -> NSRect {
     if model.atTop { return frame.offsetBy(dx: 0, dy: frame.height + 8) }
     return frame.offsetBy(dx: model.prefs.edge == "left" ? -frame.width : frame.width, dy: 0)
   }
 
   // The menu bar item's screen, or the one you're working on: the one with the frontmost window.
-  private var screen: NSScreen? {
+  var screen: NSScreen? {
     (inMenuBar ? statusItem?.button?.window?.screen : nil) ?? NSScreen.main ?? NSScreen.screens.first
   }
 
-  private func stripFrame(on screen: NSScreen) -> NSRect {
+  func stripFrame(on screen: NSScreen) -> NSRect {
     let full = screen.frame
     let visible = screen.visibleFrame
     let width = stripSize.width
@@ -496,12 +216,12 @@ final class DrawerController {
   }
 
   // The lowest y of the strip's frame at the top and at the bottom of its travel.
-  private func travel(on screen: NSScreen, height: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
+  func travel(on screen: NSScreen, height: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
     let visible = screen.visibleFrame
     return (visible.maxY - height, visible.minY)
   }
 
-  private func panelFrame(on screen: NSScreen) -> NSRect {
+  func panelFrame(on screen: NSScreen) -> NSRect {
     let full = screen.frame
     let visible = screen.visibleFrame
     let width: CGFloat = 260
@@ -521,7 +241,7 @@ final class DrawerController {
 
   // An open drawer stays where it opened while the strip or menu bar item changes size (a
   // friend coming online, a chat being read); it moves only with the screen or placement.
-  private func place(movingDrawer: Bool = false) {
+  func place(movingDrawer: Bool = false) {
     if model.atTop != inMenuBar { model.atTop = inMenuBar }
     guard let screen else { return }
     if inMenuBar {
@@ -536,10 +256,10 @@ final class DrawerController {
   // MARK: sliding in and out
 
   // A soft ease-out in (fast start, long settle) and a quicker ease-in out, fading as they go.
-  private let easeOut = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
-  private let easeIn = CAMediaTimingFunction(controlPoints: 0.5, 0, 0.75, 0)
+  let easeOut = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
+  let easeIn = CAMediaTimingFunction(controlPoints: 0.5, 0, 0.75, 0)
 
-  private func slideIn(_ window: NSWindow, to target: NSRect, duration: TimeInterval = 0.32) {
+  func slideIn(_ window: NSWindow, to target: NSRect, duration: TimeInterval = 0.32) {
     window.setFrame(reduceMotion ? target : tucked(target), display: true)
     window.alphaValue = 0
     window.orderFrontRegardless()
@@ -552,7 +272,7 @@ final class DrawerController {
     }
   }
 
-  private func slideOut(_ window: NSWindow, then done: @escaping () -> Void) {
+  func slideOut(_ window: NSWindow, then done: @escaping () -> Void) {
     let frame = window.frame
     NSAnimationContext.runAnimationGroup { context in
       context.duration = reduceMotion ? 0.12 : 0.22
@@ -565,7 +285,7 @@ final class DrawerController {
   }
 
   // The strip is as tall as its dots and counts: it grows as friends come online.
-  private func observeStrip() {
+  func observeStrip() {
     withObservationTracking {
       _ = (model.onlineFriends.count, model.unreadTotal, model.signedIn, model.prefs.style, model.prefs.customTheme)
     } onChange: { [weak self] in
@@ -580,7 +300,7 @@ final class DrawerController {
   }
 
   // Worked out from what the strip shows, with the same theme metrics it's drawn with.
-  private func stripHeight() -> CGFloat {
+  func stripHeight() -> CGFloat {
     let metrics = model.prefs.theme(dark: true)
     guard model.signedIn else { return 32 }
     let online = model.onlineFriends.count
@@ -591,7 +311,7 @@ final class DrawerController {
     return max(32, content + metrics.stripPadding * 2)
   }
 
-  private func resizeStrip() {
+  func resizeStrip() {
     let height = stripHeight()
     guard height != stripSize.height else { return }
     stripSize = CGSize(width: 8, height: height)
@@ -600,7 +320,7 @@ final class DrawerController {
 
   // MARK: the message peek
 
-  private func observePeek() {
+  func observePeek() {
     withObservationTracking {
       _ = model.peek
     } onChange: { [weak self] in
@@ -613,7 +333,7 @@ final class DrawerController {
     }
   }
 
-  private func peekFrame() -> NSRect {
+  func peekFrame() -> NSRect {
     // Under the menu bar item, kept on screen.
     if let anchor = menuBarAnchor, let screen {
       let full = screen.frame
@@ -626,7 +346,7 @@ final class DrawerController {
     return NSRect(origin: CGPoint(x: x, y: y), size: peekSize)
   }
 
-  private func showPeek() {
+  func showPeek() {
     guard !model.expanded else {
       model.peek = nil
       return
@@ -638,7 +358,7 @@ final class DrawerController {
     schedulePeekHide(after: 4)
   }
 
-  private func schedulePeekHide(after seconds: TimeInterval) {
+  func schedulePeekHide(after seconds: TimeInterval) {
     peekTimer?.invalidate()
     peekTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
       MainActor.assumeIsolated { self?.model.peek = nil }
@@ -646,12 +366,12 @@ final class DrawerController {
   }
 
   // Hovering keeps it out; leaving gives you a moment before it goes.
-  private func peekHover(_ inside: Bool) {
+  func peekHover(_ inside: Bool) {
     guard model.peek != nil else { return }
     if inside { peekTimer?.invalidate() } else { schedulePeekHide(after: 1.5) }
   }
 
-  private func hidePeek() {
+  func hidePeek() {
     peekTimer?.invalidate()
     guard peekPanel.isVisible else { return }
     slideOut(peekPanel) { [weak self] in
@@ -661,7 +381,7 @@ final class DrawerController {
     }
   }
 
-  private func openPeek() {
+  func openPeek() {
     guard let handle = model.peek?.handle else { return }
     model.peek = nil
     expand(byHover: false, focus: false)
@@ -672,9 +392,9 @@ final class DrawerController {
 
   // MARK: dragging
 
-  private var dragEdge: String?
+  var dragEdge: String?
 
-  private func dragged(to point: NSPoint) {
+  func dragged(to point: NSPoint) {
     guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? screen else { return }
     if dragEdge == nil {
       openTimer?.invalidate()
@@ -689,7 +409,7 @@ final class DrawerController {
     strip.setFrame(NSRect(x: x, y: y, width: stripSize.width, height: stripSize.height), display: true)
   }
 
-  private func dragEnded() {
+  func dragEnded() {
     guard let edge = dragEdge else { return }
     dragEdge = nil
     NSCursor.pop()
@@ -702,7 +422,7 @@ final class DrawerController {
 
   // MARK: opening and closing
 
-  private func stripHover(_ inside: Bool) {
+  func stripHover(_ inside: Bool) {
     model.stripHovered = inside
     openTimer?.invalidate()
     guard inside, model.prefs.openOnHover, !model.expanded else { return }
@@ -712,7 +432,7 @@ final class DrawerController {
     }
   }
 
-  private func panelHover(_ inside: Bool) {
+  func panelHover(_ inside: Bool) {
     closeTimer?.invalidate()
     // Not while you're picking a colour in the colour window.
     guard !inside, model.expanded, openedByHover, !panel.isKeyWindow, !ColorPanel.shared.isOpen else { return }
@@ -723,7 +443,7 @@ final class DrawerController {
 
   // A click on the menu bar item gives the drawer the keyboard, as every menu does; a click
   // on the edge strip doesn't, so it never takes focus from your work by surprise.
-  private func stripClicked() {
+  func stripClicked() {
     drawerLog.notice("click: \(self.stateLine, privacy: .public)")
     guard model.prefs.openOnClick else { return }
     // Marked open but not on this screen (macOS hid it during a call, or it's on another
@@ -737,7 +457,7 @@ final class DrawerController {
   // windows that stay on one desktop: an alert or save panel, the colour picker, and windows
   // macOS keeps for text input. Those now move to the desktop you're on instead, and the
   // drawer's own windows are put back on every desktop in case anything changed that.
-  private func keepOnThisDesktop() {
+  func keepOnThisDesktop() {
     for window in [strip, panel, peekPanel] as [NSWindow] where window.collectionBehavior != DrawerPanel.everyDesktop {
       window.collectionBehavior = DrawerPanel.everyDesktop
     }
@@ -750,7 +470,7 @@ final class DrawerController {
   }
 
   // What the drawer and menu bar item are doing, for the log.
-  private var stateLine: String {
+  var stateLine: String {
     let item = statusItem?.button?.window
     return [
       "expanded=\(model.expanded)", "panelVisible=\(panel.isVisible)", "panelOnDesktop=\(panel.isOnActiveSpace)",
@@ -763,136 +483,9 @@ final class DrawerController {
     ].joined(separator: " ")
   }
 
-  private func hotKeyPressed() {
+  func hotKeyPressed() {
     guard model.prefs.openOnHotkey else { return }
     model.expanded ? collapse() : expand(byHover: false, focus: true)
-  }
-
-  // ↑/↓ through friends or chats, Return to chat, Tab or ⌘1–4 between tabs. On Add and Settings ↑/↓
-  // outline a control, Space or Return presses it and ←/→ change it. In a chat, ↑ from an
-  // empty field outlines your last message and ⌘C copies it. While you're typing in a field,
-  // keys stay with the field.
-  private func key(_ event: NSEvent) -> Bool {
-    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-    let field = panel.firstResponder as? NSTextView
-    if flags.contains(.command) {
-      let key = event.charactersIgnoringModifiers?.lowercased()
-      if key == "c", field == nil, let message = model.cursorMessage {
-        model.copy(message)
-        return true
-      }
-      guard let digit = key.flatMap(Int.init), (1...4).contains(digit) else { return false }
-      model.showTab([.friends, .chats, .add, .settings][digit - 1])
-      return true
-    }
-    guard !model.needsSetup, !model.showGuide else { return false }
-    if model.chatWith != nil { return chatKey(event, field: field) }
-    // On a profile, Return opens the chat; Tab still moves between tabs.
-    if let profile = model.profileOf, field == nil {
-      switch Int(event.keyCode) {
-      case kVK_Return, kVK_ANSI_KeypadEnter:
-        guard profile != model.me?.handle else { return false }
-        model.openChat(profile)
-      case kVK_Tab:
-        model.cycleTab(flags.contains(.shift) ? -1 : 1)
-      default:
-        return false
-      }
-      return true
-    }
-    if field != nil {
-      // Esc leaves a field on Add or Settings without closing the drawer.
-      guard event.keyCode == kVK_Escape else { return false }
-      panel.makeFirstResponder(nil)
-      return true
-    }
-    let control = model.control
-    let list = model.tab == .friends || model.tab == .chats
-    switch Int(event.keyCode) {
-    case kVK_UpArrow where list:
-      model.moveSelection(-1)
-    case kVK_DownArrow where list:
-      model.moveSelection(1)
-    // Return does what a click does: a friend's profile on Friends, the chat on Chats.
-    case kVK_Return where list, kVK_ANSI_KeypadEnter where list:
-      guard model.keyboardNav, let handle = model.selected else { return false }
-      if model.tab == .chats { model.openChat(handle) } else { model.openProfile(handle) }
-    case kVK_UpArrow:
-      model.moveCursor(-1)
-    case kVK_DownArrow:
-      model.moveCursor(1)
-    case kVK_Space, kVK_Return, kVK_ANSI_KeypadEnter:
-      // With nothing outlined the key does nothing, rather than reaching SwiftUI, which would
-      // press whichever button it has focused (the account card, at the top of Settings).
-      control?.press()
-    case kVK_LeftArrow, kVK_RightArrow:
-      guard let adjust = control?.adjust else { return false }
-      adjust(event.keyCode == kVK_LeftArrow ? -1 : 1)
-    case kVK_Tab:
-      model.cycleTab(flags.contains(.shift) ? -1 : 1)
-    default:
-      return false
-    }
-    return true
-  }
-
-  // ↑ from an empty message field walks back through the chat; ↓ past the last message, Esc
-  // or typing goes back to the field.
-  private func chatKey(_ event: NSEvent, field: NSTextView?) -> Bool {
-    let ids = (model.conversations[model.chatWith ?? ""] ?? []).map(\.id)
-    if let field {
-      guard event.keyCode == kVK_UpArrow, field.string.isEmpty, let last = ids.last else { return false }
-      model.cursor = last
-      model.keyboardNav = true
-      panel.makeFirstResponder(nil)
-      return true
-    }
-    guard let cursor = model.cursor, let index = ids.firstIndex(of: cursor) else { return false }
-    switch Int(event.keyCode) {
-    case kVK_UpArrow:
-      model.cursor = ids[max(index - 1, 0)]
-    case kVK_DownArrow where index < ids.count - 1:
-      model.cursor = ids[index + 1]
-    case kVK_DownArrow, kVK_Escape:
-      backToField(typing: nil)
-    case kVK_Delete, kVK_ForwardDelete:
-      guard let message = model.cursorMessage else { return false }
-      model.delete(message)
-    default:
-      // Arrow and function keys arrive as private-use characters, Return and Tab as controls.
-      guard let typed = event.characters?.unicodeScalars.first,
-        !CharacterSet.controlCharacters.contains(typed), !(0xF700...0xF8FF).contains(typed.value)
-      else { return false }
-      backToField(typing: event)
-    }
-    return true
-  }
-
-  private func backToField(typing event: NSEvent?) {
-    model.cursor = nil
-    guard let field = editableField(in: panelView) else { return }
-    panel.makeFirstResponder(field)
-    if let event { panel.firstResponder?.keyDown(with: event) }
-  }
-
-  private func editableField(in view: NSView) -> NSView? {
-    if let field = view as? NSTextField, field.isEditable { return field }
-    if let text = view as? NSTextView, text.isEditable { return text }
-    return view.subviews.lazy.compactMap { self.editableField(in: $0) }.first
-  }
-
-  private func escape() {
-    if model.chatWith != nil {
-      model.chatWith = nil
-    } else if model.profileOf != nil {
-      model.profileOf = nil
-    } else if model.showThemeEditor {
-      model.showThemeEditor = false
-    } else if model.tab == .settings, model.settingsPage != nil {
-      model.settingsPage = nil
-    } else {
-      collapse()
-    }
   }
 
   func expand(byHover: Bool, focus: Bool) {
