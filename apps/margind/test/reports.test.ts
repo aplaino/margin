@@ -45,6 +45,28 @@ describe('scrubbing', () => {
     expect(out).toContain('at recompute (/$bunfs/root/margind:812:14)');
     expect(out).toContain('https://margin-api.fly.dev/crash');
   });
+
+  test('stack frames keep their file and line, never the folders above them', () => {
+    const text = [
+      'PreKeyError',
+      '    at initIncoming (/Users/maya/code/stealth-launch/node_modules/.bun/libsignal@6.0.0/node_modules/libsignal/src/session_builder.js:66:30)',
+      '    at async <anonymous> (/Users/maya/code/stealth-launch/node_modules/@privacyresearch/libsignal-protocol-typescript/lib/session-cipher.js:205:44)',
+      '    at /Users/maya/code/stealth-launch/node_modules/optionator/lib/index.js:20:39',
+      '    at recompute (/Users/maya/maya-chen/apps/margind/src/tokens.ts:812:14)',
+      '    at processTicksAndRejections (native:7:39)',
+    ].join('\n');
+    const out = scrub(text, ['maya-chen'], '/Users/maya');
+    expect(out).toBe(
+      [
+        'PreKeyError',
+        '    at initIncoming (node_modules/libsignal/src/session_builder.js:66:30)',
+        '    at async <anonymous> (node_modules/@privacyresearch/libsignal-protocol-typescript/lib/session-cipher.js:205:44)',
+        '    at node_modules/optionator/lib/index.js:20:39',
+        '    at recompute (tokens.ts:812:14)',
+        '    at processTicksAndRejections (native:7:39)',
+      ].join('\n'),
+    );
+  });
 });
 
 describe('stacks', () => {
