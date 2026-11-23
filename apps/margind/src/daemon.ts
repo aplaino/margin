@@ -2,54 +2,37 @@ import { chmodSync, existsSync, unlinkSync } from 'node:fs';
 import { createServer, type Socket } from 'node:net';
 import {
   BlockList,
-  type ChatMessage,
-  type ClientFrame,
-  CONTROL,
   Config,
-  Control,
-  Count,
   Directory,
   Findable,
-  type Friend,
-  FriendList,
-  type LinkPreview,
-  PeerBundle,
   PROTOCOL,
-  type PublicPresence,
-  type PublicStats,
   type Push,
   ReporterEvent,
   Request,
-  Requests,
   type ServerFrame,
   Session,
   type Settings,
 } from '@margin/protocol';
 import * as v from 'valibot';
 import { Api, ApiError } from './api';
+import { createChat } from './chat';
 import { Connection, type ConnectionState } from './connection';
-import { type DeviceLogin, GitHubError, githubDeviceLogin } from './github';
+import { DaemonError, errorText, log, ownError } from './errors';
+import { createFriends } from './friends';
+import { type DeviceLogin, githubDeviceLogin } from './github';
 import { idleSeconds } from './idle';
 import type { KeyProvider } from './keychain';
 import { defaultLocalModels, type LocalModelSources, LocalModels } from './local-models';
 import { onLines, sendOnce, write } from './net';
 import type { Paths } from './paths';
-import {
-  assertPublic,
-  buildView,
-  hiddenRepo,
-  localSecrets,
-  type PresenceView,
-  shareable,
-  withoutLocalDetails,
-} from './presence';
-import { type FetchRepo, originRepo, repoClassifier } from './repo';
+import { localSecrets } from './presence';
+import { createPresence } from './presence-sync';
+import { type FetchRepo, repoClassifier } from './repo';
 import { Reports, stackOf } from './reports';
-import { type LocalSession, Sessions } from './sessions';
-import { changedKey, healable, PREKEY_BATCH, Signal } from './signal';
-import { Stats } from './stats';
+import { Sessions } from './sessions';
+import { Signal } from './signal';
 import { Store } from './store';
-import { scanTokens, type TokenSources } from './tokens';
+import type { TokenSources } from './tokens';
 import {
   connectTool,
   disconnectTool,
@@ -85,73 +68,6 @@ export type DaemonOptions = {
   crashLogs?: string;
 };
 
-const KeyCount = v.object({ remaining: Count });
-
-const IDLE_AFTER_S = 5 * 60;
-const STALE_MS = 90_000;
-const PREKEY_LOW = 20;
-
-// Other errors can carry paths, so only Margin's own messages are logged (or reported) in full.
-const ownError = (e: unknown) =>
-  e instanceof ApiError ||
-  e instanceof DaemonError ||
-  e instanceof GitHubError ||
-  e instanceof ToolError;
-const log = (what: string, e?: unknown) => {
-  const own = ownError(e);
-  const detail = e
-    ? ` (${(e as Error).name ?? 'error'}${own ? `: ${(e as Error).message}` : ''})`
-    : '';
-  console.error(`[margind] ${what}${detail}`);
-};
-
-// Received chat text keeps newlines, tabs and joiners; every other control or format character goes.
-// How long after sending a message you can still Undo Send.
-const UNSEND_MS = 24 * 60 * 60_000;
-// A preview follows its message within seconds; one arriving much later is refused.
-const PREVIEW_MS = 10 * 60_000;
-
-// The preview's address is a whole link in the text (not the start of a longer one) with no
-// user name or password, so the card opens exactly what the message shows.
-export function linkIn(text: string, url: string) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.username || parsed.password) return false;
-  } catch {
-    return false;
-  }
-  for (let i = text.indexOf(url); i >= 0; i = text.indexOf(url, i + 1)) {
-    const before = text[i - 1] ?? '';
-    const rest = text.slice(i + url.length);
-    if (/^$|[\s("'<[]/.test(before) && /^$|^\s|^[.,!?;:)\]}>"']+(\s|$)/.test(rest)) return true;
-  }
-  return false;
-}
-
-// Only a JPEG picture is kept; anything else loses its picture, not the preview.
-export function safePreview(preview: LinkPreview): LinkPreview {
-  if (!preview.image) return preview;
-  const bytes = Buffer.from(preview.image, 'base64');
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return preview;
-  const { image: _dropped, ...rest } = preview;
-  return rest;
-}
-
-function cleanChat(text: string) {
-  const cleaned = text.replace(CONTROL, (c) => ('\t\n‌‍'.includes(c) ? c : '')).slice(0, 4000);
-  return cleaned.trim() ? cleaned : null;
-}
-
-const errorText = (e: unknown) =>
-  e instanceof ApiError ||
-  e instanceof DaemonError ||
-  e instanceof GitHubError ||
-  e instanceof ToolError
-    ? e.message
-    : 'Something went wrong';
-
-class DaemonError extends Error {}
-
 export async function startDaemon(options: DaemonOptions) {
   const { paths } = options;
   if (existsSync(paths.socket)) {
@@ -174,21 +90,8 @@ export async function startDaemon(options: DaemonOptions) {
   const classify = repoClassifier(options.fetchRepo);
   const idle = options.idle ?? idleSeconds;
   const subscribers = new Set<Socket>();
-  const friendPresence = new Map<string, { presence: PublicPresence; receivedAt: number }>();
-  // When each friend was last online or idle, kept across restarts for the offline list.
-  const lastSeen = new Map(
-    Object.entries(store.getJson<Record<string, number>>('friendLastSeen') ?? {}),
-  );
-  let lastSeenSavedAt = 0;
-  let requests: Requests = { incoming: [], outgoing: [] };
   let connection: Connection | undefined;
   let connectionState: ConnectionState | 'update-required' = 'offline';
-  let view: PresenceView | undefined;
-  let tokens = store.tokenTotal();
-  const stats = new Stats(store);
-  // The session you're working in (not idle), as of the last recompute; the heartbeat
-  // counts it as time.
-  let working: LocalSession | undefined;
   let stopped = false;
 
   const account = () => store.account();
@@ -241,498 +144,65 @@ export async function startDaemon(options: DaemonOptions) {
     push({ type: 'reports', ...reports.state() });
   };
 
-  const savedTokens = () => store.getJson<Record<string, number>>('friendTokens') ?? {};
-  const savedStats = () => store.getJson<Record<string, PublicStats>>('friendStats') ?? {};
-
-  function roster(): Friend[] {
-    const now = Date.now();
-    const lastTokens = savedTokens();
-    const lastStats = savedStats();
-    return store.friends().map((f) => {
-      const seen = friendPresence.get(f.handle);
-      const fresh = seen && now - seen.receivedAt < STALE_MS;
-      const known = seen?.presence.tokens ?? lastTokens[f.handle];
-      const stats = lastStats[f.handle];
-      // Offline, their last token total and stats stay (the profile says as of when).
-      const kept = {
-        ...(known !== undefined ? { tokens: known } : {}),
-        ...(stats ? { stats } : {}),
-      };
-      const presence: PublicPresence = fresh
-        ? { ...seen.presence, ...(seen.presence.status === 'offline' ? kept : {}) }
-        : { status: 'offline', at: seen?.presence.at ?? 0, ...kept };
-      return {
-        handle: f.handle,
-        ...(f.name ? { name: f.name } : {}),
-        presence,
-        lastSeenAt: lastSeen.get(f.handle) ?? 0,
-        unread: store.unread(f.handle),
-      };
-    });
-  }
-
-  function selfPush(): Push {
-    const a = account();
-    return {
-      type: 'self',
-      ...(a ? { handle: a.handle } : {}),
-      ...(a?.name ? { name: a.name } : {}),
-      ...(view ? { presence: view.full, basic: view.basic } : {}),
-      tokens,
-      connection: !a ? 'signed-out' : connectionState,
-      protocol: PROTOCOL,
-    };
-  }
-
-  // The latest message in each chat with a current friend, for the Chats tab; the app keeps
-  // it current from message pushes.
-  const chats = (): Push => ({
-    type: 'chats',
-    chats: store.latest().filter((m) => store.friend(m.peer)),
+  const presence = createPresence({
+    store,
+    sessions,
+    classify,
+    idle,
+    tokenSources: options.tokenSources,
+    connection: () => connection,
+    connectionState: () => connectionState,
+    push,
+    problem,
   });
+  const { roster, selfPush, recompute, refreshTokens } = presence;
+  const friends = createFriends({
+    store,
+    signal,
+    api,
+    push,
+    problem,
+    roster,
+    forget: presence.forget,
+  });
+  const { syncFriends, topUpPreKeys } = friends;
+  const chat = createChat({
+    store,
+    signal,
+    connection: () => connection,
+    push,
+    problem,
+    roster,
+    syncFriends,
+    fetchBundle: friends.fetchBundle,
+    retryMs: options.retryMs,
+  });
+  const { chats, chatChanged } = chat;
 
   const pushAll = () => {
     push(selfPush());
     push({ type: 'settings', settings: store.settings() });
     push({ type: 'tools', tools: toolStatus(options.tools) });
     push({ type: 'roster', friends: roster() });
-    push({ type: 'requests', requests });
+    push({ type: 'requests', requests: friends.requests() });
     push(chats());
   };
-
-  // A prompt or new session counts toward stats unless you're invisible or it's in a repo
-  // you've hidden, like time in a tool.
-  async function countEvent(event: ReporterEvent, newSession: boolean) {
-    const session = sessions
-      .list()
-      .find((s) => s.tool === event.tool && s.sessionId === event.sessionId);
-    const remote = session?.cwd ? originRepo(session.cwd) : null;
-    const settings = store.settings();
-    if (settings.invisible || hiddenRepo(await classify(remote), remote, settings)) return;
-    stats.event(event, newSession);
-  }
-
-  // What friends see, recomputed from sessions, settings, idle time and tokens.
-  // Recalculations overlap (a heartbeat and a tool event, say); one that a newer one has
-  // overtaken is dropped, so stale activity never overwrites fresh.
-  let generation = 0;
-  async function recompute() {
-    const mine = ++generation;
-    const settings = store.settings();
-    const session = sessions.current();
-    const status = (await idle()) > IDLE_AFTER_S ? 'idle' : 'online';
-    const remote = session?.cwd ? originRepo(session.cwd) : null;
-    const repo = session ? await classify(remote) : undefined;
-    const activity =
-      session && repo && !settings.invisible
-        ? shareable(session, repo, remote, settings)
-        : undefined;
-    // Time while invisible or in a hidden repo isn't counted, so stats can't show it later.
-    working =
-      status === 'online' &&
-      session &&
-      repo &&
-      !settings.invisible &&
-      !hiddenRepo(repo, remote, settings)
-        ? session
-        : undefined;
-    const recent = stats.view(tokens);
-    let next = buildView({ status, activity, tokens, stats: recent, settings });
-    const secrets = localSecrets(sessions.list());
-    const full = withoutLocalDetails(next.full, secrets);
-    const basic = withoutLocalDetails(next.basic, secrets);
-    try {
-      assertPublic(full, secrets);
-      assertPublic(basic, secrets);
-      next = { ...next, full, basic };
-    } catch {
-      // Fail closed: status, tokens and counts only, and without stats if even that fails.
-      problem('withheld activity that failed the privacy check');
-      const { model: _model, tool: _tool, ...counts } = recent;
-      next = buildView({ status, tokens, stats: counts, settings });
-      try {
-        assertPublic(next.full, secrets);
-        assertPublic(next.basic, secrets);
-      } catch {
-        next = buildView({ status, tokens, settings });
-      }
-    }
-    if (mine !== generation) return;
-    view = next;
-    sendPresence();
-    push(selfPush());
-  }
-
-  // Targeted view first, so close friends never flicker to the basic one.
-  // Sent when it changes, and at least every 25 s so friends don't see you go stale (they
-  // treat 90 s of silence as offline). The server caps how often presence may be sent.
-  let lastSent = '';
-  let lastSentAt = 0;
-  let closeViewSent = false;
-  function sendPresence(force = false) {
-    if (!view || !connection?.connected) return;
-    const key = JSON.stringify({
-      ...view,
-      full: { ...view.full, at: 0 },
-      basic: { ...view.basic, at: 0 },
-    });
-    if (!force && key === lastSent && Date.now() - lastSentAt < 25_000) return;
-    lastSent = key;
-    lastSentAt = Date.now();
-    // An empty list ends the close-friends view (invisible, or close friends only turned off),
-    // so close friends don't keep seeing the activity they saw before.
-    if (view.close.length || closeViewSent) {
-      connection.send({ t: 'presence', presence: view.full, to: view.close });
-    }
-    closeViewSent = view.close.length > 0;
-    connection.send({ t: 'presence', presence: view.basic });
-  }
-
-  async function refreshTokens() {
-    try {
-      const next = await scanTokens(store, options.tokenSources);
-      stats.tokens(next);
-      if (next !== tokens) {
-        tokens = next;
-        await recompute();
-      }
-    } catch (e) {
-      problem('token scan failed', e);
-    }
-  }
-
-  // Mirror the server's friend list, pinning identity keys for new friends.
-  async function syncFriends() {
-    const client = api();
-    const { friends } = await client.call(FriendList, 'GET', '/friends');
-    requests = await client.call(Requests, 'GET', '/friends/requests');
-    // Removals first, so nothing that goes wrong fetching keys can keep a removed friend.
-    const current = new Set(friends.map((f) => f.handle));
-    for (const { handle } of store.friends()) {
-      if (!current.has(handle)) {
-        store.removeFriend(handle);
-        friendPresence.delete(handle);
-        lastSeen.delete(handle);
-      }
-    }
-    for (const friend of friends) {
-      store.upsertFriend(friend.handle, friend.name);
-      if (store.friend(friend.handle)?.identityKey) continue;
-      // One friend's bad or missing keys don't stop the rest of the sync.
-      await fetchBundle(friend.handle).catch((e) => problem('could not pin a friend’s keys', e));
-    }
-    push({ type: 'roster', friends: roster() });
-    push({ type: 'requests', requests });
-  }
-
-  async function fetchBundle(handle: string) {
-    try {
-      const bundle = await api().call(PeerBundle, 'GET', `/keys/${handle}`);
-      store.pin(handle, bundle);
-      // A new identity key is trusted in the background (as Signal does by default): the
-      // old session can't reach them any more. The safety number shows the new key.
-      const pinned = store.friend(handle)?.identityKey;
-      if (pinned && pinned !== bundle.identityKey) {
-        log(`${handle}'s identity key changed`);
-        store.repin(handle, bundle.identityKey);
-        store.removeSignalSessions(handle);
-      }
-    } catch (e) {
-      // They may not have published keys yet; the next sync tries again.
-      if (!(e instanceof ApiError && e.status === 404)) throw e;
-    }
-  }
-
-  async function topUpPreKeys(remaining?: number) {
-    const client = api();
-    // An unreadable count throws and skips this round; the next sync tries again.
-    const count = remaining ?? (await client.call(KeyCount, 'GET', '/keys/count')).remaining;
-    if (count >= PREKEY_LOW) return;
-    const preKeys = signal.replenish(PREKEY_BATCH);
-    if (preKeys.length) await client.call(null, 'POST', '/keys/prekeys', { preKeys });
-  }
-
-  let retryTimer: ReturnType<typeof setTimeout> | undefined;
-  function retryOutboxSoon() {
-    if (retryTimer) return;
-    retryTimer = setTimeout(() => {
-      retryTimer = undefined;
-      flushOutbox();
-    }, options.retryMs ?? 30_000);
-  }
-
-  function flushOutbox() {
-    for (const item of store.outbox()) {
-      if (!connection?.send(item.frame as ClientFrame)) return;
-    }
-  }
-
-  async function onPresence(from: string, presence: PublicPresence) {
-    if (!store.friend(from)) return;
-    const now = Date.now();
-    const before = friendPresence.get(from);
-    friendPresence.set(from, { presence, receivedAt: now });
-    // Online and idle say they were here; offline only marks the moment they left.
-    const wasHere =
-      before && before.presence.status !== 'offline' && now - before.receivedAt < STALE_MS;
-    if (presence.status !== 'offline' || wasHere) {
-      lastSeen.set(from, now);
-      // Saved when they leave, and at most once a minute while they're here.
-      if (presence.status === 'offline' || now - lastSeenSavedAt > 60_000) {
-        store.setJson('friendLastSeen', Object.fromEntries(lastSeen));
-        lastSeenSavedAt = now;
-      }
-    }
-    // Going offline carries no count, so the last one is kept for the offline list. Online
-    // without one means they've chosen to hide it, so it's forgotten.
-    if (presence.status !== 'offline') {
-      const { [from]: _, ...others } = savedTokens();
-      store.setJson(
-        'friendTokens',
-        presence.tokens === undefined ? others : { ...others, [from]: presence.tokens },
-      );
-      const { [from]: _stats, ...otherStats } = savedStats();
-      store.setJson(
-        'friendStats',
-        presence.stats === undefined ? otherStats : { ...otherStats, [from]: presence.stats },
-      );
-    }
-    push({ type: 'roster', friends: roster() });
-  }
-
-  async function onMessage(frame: Extract<ServerFrame, { t: 'message' }>) {
-    const ack = () => connection?.send({ t: 'ack', id: frame.id });
-    if (store.hasMessage(frame.id)) return ack();
-    if (!store.friend(frame.from)?.identityKey) await syncFriends().catch(() => {});
-    if (!store.friend(frame.from)) return ack();
-    let text: string | null;
-    try {
-      text = cleanChat(await signal.decrypt(frame.from, frame.ciphertext));
-    } catch (e) {
-      // From a new identity key: trusted if it's the key the server has for them now, then
-      // the message is asked for again on a session with that key.
-      const key = changedKey(e);
-      if (key) {
-        if (await keyNowTrusted(frame.from, key)) askToResend(frame.from, frame.id);
-        return ack();
-      }
-      // Retrying this frame can't help, so it's dropped rather than jam the queue. A lost
-      // session asks the sender to start a new one and send it again.
-      problem('dropped a message that could not be decrypted', e);
-      if (healable(e)) askToResend(frame.from, frame.id);
-      return ack();
-    }
-    if (!text) return ack();
-    const message: ChatMessage = {
-      id: frame.id,
-      peer: frame.from,
-      direction: 'in',
-      text,
-      sentAt: frame.sentAt,
-    };
-    store.saveMessage(message);
-    ack();
-    push({ type: 'message', message });
-    push({ type: 'roster', friends: roster() });
-    sendReceipt(frame.from, { t: 'delivered', id: frame.id });
-  }
-
-  // A control from a friend: an Undo Send is honoured for their own message, if it was
-  // asked for within a day of sending (a little longer, for clocks and slow delivery);
-  // receipts mark your messages to them delivered or read, at the server's time.
-  async function onControl(frame: Extract<ServerFrame, { t: 'control' }>) {
-    const ack = () => connection?.send({ t: 'ack', id: frame.id });
-    if (!store.friend(frame.from)) return ack();
-    let control: Control;
-    try {
-      control = v.parse(Control, JSON.parse(await signal.decrypt(frame.from, frame.ciphertext)));
-    } catch (e) {
-      problem('dropped a control that could not be read', e);
-      return ack();
-    }
-    if (control.t === 'delivered') {
-      if (store.delivered(frame.from, control.id)) chatChanged(frame.from, control.id);
-      return ack();
-    }
-    // A preview is kept only for their own message, and only if its address is in the text,
-    // so a card can't claim one site and open another.
-    if (control.t === 'preview') {
-      const original = store.message(control.id);
-      if (
-        original?.peer === frame.from &&
-        original.direction === 'in' &&
-        original.state !== 'unsent' &&
-        !original.preview &&
-        frame.sentAt - original.sentAt <= PREVIEW_MS &&
-        linkIn(original.text, control.preview.url)
-      ) {
-        store.setPreview(control.id, safePreview(control.preview));
-        chatChanged(frame.from, control.id);
-      }
-      return ack();
-    }
-    if (control.t === 'read') {
-      if (store.readUpTo(frame.from, control.id, frame.sentAt)) chatChanged(frame.from);
-      return ack();
-    }
-    const original = store.message(control.id);
-    if (
-      original?.peer === frame.from &&
-      original.direction === 'in' &&
-      original.state !== 'unsent' &&
-      frame.sentAt - original.sentAt <= UNSEND_MS + 5 * 60_000
-    ) {
-      store.unsend(control.id);
-      chatChanged(frame.from, control.id);
-    }
-    ack();
-  }
-
-  // Receipts go out on their own, so none is sent while invisible: invisible looks exactly
-  // like offline, and a receipt would say this Mac is here.
-  function sendReceipt(to: string, control: Extract<Control, { t: 'delivered' | 'read' }>) {
-    if (store.settings().invisible) return;
-    sendControl(to, control).catch((e) => problem(`could not send a ${control.t} receipt`, e));
-  }
-
-  // The preview the app fetched for a link you just sent: kept on your newest message to them
-  // with that link (from the last five minutes) and sent after it.
-  async function attachPreview(to: string, preview: LinkPreview) {
-    if (!store.settings().linkPreviews || !store.friend(to)) return;
-    const message = store
-      .history(to)
-      .reverse()
-      .find(
-        (m) =>
-          m.direction === 'out' &&
-          m.state !== 'unsent' &&
-          !m.preview &&
-          linkIn(m.text, preview.url) &&
-          Date.now() - m.sentAt < 5 * 60_000,
-      );
-    if (!message) return;
-    const safe = safePreview(preview);
-    await sendControl(to, { t: 'preview', id: message.id, preview: safe }, () =>
-      store.setPreview(message.id, safe),
-    );
-    chatChanged(to, message.id);
-  }
-
-  // An encrypted instruction for a friend's margind, kept in the outbox like a message until
-  // the server has it. `alongside` runs in the same transaction as queueing it.
-  async function sendControl(to: string, control: Control, alongside?: () => void) {
-    if (!signal.hasSession(to) && !store.bundle(to)) await fetchBundle(to);
-    const ciphertext = await signal.encrypt(to, JSON.stringify(control), store.bundle(to));
-    const frame: ClientFrame = {
-      t: 'send',
-      id: crypto.randomUUID(),
-      to,
-      ciphertext,
-      control: true,
-    };
-    store.transaction(() => {
-      alongside?.();
-      store.enqueue(frame.id, to, frame);
-    });
-    connection?.send(frame);
-  }
-
-  // The app redraws a changed message in place; the Chats tab and unread counts follow.
-  function chatChanged(peer: string, id?: string) {
-    const message = id ? store.message(id) : undefined;
-    if (message) push({ type: 'message', message });
-    else push({ type: 'history', with: peer, messages: store.history(peer) });
-    push(chats());
-    push({ type: 'roster', friends: roster() });
-  }
-
-  // Undo Send: tells the friend's margind to remove it too. One still waiting to leave this
-  // Mac never goes.
-  async function unsend(id: string) {
-    const message = store.message(id);
-    if (message?.direction !== 'out' || message.state === 'unsent') {
-      throw new DaemonError('Only your own messages can be unsent');
-    }
-    if (Date.now() - message.sentAt > UNSEND_MS) {
-      throw new DaemonError('Messages can only be unsent within 24 hours');
-    }
-    const to = message.peer;
-    if (!store.friend(to)) throw new DaemonError(`${to} isn’t your friend`);
-    store.dequeue(id);
-    await sendControl(to, { t: 'unsend', id }, () => store.unsend(id));
-    chatChanged(to, id);
-  }
-
-  // At most 20 resend requests a minute to each friend.
-  const resendAsks = new Map<string, number[]>();
-  function askToResend(from: string, id: string) {
-    const now = Date.now();
-    const recent = (resendAsks.get(from) ?? []).filter((t) => now - t < 60_000);
-    if (recent.length >= 20) return;
-    resendAsks.set(from, [...recent, now]);
-    connection?.send({ t: 'reset', to: from, id });
-  }
-
-  // A friend couldn't read one of your messages: start a new session from fresh keys (once,
-  // however many messages they ask about) and send that message again.
-  const lastReset = new Map<string, number>();
-  async function onReset(from: string, id: string) {
-    if (!store.friend(from)) return;
-    const now = Date.now();
-    if (now - (lastReset.get(from) ?? 0) > 60_000) {
-      lastReset.set(from, now);
-      store.removeSignalSessions(from);
-      await fetchBundle(from);
-    }
-    const original = store.message(id);
-    if (original?.direction !== 'out' || original.peer !== from || !store.bundle(from)) return;
-    const ciphertext = await signal.encrypt(from, original.text, store.bundle(from));
-    // A new id: the server has already delivered the old one. The chat keeps the original.
-    const frame: ClientFrame = { t: 'send', id: crypto.randomUUID(), to: from, ciphertext };
-    store.enqueue(frame.id, from, frame);
-    connection?.send(frame);
-  }
-
-  // Checks a key a message arrived with against the server's current one, at most once a
-  // minute per friend (each check uses up one of their prekeys).
-  const lastKeyCheck = new Map<string, number>();
-  async function keyNowTrusted(handle: string, key: string) {
-    const now = Date.now();
-    if (now - (lastKeyCheck.get(handle) ?? 0) > 60_000) {
-      lastKeyCheck.set(handle, now);
-      await fetchBundle(handle).catch((e) => problem('could not check a friend’s new keys', e));
-    }
-    return store.friend(handle)?.identityKey === key;
-  }
 
   function onFrame(frame: ServerFrame) {
     const handle = async () => {
       switch (frame.t) {
         case 'presence':
-          return onPresence(frame.from, frame.presence);
+          return presence.onPresence(frame.from, frame.presence);
         case 'message':
-          return onMessage(frame);
+          return chat.onMessage(frame);
         case 'control':
-          return onControl(frame);
+          return chat.onControl(frame);
         case 'reset':
-          return onReset(frame.from, frame.id);
-        case 'accepted': {
-          store.dequeue(frame.id);
-          store.setMessageState(frame.id, 'sent');
-          const message = store.message(frame.id);
-          if (message) push({ type: 'message', message });
-          return;
-        }
+          return chat.onReset(frame.from, frame.id);
+        case 'accepted':
+          return chat.onAccepted(frame.id);
         case 'rejected':
-          // Too many at once, or a friend's queue is full while they're away: it stays in the
-          // outbox and goes again shortly. Anything else won't succeed by retrying.
-          if (frame.error === 'rate limited' || frame.error === 'queue full') {
-            retryOutboxSoon();
-            return;
-          }
-          store.dequeue(frame.id);
-          log('the server refused a message');
-          return;
+          return chat.onRejected(frame.id, frame.error);
         case 'friends-changed':
           return syncFriends();
         case 'prekeys-low':
@@ -777,8 +247,8 @@ export async function startDaemon(options: DaemonOptions) {
         push(selfPush());
         if (state === 'online') {
           // The server starts each connection knowing nothing about you.
-          sendPresence(true);
-          flushOutbox();
+          presence.sendPresence(true);
+          chat.flushOutbox();
           void syncFriends()
             .then(() => topUpPreKeys())
             .catch((e) => log('sync after connecting failed', e));
@@ -797,10 +267,8 @@ export async function startDaemon(options: DaemonOptions) {
     connection?.stop();
     connection = undefined;
     store.setAccount(undefined);
-    friendPresence.clear();
-    lastSeen.clear();
-    store.delete('friendLastSeen');
-    requests = { incoming: [], outgoing: [] };
+    presence.forgetAll();
+    friends.clearRequests();
     connectionState = 'offline';
     pushAll();
   }
@@ -834,31 +302,6 @@ export async function startDaemon(options: DaemonOptions) {
     push({ type: 'login', state: 'done' });
     pushAll();
     connect();
-  }
-
-  async function send(to: string, text: string) {
-    if (!store.friend(to)) throw new DaemonError(`${to} isn’t your friend`);
-    if (!signal.hasSession(to) && !store.bundle(to)) await fetchBundle(to);
-    if (!signal.hasSession(to) && !store.bundle(to)) {
-      throw new DaemonError(`${to} hasn’t finished setting up Margin yet`);
-    }
-    const ciphertext = await signal.encrypt(to, text, store.bundle(to));
-    const message: ChatMessage = {
-      id: crypto.randomUUID(),
-      peer: to,
-      direction: 'out',
-      text,
-      sentAt: Date.now(),
-      state: 'queued',
-    };
-    const frame: ClientFrame = { t: 'send', id: message.id, to, ciphertext };
-    store.transaction(() => {
-      store.saveMessage(message);
-      store.enqueue(message.id, to, frame);
-    });
-    push({ type: 'message', message });
-    connection?.send(frame);
-    return message;
   }
 
   // The server keeps the one setting it needs: whether you can be found. A choice made on
@@ -895,9 +338,9 @@ export async function startDaemon(options: DaemonOptions) {
   async function handle(request: Request, socket: Socket): Promise<unknown> {
     switch (request.op) {
       case 'event':
-        countEvent(request.event, sessions.onEvent(request.event)).catch((e) =>
-          problem('could not count a tool event', e),
-        );
+        presence
+          .countEvent(request.event, sessions.onEvent(request.event))
+          .catch((e) => problem('could not count a tool event', e));
         if (request.event.event === 'stop') setTimeout(() => void refreshTokens(), 2000);
         void recompute();
         return undefined;
@@ -908,7 +351,7 @@ export async function startDaemon(options: DaemonOptions) {
         write(socket, { type: 'settings', settings: store.settings() });
         write(socket, { type: 'tools', tools: toolStatus(options.tools) });
         write(socket, { type: 'roster', friends: roster() });
-        write(socket, { type: 'requests', requests });
+        write(socket, { type: 'requests', requests: friends.requests() });
         write(socket, chats());
         if (reports.state().count) write(socket, { type: 'reports', ...reports.state() });
         return undefined;
@@ -936,7 +379,7 @@ export async function startDaemon(options: DaemonOptions) {
         signOutLocally();
         return undefined;
       case 'send':
-        return send(request.to, request.text);
+        return chat.send(request.to, request.text);
       case 'history': {
         const messages = store.history(request.with, request.before, request.limit);
         write(socket, { type: 'history', with: request.with, messages });
@@ -951,9 +394,9 @@ export async function startDaemon(options: DaemonOptions) {
         return undefined;
       }
       case 'preview':
-        return attachPreview(request.to, request.preview);
+        return chat.attachPreview(request.to, request.preview);
       case 'unsend':
-        return unsend(request.id);
+        return chat.unsend(request.id);
       case 'chat.delete':
         store.deleteChat(request.handle);
         chatChanged(request.handle);
@@ -962,7 +405,7 @@ export async function startDaemon(options: DaemonOptions) {
         const newest = store.markRead(request.handle);
         push({ type: 'roster', friends: roster() });
         if (newest && store.settings().readReceipts && store.friend(request.handle)) {
-          sendReceipt(request.handle, { t: 'read', id: newest });
+          chat.sendReceipt(request.handle, { t: 'read', id: newest });
         }
         return undefined;
       }
@@ -1082,12 +525,7 @@ export async function startDaemon(options: DaemonOptions) {
   await recompute();
   connect();
 
-  const heartbeat = setInterval(() => {
-    stats.tick(working, localSecrets(sessions.list()));
-    sessions.expire();
-    void recompute();
-    push({ type: 'roster', friends: roster() });
-  }, options.heartbeatMs ?? 30_000);
+  const heartbeat = setInterval(presence.heartbeat, options.heartbeatMs ?? 30_000);
   const tokenTimer = setInterval(() => void refreshTokens(), options.tokenScanMs ?? 60_000);
   const localModels = new LocalModels(
     options.localModels ?? defaultLocalModels(options.tools.home),
@@ -1109,7 +547,7 @@ export async function startDaemon(options: DaemonOptions) {
       clearInterval(heartbeat);
       clearInterval(tokenTimer);
       clearInterval(localModelTimer);
-      clearTimeout(retryTimer);
+      chat.stop();
       // Tell friends straight away rather than waiting for the server to notice.
       if (connection?.connected)
         connection.send({ t: 'presence', presence: { status: 'offline', at: Date.now() } });

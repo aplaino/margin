@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { linkIn, safePreview } from '../src/daemon';
+import { linkIn, safePreview } from '../src/chat';
 
 describe('link previews', () => {
   const url = 'https://open.spotify.com/track/0UqKPaKqC3tWU4o8BB7owl';
