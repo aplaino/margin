@@ -37,6 +37,16 @@ describe('crash reports', () => {
     });
   });
 
+  test('a hang in the app is a report like any other', async () => {
+    const hang = report({
+      component: 'app',
+      kind: 'hang',
+      what: 'main thread hung in AppModel.askAboutReports()',
+    });
+    expect((await api.call('/crash', { body: hang })).status).toBe(204);
+    expect((await api.call('/crash', { token: TOKEN })).body[0]).toMatchObject({ kind: 'hang' });
+  });
+
   test('anything outside the report shape, too big, or with control characters is refused', async () => {
     for (const bad of [
       report({ install: 'not-a-uuid' }),

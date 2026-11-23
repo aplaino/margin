@@ -6,19 +6,33 @@ MainActor.assumeIsolated {
   app.setActivationPolicy(.accessory)
   let launcher = Launcher()
   launcher.start()
-  NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) {
-    _ in MainActor.assumeIsolated { launcher.stop() }
-  }
   // A plain kill is handled like Quit, so the bundled margind is stopped too.
   signal(SIGTERM, SIG_IGN)
   let terminate = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
   terminate.setEventHandler { NSApp.terminate(nil) }
   terminate.resume()
   let model = AppModel()
+  // Quitting (or relaunching for an update) first tells margind it isn't a hang.
+  NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) {
+    _ in
+    MainActor.assumeIsolated {
+      model.client.send(["op": "app.quitting"])
+      launcher.stop()
+    }
+  }
+  #if DEBUG
+    // Debug builds: `kill -USR1 <pid>` blocks the main thread for 10 s, to test hang reports.
+    signal(SIGUSR1, SIG_IGN)
+    let freeze = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main)
+    freeze.setEventHandler { Thread.sleep(forTimeInterval: 10) }
+    freeze.resume()
+  #else
+    let freeze: DispatchSourceSignal? = nil
+  #endif
   // Give whatever stopped (say, `bun run dev`) a moment to come back before starting our own.
   model.onDaemonLost = {
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MainActor.assumeIsolated { launcher.ensureRunning() } }
   }
   let drawer = DrawerController(model: model)
-  withExtendedLifetime((drawer, launcher, terminate)) { app.run() }
+  withExtendedLifetime((drawer, launcher, terminate, freeze)) { app.run() }
 }

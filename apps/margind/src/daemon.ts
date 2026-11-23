@@ -20,6 +20,7 @@ import { Connection, type ConnectionState } from './connection';
 import { DaemonError, errorText, log, ownError } from './errors';
 import { createFriends } from './friends';
 import { type DeviceLogin, githubDeviceLogin } from './github';
+import { type HangOptions, type Watch, watchApp } from './hangs';
 import { idleSeconds } from './idle';
 import type { KeyProvider } from './keychain';
 import { defaultLocalModels, type LocalModelSources, LocalModels } from './local-models';
@@ -66,6 +67,7 @@ export type DaemonOptions = {
   // The app's version, for crash reports, and where macOS keeps crash reports (tests).
   version?: string;
   crashLogs?: string;
+  hangs?: HangOptions;
 };
 
 export async function startDaemon(options: DaemonOptions) {
@@ -90,6 +92,8 @@ export async function startDaemon(options: DaemonOptions) {
   const classify = repoClassifier(options.fetchRepo);
   const idle = options.idle ?? idleSeconds;
   const subscribers = new Set<Socket>();
+  // The app's connection, watched for its main thread stopping (see hangs.ts).
+  const watches = new Map<Socket, Watch>();
   let connection: Connection | undefined;
   let connectionState: ConnectionState | 'update-required' = 'offline';
   let stopped = false;
@@ -138,6 +142,18 @@ export async function startDaemon(options: DaemonOptions) {
           'recent log:',
           reports.logTail(),
         ].join('\n'),
+      },
+      reportSecrets(),
+    );
+    push({ type: 'reports', ...reports.state() });
+  };
+  const hang = (what: string, detail: string) => {
+    reports.add(
+      {
+        component: 'app',
+        kind: 'hang',
+        what,
+        detail: [detail, '', 'recent log:', reports.logTail()].join('\n'),
       },
       reportSecrets(),
     );
@@ -346,7 +362,22 @@ export async function startDaemon(options: DaemonOptions) {
         return undefined;
       case 'subscribe':
         subscribers.add(socket);
-        socket.on('close', () => subscribers.delete(socket));
+        socket.on('close', () => {
+          subscribers.delete(socket);
+          watches.get(socket)?.disconnected();
+          watches.delete(socket);
+        });
+        if (request.pid && !watches.has(socket))
+          watches.set(
+            socket,
+            watchApp(
+              request.pid,
+              (n) => write(socket, { type: 'ping', n } satisfies Push),
+              (h) => hang(h.what, h.detail),
+              (line) => log(line),
+              options.hangs,
+            ),
+          );
         write(socket, selfPush());
         write(socket, { type: 'settings', settings: store.settings() });
         write(socket, { type: 'tools', tools: toolStatus(options.tools) });
@@ -357,6 +388,13 @@ export async function startDaemon(options: DaemonOptions) {
         return undefined;
       case 'ping':
         return { protocol: PROTOCOL };
+      case 'pong':
+        watches.get(socket)?.pong(request);
+        return undefined;
+      case 'app.quitting':
+        watches.get(socket)?.quitting();
+        watches.delete(socket);
+        return undefined;
       case 'reports.send': {
         const sent = await reports.send(options.server);
         push({ type: 'reports', ...reports.state() });
@@ -488,7 +526,7 @@ export async function startDaemon(options: DaemonOptions) {
       }
       handle(request, socket).then(
         (data) => {
-          if (request.op !== 'event' && request.op !== 'subscribe') {
+          if (!['event', 'subscribe', 'pong', 'app.quitting'].includes(request.op)) {
             write(socket, {
               type: 'result',
               op: request.op,
@@ -553,6 +591,7 @@ export async function startDaemon(options: DaemonOptions) {
         connection.send({ t: 'presence', presence: { status: 'offline', at: Date.now() } });
       await Bun.sleep(50);
       connection?.stop();
+      for (const watch of watches.values()) watch.flush();
       for (const socket of subscribers) socket.destroy();
       await new Promise<void>((resolve) => server.close(() => resolve()));
       if (existsSync(paths.socket)) unlinkSync(paths.socket);

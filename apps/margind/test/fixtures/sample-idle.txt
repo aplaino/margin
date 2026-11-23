@@ -1,0 +1,94 @@
+Analysis of sampling Margin (pid 88184) every 1 millisecond
+Process:         Margin [88184]
+Path:            /Applications/Margin.app/Contents/MacOS/Margin
+Load Address:    0x102974000
+Identifier:      dev.margin.app
+Version:         0.1.112 (112)
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  launchd [1]
+Target Type:     live task
+
+Date/Time:       2026-11-22 22:50:28.310 -0500
+Launch Time:     2026-11-22 20:52:25.525 -0500
+OS Version:      macOS 27.2.1 (26B131)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+
+Physical footprint:         148.0M
+Physical footprint (peak):  244.9M
+Idle exit:                  untracked
+----
+
+Call graph:
+    871 Thread_1379166   DispatchQueue_1: com.apple.main-thread  (serial)
+    + 871 start  (in dyld) + 6652  [0x198214d7c]
+    +   871 main  (in Margin) + 72  [0x102975a38]  main.swift:4
+    +     871 specialized static MainActor.assumeIsolated<A>(_:file:line:)  (in Margin) + 132  [0x102975fcc]  /<compiler-generated>:0
+    +       871 closure #1 in   (in Margin) + 1096  [0x102975e98]  main.swift:23
+    +         871 -[NSApplication run]  (in AppKit) + 396  [0x1a214a920]
+    +           871 -[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]  (in AppKit) + 344  [0x1a28ee0e8]
+    +             871 -[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]  (in AppKit) + 832  [0x1a28ee5f8]
+    +               871 _DPSNextEvent  (in AppKit) + 576  [0x1a215759c]
+    +                 871 _DPSBlockUntilNextEventMatchingListInMode  (in AppKit) + 292  [0x1a24988c0]
+    +                   871 _BlockUntilNextEventMatchingListInMode  (in HIToolbox) + 48  [0x1a6deddb8]
+    +                     871 ReceiveNextEventCommon  (in HIToolbox) + 492  [0x1a6c6796c]
+    +                       871 RunCurrentEventLoopInMode  (in HIToolbox) + 320  [0x1a6c645e0]
+    +                         871 _CFRunLoopRunSpecificWithOptions  (in CoreFoundation) + 536  [0x19c586c10]
+    +                           871 __CFRunLoopRun  (in CoreFoundation) + 1172  [0x19c4ac310]
+    +                             871 __CFRunLoopServiceMachPort  (in CoreFoundation) + 160  [0x19c4adac8]
+    +                               871 mach_msg  (in libsystem_kernel.dylib) + 24  [0x1982a3fac]
+    +                                 871 mach_msg_overwrite  (in libsystem_kernel.dylib) + 480  [0x1982aca28]
+    +                                   871 mach_msg2_internal  (in libsystem_kernel.dylib) + 76  [0x1982b68e0]
+    +                                     871 mach_msg2_trap  (in libsystem_kernel.dylib) + 8  [0x1982a3c20]
+    871 Thread_1379422: com.apple.NSEventThread
+    + 871 thread_start  (in libsystem_pthread.dylib) + 8  [0x1982e3cd0]
+    +   871 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x1982e8ce4]
+    +     871 _NSEventThread  (in AppKit) + 152  [0x1a227b554]
+    +       871 _CFRunLoopRunSpecificWithOptions  (in CoreFoundation) + 536  [0x19c586c10]
+    +         871 __CFRunLoopRun  (in CoreFoundation) + 1172  [0x19c4ac310]
+    +           871 __CFRunLoopServiceMachPort  (in CoreFoundation) + 160  [0x19c4adac8]
+    +             871 mach_msg  (in libsystem_kernel.dylib) + 24  [0x1982a3fac]
+    +               871 mach_msg_overwrite  (in libsystem_kernel.dylib) + 480  [0x1982aca28]
+    +                 871 mach_msg2_internal  (in libsystem_kernel.dylib) + 76  [0x1982b68e0]
+    +                   871 mach_msg2_trap  (in libsystem_kernel.dylib) + 8  [0x1982a3c20]
+    871 Thread_1379424: margin.daemon
+    + 871 thread_start  (in libsystem_pthread.dylib) + 8  [0x1982e3cd0]
+    +   871 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x1982e8ce4]
+    +     871 __NSThread__start__  (in Foundation) + 732  [0x198971c98]
+    +       871 thunk for @escaping @callee_guaranteed @Sendable () -> ()  (in Margin) + 28  [0x1029dc1bc]  /<compiler-generated>:0
+    +         871 closure #1 in DaemonClient.start()  (in Margin) + 60  [0x1029d38b8]  DaemonClient.swift:24
+    +           871 DaemonClient.run()  (in Margin) + 940  [0x1029d3c7c]  DaemonClient.swift:104
+    +             871 read  (in libsystem_kernel.dylib) + 8  [0x1982a4910]
+    871 Thread_1390356: com.apple.NSURLConnectionLoader
+    + 871 thread_start  (in libsystem_pthread.dylib) + 8  [0x1982e3cd0]
+    +   871 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x1982e8ce4]
+    +     871 __NSThread__start__  (in Foundation) + 732  [0x198971c98]
+    +       871 +[__CFN_CoreSchedulingSetRunnable _run:]  (in CFNetwork) + 392  [0x1a3a224cc]
+    +         871 _CFRunLoopRunSpecificWithOptions  (in CoreFoundation) + 536  [0x19c586c10]
+    +           871 __CFRunLoopRun  (in CoreFoundation) + 1172  [0x19c4ac310]
+    +             871 __CFRunLoopServiceMachPort  (in CoreFoundation) + 160  [0x19c4adac8]
+    +               871 mach_msg  (in libsystem_kernel.dylib) + 24  [0x1982a3fac]
+    +                 871 mach_msg_overwrite  (in libsystem_kernel.dylib) + 480  [0x1982aca28]
+    +                   871 mach_msg2_internal  (in libsystem_kernel.dylib) + 76  [0x1982b68e0]
+    +                     871 mach_msg2_trap  (in libsystem_kernel.dylib) + 8  [0x1982a3c20]
+    871 Thread_1605262
+    + 871 start_wqthread  (in libsystem_pthread.dylib) + 8  [0x1982e3cc4]
+    +   871 _pthread_wqthread  (in libsystem_pthread.dylib) + 368  [0x1982e4fcc]
+    +     871 __workq_kernreturn  (in libsystem_kernel.dylib) + 8  [0x1982a59ec]
+    871 Thread_1605269
+      871 start_wqthread  (in libsystem_pthread.dylib) + 8  [0x1982e3cc4]
+        871 _pthread_wqthread  (in libsystem_pthread.dylib) + 368  [0x1982e4fcc]
+          871 __workq_kernreturn  (in libsystem_kernel.dylib) + 8  [0x1982a59ec]
+
+Total number in stack (recursive counted multiple, when >=5):
+
+Sort by top of stack, same collapsed (when >= 5):
+        mach_msg2_trap  (in libsystem_kernel.dylib)        2613
+        __workq_kernreturn  (in libsystem_kernel.dylib)        1742
+        read  (in libsystem_kernel.dylib)        871
+
+Binary Images:
+       0x102974000 -        0x102b0e62b +dev.margin.app (0.1.112 - 112) <AF1B559B-046C-3AA9-9FA5-155FB56101AF> /Applications/Margin.app/Contents/MacOS/Margin
+       0x102fa0000 -        0x102ff2443 +org.sparkle-project.Sparkle (2.10.1 - 2065) <C4231EEC-0FAA-35B1-943B-2DD9BD1523AB> /Applications/Margin.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle
+       0x103190000 -        0x10319803f  libobjc-trampolines.dylib (973.1) <C7D2186B-CEC3-36AF-B45B-666F3843B773> /usr/lib/libobjc-trampolines.dylib
