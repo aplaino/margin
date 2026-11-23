@@ -116,6 +116,7 @@ final class DrawerController {
         guard let self else { return }
         drawerLog.notice("desktop changed: \(self.stateLine, privacy: .public)")
         if self.statusItem != nil { self.menuBarVisibilityChanged() }
+        self.repairDesktops()
       }
     }
     center.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main) {
@@ -344,6 +345,23 @@ final class DrawerController {
     let x = model.prefs.edge == "left" ? anchor.maxX - 1 : anchor.minX - peekSize.width + 1
     let y = anchor.maxY - peekSize.height
     return NSRect(origin: CGPoint(x: x, y: y), size: peekSize)
+  }
+
+  // Adding or rearranging desktops in Mission Control can leave windows that already exist on
+  // only some desktops, although they're set to be on all of them (new windows are placed on
+  // all). Any of the drawer's windows that should be showing and isn't on this desktop is
+  // ordered out and straight back in, in the same turn so it doesn't blink, which puts it on
+  // every desktop again. Hidden ones are left hidden, and nothing takes focus.
+  func repairDesktops() {
+    let windows: [(window: NSWindow, name: String, showing: Bool)] = [
+      (strip, "strip", !inMenuBar), (panel, "drawer", model.expanded), (peekPanel, "peek", model.peek != nil),
+    ]
+    for (window, name, showing) in windows where showing && !window.isOnActiveSpace {
+      window.orderOut(nil)
+      window.orderFrontRegardless()
+      drawerLog.notice(
+        "put the \(name, privacy: .public) back on this desktop (now here: \(window.isOnActiveSpace)): \(self.stateLine, privacy: .public)")
+    }
   }
 
   func showPeek() {
