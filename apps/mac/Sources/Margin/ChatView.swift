@@ -103,6 +103,10 @@ struct ChatView: View {
         (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t unsend")).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
       }
+      if let error = model.results["retry"], !error.ok {
+        (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
+          .padding(.bottom, 4)
+      }
       if let error = model.results["send"], !error.ok {
         (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
@@ -229,9 +233,10 @@ struct ChatView: View {
 
   // "Sending…" on anything still waiting to leave this Mac; "Delivered" or "Read 2:14 PM"
   // under your latest message while it's the last in the chat, as in Messages. With read
-  // receipts off, theirs show as delivered.
+  // receipts off, theirs show as delivered. A refused one says "Not Delivered", in red.
   private func status(_ message: ChatMessage) -> LocalizedStringResource? {
     if message.state == "queued" { return "Sending…" }
+    if message.failed { return "Not Delivered" }
     guard !message.incoming, message.id == (model.conversations[handle] ?? []).last?.id else { return nil }
     switch message.state {
     case "read" where model.settings?.readReceipts ?? true:
@@ -276,41 +281,69 @@ struct ChatView: View {
     .help(preview.url)
   }
 
+  // Beside a refused message, as in Messages: Try Again or Delete.
+  private func notDelivered(_ message: ChatMessage) -> some View {
+    Menu {
+      Button("Try Again") { model.tryAgain(message) }
+      Button("Delete…") { model.delete(message) }
+    } label: {
+      Image(systemName: "exclamationmark.circle.fill").font(theme.font(14)).foregroundStyle(theme.danger)
+    }
+    .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .accessibilityLabel("Not Delivered")
+    .transition(.blurReplace)
+  }
+
   private func sentBubble(_ message: ChatMessage) -> some View {
     VStack(alignment: message.incoming ? .leading : .trailing, spacing: 2) {
       if let preview = message.preview { previewCard(preview) }
-      Text(LinkPreviews.attributed(message.text))
-        .tint(message.incoming ? theme.accent : theme.onAccent)
-        .help(LinkPreviews.links(in: message.text).map(\.url.absoluteString).joined(separator: "\n"))
-        .textSelection(.enabled)
-        .padding(.horizontal, 11).padding(.vertical, 7)
-        .foregroundStyle(message.incoming ? theme.text : theme.onAccent)
-        .background(
-          UnevenRoundedRectangle(
-            topLeadingRadius: theme.bubbleRadius,
-            bottomLeadingRadius: message.incoming ? min(4, theme.bubbleRadius) : theme.bubbleRadius,
-            bottomTrailingRadius: message.incoming ? theme.bubbleRadius : min(4, theme.bubbleRadius),
-            topTrailingRadius: theme.bubbleRadius
-          )
-          .fill(message.incoming ? theme.surface : theme.accent))
-        .overlay {
-          RoundedRectangle(cornerRadius: theme.bubbleRadius + 3)
-            .strokeBorder(model.keyboardNav && model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
-            .padding(-3)
-        }
-        .contextMenu {
-          Button("Copy") { model.copy(message) }
-          if message.canUndoSend {
-            Button("Undo Send") { model.undoSend(message) }
-          }
-          Divider()
-          Button("Delete…") { model.delete(message) }
-        }
+      HStack(spacing: 6) {
+        if message.failed { notDelivered(message) }
+        textBubble(message)
+      }
       if let status = status(message) {
-        Text(status).font(theme.font(10)).foregroundStyle(theme.tertiary)
+        Text(status).font(theme.font(10)).foregroundStyle(message.failed ? theme.danger : theme.tertiary)
+          .id(message.state)
+          .transition(.blurReplace)
       }
     }
+    .animation(.smooth(duration: 0.2), value: message.state)
     .frame(maxWidth: 190, alignment: message.incoming ? .leading : .trailing)
     .frame(maxWidth: .infinity, alignment: message.incoming ? .leading : .trailing)
+  }
+
+  private func textBubble(_ message: ChatMessage) -> some View {
+    Text(LinkPreviews.attributed(message.text))
+      .tint(message.incoming ? theme.accent : theme.onAccent)
+      .help(LinkPreviews.links(in: message.text).map(\.url.absoluteString).joined(separator: "\n"))
+      .textSelection(.enabled)
+      .padding(.horizontal, 11).padding(.vertical, 7)
+      .foregroundStyle(message.incoming ? theme.text : theme.onAccent)
+      .background(
+        UnevenRoundedRectangle(
+          topLeadingRadius: theme.bubbleRadius,
+          bottomLeadingRadius: message.incoming ? min(4, theme.bubbleRadius) : theme.bubbleRadius,
+          bottomTrailingRadius: message.incoming ? theme.bubbleRadius : min(4, theme.bubbleRadius),
+          topTrailingRadius: theme.bubbleRadius
+        )
+        .fill(message.incoming ? theme.surface : theme.accent))
+      .overlay {
+        RoundedRectangle(cornerRadius: theme.bubbleRadius + 3)
+          .strokeBorder(model.keyboardNav && model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
+          .padding(-3)
+      }
+      .contextMenu {
+        Button("Copy") { model.copy(message) }
+        if message.failed {
+          Button("Try Again") { model.tryAgain(message) }
+        }
+        if message.canUndoSend {
+          Button("Undo Send") { model.undoSend(message) }
+        }
+        Divider()
+        Button("Delete…") { model.delete(message) }
+      }
   }
 }

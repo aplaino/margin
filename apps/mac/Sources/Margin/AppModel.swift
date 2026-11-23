@@ -279,6 +279,10 @@ final class AppModel {
     request("unsend", ["id": message.id])
   }
 
+  func tryAgain(_ message: ChatMessage) {
+    request("retry", ["id": message.id])
+  }
+
   func deleteConversation(_ handle: String) {
     let name = friend(handle)?.displayName ?? handle
     NSApp.activate()

@@ -59,8 +59,10 @@ struct ChatMessage: Codable, Equatable, Identifiable {
   var preview: LinkPreview?
   var incoming: Bool { direction == "in" }
   var unsent: Bool { state == "unsent" }
-  // Your own, not yet unsent, and sent within the last day.
-  var canUndoSend: Bool { !incoming && !unsent && Date.now.timeIntervalSince1970 * 1000 - sentAt < 24 * 3600 * 1000 }
+  // The server refused it: Not Delivered, with Try Again.
+  var failed: Bool { state == "failed" }
+  // Your own, delivered to the server, not yet unsent, and sent within the last day.
+  var canUndoSend: Bool { !incoming && !unsent && !failed && Date.now.timeIntervalSince1970 * 1000 - sentAt < 24 * 3600 * 1000 }
 }
 
 struct Share: Codable, Equatable {
