@@ -191,6 +191,7 @@ About **260 px** wide, as tall as needed up to 70 % of the screen height, anchor
 - **Find friends (agreed with the owner 2026-11-21):** below the requests, a search over everyone on Margin who can be found (handle or GitHub name), each with **Add**, or "Requested" once asked. It never shows you, your friends, anyone who switched it off, anyone who has blocked you or anyone you've blocked, and never shows activity. Everyone is findable by default (the owner's call); Settings → Privacy → **Show me in Find friends** switches it off. The server keeps only that one flag; searches are limited to 300 an hour.
 - **Friend actions** are in the chat header's ⋯ menu: **Safety Number** (Signal's 60-digit numeric fingerprint of both identity keys and handles, in three lines of four groups of five, the same on both Macs, to compare in person or on a call), **Remove Friend…**, **Block…** (also unfriends and deletes what they queued for you; to them you look like you're not on Margin) and **Report…** (an optional reason, with "Also block"). Remove and block ask first. Settings → Privacy lists who you've blocked, with **Unblock**.
 - **A friend's new identity key (owner's call 2026-11-22):** trusted in the background, as Signal does by default, so messaging keeps working with nothing to accept. margind takes the key the server has for them now (a message from a different key is checked against it first), starts a new session, and has anything unreadable sent again. Their safety number changes with it; nothing is shown about the change. The trade-off: a compromised server could swap in its own key unnoticed unless you compare safety numbers.
+- **Signing in on another Mac (2026-11-22):** one account lives on one Mac at a time; this is not multi-device. Signing in with GitHub on a new Mac, after reinstalling macOS, or after Margin's data folder was wiped moves the account there with that Mac's new identity key: the server swaps the key bundle and drops the old prekeys, but only within 10 minutes of a sign-in, so a session token kept from before can't move it. The old Mac is signed out at once with "You signed in on another Mac." on the sign-in screen (if it was off, it finds itself signed out when it next connects, without the line); its chats stay in its data folder, and signing in there again moves the account back. History doesn't move: the new Mac starts with empty chats. Messages friends sent that were still waiting for the old key are dropped by the server and each becomes a request to its sender to send it again, which their Mac does on a new session (a message they've since deleted or unsent isn't); receipts, previews and Undo Send waiting for the old key are dropped. Friends heal as for any new identity key, above.
 
 ### Settings (⚙)
 ```
@@ -260,7 +261,7 @@ here at the edge.   │ ABCD-1234│              ☐ Shell (zsh)
 
 | State | Strip | Expanded |
 |---|---|---|
-| Signed out | ○ | First-launch flow |
+| Signed out | ○ | First-launch flow ("You signed in on another Mac." when that's why) |
 | Daemon not running | ○ | "Margin's background service isn't running" + Restart |
 | Offline (no network) | dots greyed | Banner "Offline — reconnecting"; chat queues messages |
 | Server needs a newer app | ○ | "Update Margin" with link (protocol version mismatch) |

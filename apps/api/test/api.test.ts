@@ -217,14 +217,55 @@ describe('keys', () => {
     ).toBe(400);
   });
 
-  test('the identity key cannot be swapped', async () => {
-    const maya = await api.user('maya');
-    const first = bundle();
-    await maya.call('/keys', { method: 'PUT', body: first });
-    expect((await maya.call('/keys', { method: 'PUT', body: bundle() })).status).toBe(409);
+  test('a new sign-in moves the account to its key; an older session cannot', async () => {
+    const old = await api.user('maya');
+    const first = bundle(3);
+    await old.call('/keys', { method: 'PUT', body: first });
+    await api.sql`UPDATE sessions SET created_at = ${Date.now() - 11 * 60_000}`;
+    expect((await old.call('/keys', { method: 'PUT', body: bundle() })).status).toBe(409);
     expect(
-      (await maya.call('/keys', { method: 'PUT', body: bundle(5, 1, first.identityKey) })).status,
+      (await old.call('/keys', { method: 'PUT', body: bundle(5, 1, first.identityKey) })).status,
     ).toBe(200);
+
+    // Waiting for the old key: a message and a receipt from Leo (online), a message from
+    // Jules (offline by the time the account moves).
+    const leo = await api.user('leo');
+    const jules = await api.user('jules');
+    await api.befriend(old, leo);
+    await api.befriend(old, jules);
+    const oldSocket = await old.connect();
+    const [l, j] = [await leo.connect(), await jules.connect()];
+    const [fromLeo, receipt, fromJules] = [uuid(), uuid(), uuid()];
+    l.send({ t: 'send', id: fromLeo, to: 'maya', ciphertext });
+    l.send({ t: 'send', id: receipt, to: 'maya', ciphertext, control: true });
+    j.send({ t: 'send', id: fromJules, to: 'maya', ciphertext });
+    await j.next((f) => f.t === 'accepted');
+    j.ws.close();
+    await j.closed();
+    await Bun.sleep(50);
+
+    const moved = await api.user('maya');
+    const second = bundle(4, 100);
+    expect((await moved.call('/keys', { method: 'PUT', body: second })).body.remaining).toBe(4);
+    expect((await oldSocket.closed()).code).toBe(4003);
+    expect((await old.call('/me')).status).toBe(401);
+    expect((await moved.call('/me')).status).toBe(200);
+
+    const fetched = (await leo.call('/keys/maya')).body;
+    expect(fetched.identityKey).toBe(second.identityKey);
+    expect(fetched.preKeys[0].keyId).toBeGreaterThanOrEqual(100);
+
+    // Each unread message is asked for again; the receipt just goes.
+    expect(await l.next((f) => f.t === 'reset')).toEqual({ t: 'reset', from: 'maya', id: fromLeo });
+    expect(await l.unexpected((f) => f.t === 'reset')).toEqual([]);
+    const julesBack = await jules.connect();
+    expect(await julesBack.next((f) => f.t === 'reset')).toEqual({
+      t: 'reset',
+      from: 'maya',
+      id: fromJules,
+    });
+    const m = await moved.connect();
+    expect(await m.unexpected((f) => f.t === 'message' || f.t === 'control')).toEqual([]);
   });
 
   test('rejects malformed bundles', async () => {

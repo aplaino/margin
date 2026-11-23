@@ -7,7 +7,7 @@ import { limiter } from './limits';
 // rate limits, and the lookups several of them need.
 
 export type Account = { id: string; handle: string };
-export type SocketData = Account & { tokenHash: string };
+export type SocketData = Account & { tokenHash: string; signedInAt: number };
 export type Socket = ServerWebSocket<SocketData>;
 export type Online = {
   sockets: Set<Socket>;

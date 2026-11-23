@@ -63,7 +63,7 @@ export function createApp(sql: SQL, options: Options = {}) {
 
     const response =
       (await account.signedIn(req, url, me, auth.tokenHash)) ??
-      (await keys(req, url, me)) ??
+      (await keys(req, url, me, auth)) ??
       (await friends(req, url, me));
     if (response) return response;
     throw notFound();

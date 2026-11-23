@@ -158,6 +158,7 @@ enum Push {
   case loginCode(userCode: String, verificationUri: String)
   case loginDone
   case loginFailed(String)
+  case signedInElsewhere
   case settings(PrivacySettings)
   case tools([ToolState])
   case roster([Friend])
@@ -214,6 +215,7 @@ enum Push {
         guard let code = envelope.userCode, let uri = envelope.verificationUri else { return nil }
         return .loginCode(userCode: code, verificationUri: uri)
       case "done": return .loginDone
+      case "elsewhere": return .signedInElsewhere
       default: return .loginFailed(envelope.error ?? "Sign-in failed")
       }
     case "settings": return payload(SettingsPayload.self).map { .settings($0.settings) }
