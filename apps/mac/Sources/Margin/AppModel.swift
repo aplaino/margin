@@ -84,6 +84,9 @@ final class AppModel {
   // field take focus by itself, so keystrokes meant for your work never land in Margin.
   var drawerFocused = false
   var setupStep: SetupStep = .welcome
+  // Times are shown in the Mac's time zone, which macOS changes as you travel (Date & Time →
+  // Set time zone automatically). A running app keeps the old one until it's told to look again.
+  var timeZone = TimeZone.current
 
   // A release build running from Downloads runs from a temporary read-only copy
   // (App Translocation): it can't update itself, and tool hooks would point at a path
@@ -131,6 +134,13 @@ final class AppModel {
       }
     }
     client.onPush = { [weak self] push in self?.handle(push) }
+    NotificationCenter.default.addObserver(forName: .NSSystemTimeZoneDidChange, object: nil, queue: .main) {
+      [weak self] _ in
+      MainActor.assumeIsolated {
+        NSTimeZone.resetSystemTimeZone()
+        self?.timeZone = .current
+      }
+    }
     client.start()
     notifier.start(self)
   }

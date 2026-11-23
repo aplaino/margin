@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import Margin
@@ -11,6 +12,18 @@ import Testing
     #expect(Format.tokens(1_000_000) == "1M")
     #expect(Format.tokens(48_190_000) == "48.1M")
     #expect(Format.tokens(2_500_000_000) == "2.5B")
+  }
+
+  // Sent at 11:30 PM in Toronto (4:30 AM in London) and seen an hour later: yesterday's
+  // message in Toronto, today's in London.
+  @Test func timesFollowTheTimeZone() {
+    let toronto = TimeZone(identifier: "America/Toronto")!
+    let london = TimeZone(identifier: "Europe/London")!
+    let sent = 1_795_408_200_000.0
+    let now = Date(timeIntervalSince1970: (sent + 3_600_000) / 1000)
+    #expect(Format.time(sent, in: london, now: now).hasPrefix("Today"))
+    #expect(!Format.time(sent, in: toronto, now: now).hasPrefix("Today"))
+    #expect(Format.readTime(sent, in: london, now: now) != Format.readTime(sent, in: toronto, now: now))
   }
 
   @Test func hours() {

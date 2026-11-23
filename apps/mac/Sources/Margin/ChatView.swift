@@ -69,7 +69,7 @@ struct ChatView: View {
         ScrollView {
           VStack(spacing: 6) {
             if let first = messages.first {
-              Text(Format.time(first.sentAt)).font(theme.font(10.5)).foregroundStyle(theme.tertiary)
+              Text(Format.time(first.sentAt, in: model.timeZone)).font(theme.font(10.5)).foregroundStyle(theme.tertiary)
                 .padding(.bottom, 4)
             }
             ForEach(messages) { message in
@@ -229,7 +229,7 @@ struct ChatView: View {
     guard !message.incoming, message.id == (model.conversations[handle] ?? []).last?.id else { return nil }
     switch message.state {
     case "read" where model.settings?.readReceipts ?? true:
-      return "Read \(Format.readTime(message.readAt ?? message.sentAt))"
+      return "Read \(Format.readTime(message.readAt ?? message.sentAt, in: model.timeZone))"
     case "read", "delivered": return "Delivered"
     default: return nil
     }

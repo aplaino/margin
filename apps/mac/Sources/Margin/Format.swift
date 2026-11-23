@@ -141,14 +141,23 @@ enum Format {
     return String(localized: "\(minutes / (60 * 24))d ago")
   }
 
-  static func time(_ ms: Double) -> String {
+  // In the time zone the Mac is in now, so a message's time follows you when you travel.
+  static func time(_ ms: Double, in zone: TimeZone = .current, now: Date = .now) -> String {
     let date = Date(timeIntervalSince1970: ms / 1000)
+    let today = sameDay(date, now, in: zone)
     let formatter = DateFormatter()
+    formatter.timeZone = zone
     formatter.doesRelativeDateFormatting = true
-    formatter.dateStyle = Calendar.current.isDateInToday(date) ? .none : .short
+    formatter.dateStyle = today ? .none : .short
     formatter.timeStyle = .short
     let time = formatter.string(from: date)
-    return Calendar.current.isDateInToday(date) ? String(localized: "Today \(time)") : time
+    return today ? String(localized: "Today \(time)") : time
+  }
+
+  private static func sameDay(_ a: Date, _ b: Date, in zone: TimeZone) -> Bool {
+    var calendar = Calendar.current
+    calendar.timeZone = zone
+    return calendar.isDate(a, inSameDayAs: b)
   }
 
   // "Claude Code · maya/tidepool-ui", "idle · OpenCode · private project", "online"
@@ -168,11 +177,12 @@ enum Format {
   }
 
   // When a friend read your message: "2:14 PM" today, otherwise "Yesterday" or the date.
-  static func readTime(_ ms: Double) -> String {
+  static func readTime(_ ms: Double, in zone: TimeZone = .current, now: Date = .now) -> String {
     let date = Date(timeIntervalSince1970: ms / 1000)
     let formatter = DateFormatter()
+    formatter.timeZone = zone
     formatter.doesRelativeDateFormatting = true
-    let today = Calendar.current.isDateInToday(date)
+    let today = sameDay(date, now, in: zone)
     formatter.dateStyle = today ? .none : .short
     formatter.timeStyle = today ? .short : .none
     return formatter.string(from: date)
