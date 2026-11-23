@@ -40,6 +40,7 @@ Library: `libsignal` 6.0.0 (npm, the JS port: X3DH + Double Ratchet). Code: `src
 
 ### Transport and delivery
 - One authenticated WebSocket per daemon (`Authorization: Bearer`), exponential backoff 1 s → 30 s, `stop()` for good on sign-out.
+- **Give the handshake a timeout** (15 s). Bun's `WebSocket` has none: on 2026-11-23, after the owner's Mac woke from sleep, margind's upgrade request went out (TLS done, ~900 bytes sent, ~3.9 KB received) and the server never answered. It sat at `connecting` for good, with no close event and so no retry, and every message stayed `queued` in the outbox. That looked to the owner like messages not reaching friends who were offline. Read margind's state with `{op:'subscribe'}` on its socket (the `self` push has `connection`); `nettop -p <pid>` shows whether the socket is moving.
 - **The server sets `from` on everything it relays** from the authenticated session — never trust a client-supplied sender.
 - Messages are queued as ciphertext (`queued_messages`), pushed if the friend is online, **deleted only on ack**, and expire after 30 days. friendd **acks only after decrypt + store**, so a crash can't lose a message. Undelivered sends go to a local encrypted `outbox` and flush on reconnect.
 - **Per-socket ordering**: the server must process each socket's messages strictly in order (promise chain per socket). Found on Postgres: a "targeted" presence was overtaken by the default one that followed it because handlers awaited DB calls concurrently.
