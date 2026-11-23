@@ -132,6 +132,16 @@ struct ResultData: Decodable {
   var blocked: [String]?
   var handle: String?
   var safety: String?
+  // The reports waiting on this Mac, exactly as they'd be sent.
+  var reports: [WaitingReport]?
+}
+
+struct WaitingReport: Decodable {
+  var version: String
+  var os: String
+  var kind: String
+  var what: String
+  var detail: String
 }
 
 // Someone in Find friends.
@@ -159,8 +169,8 @@ enum Push {
   case result(op: String, ok: Bool, data: ResultData?, error: String?)
   // Your account export, pretty-printed for saving to a file.
   case export(Data)
-  // Crash and error reports waiting on this Mac.
-  case reports(count: Int, crash: Bool)
+  // Crash and error reports waiting on this Mac, and when the oldest was kept.
+  case reports(count: Int, crash: Bool, since: Date?)
 
   private struct Envelope: Decodable {
     var type: String
@@ -185,6 +195,7 @@ enum Push {
   private struct ReportsPayload: Decodable {
     var count: Int
     var crash: Bool
+    var since: Double?
   }
 
   static func decode(_ data: Data) -> Push? {
@@ -209,7 +220,10 @@ enum Push {
     case "message": return payload(MessagePayload.self).map { .message($0.message) }
     case "history": return payload(HistoryPayload.self).map { .history(with: $0.with, messages: $0.messages) }
     case "chats": return payload(ChatsPayload.self).map { .chats($0.chats) }
-    case "reports": return payload(ReportsPayload.self).map { .reports(count: $0.count, crash: $0.crash) }
+    case "reports":
+      return payload(ReportsPayload.self).map {
+        .reports(count: $0.count, crash: $0.crash, since: $0.since.map { Date(timeIntervalSince1970: $0 / 1000) })
+      }
     case "result":
       if envelope.op == "account.export", envelope.ok == true,
         let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],

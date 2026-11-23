@@ -23,24 +23,54 @@ const LOG_LINES = 50;
 
 // Absolute paths outside the app's own bundle and macOS's frameworks, and ~/ paths.
 const PATHS =
-  /(?:~|\/(?:Users|private|var|tmp|Volumes|opt|home|Applications)|[A-Za-z]:\\)(?:[/\\][^\s:'"()<>[\],]*)*/g;
-const EMAILS = /[^\s@<>()"']+@[^\s@<>()"']+\.[a-z]{2,}/gi;
+  /(?:~|\/(?:Users|private|var|tmp|Volumes|opt|home|Applications)(?![\w.-])|[A-Za-z]:\\)(?:[/\\][^\s:'"()<>[\],]*)*/g;
+const PERSONAL = new RegExp(`^${PATHS.source}`);
+// No slashes either side of the @, so package folders (@scope/pkg, .bun/pkg@1.0.0/…) aren't
+// taken for addresses.
+const EMAILS = /[^\s@<>()"'/]+@[^\s@<>()"'/]+\.[a-z]{2,}/gi;
 const TOKENS = /[A-Za-z0-9+/_=-]{32,}/g;
 const URL_QUERY = /(https?:\/\/[^\s?#]+)[?#][^\s]*/g;
+// A stack frame, "    at fn (location:line:col)" or "    at location:line:col".
+const FRAME = /^(\s+at (?:.+? \()?)(.+?)(:\d+(?::\d+)?\)?)$/gm;
 
 export function scrub(text: string, secrets: string[] = [], home = homedir()) {
-  let out = text.split(home).join('~');
-  out = out.replace(URL_QUERY, '$1').replace(EMAILS, '<email>').replace(PATHS, '<path>');
   // Longest first, so a repo name goes before the handle inside it.
-  for (const secret of [...new Set(secrets)]
+  const named = [...new Set(secrets)]
     .filter((s) => s.length > 3)
-    .sort((a, b) => b.length - a.length)) {
-    out = out.replace(
-      new RegExp(secret.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
-      '<redacted>',
-    );
-  }
-  return out.replace(TOKENS, '<token>');
+    .sort((a, b) => b.length - a.length)
+    .map((s) => new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'));
+  const redact = (s: string) => named.reduce((out, secret) => out.replace(secret, '<redacted>'), s);
+  // A frame in a personal folder keeps its file and line: a package's own path inside
+  // node_modules, or else just the file's name. It's set aside while the passes below run,
+  // since a long package path looks like a token.
+  const locations: string[] = [];
+  let out = text
+    .replaceAll('\0', '')
+    .split(home)
+    .join('~')
+    .replace(FRAME, (line, at: string, file: string, end: string) => {
+      if (!PERSONAL.test(file)) return line;
+      locations.push(file.replace(/^.*[/\\](?=node_modules[/\\])|^.*[/\\]/, ''));
+      return `${at}\0${locations.length - 1}\0${end}`;
+    });
+  out = out.replace(URL_QUERY, '$1').replace(EMAILS, '<email>').replace(PATHS, '<path>');
+  return redact(out)
+    .replace(TOKENS, '<token>')
+    .replace(/\0(\d+)\0/g, (_, i: string) => redact(locations[Number(i)] ?? ''));
+}
+
+let macOS: string | undefined;
+// The macOS version and build, as macOS's own crash reports give it ("macOS 26.1 (25B78)").
+// os.release() is the Darwin kernel's version, which is a different number.
+function macOSVersion() {
+  if (macOS) return macOS;
+  const read = (flag: string) => Bun.spawnSync(['sw_vers', flag]).stdout.toString().trim();
+  try {
+    const version = read('-productVersion');
+    const build = read('-buildVersion');
+    macOS = version ? `macOS ${version}${build ? ` (${build})` : ''}` : undefined;
+  } catch {}
+  return macOS ?? `Darwin ${release()}`;
 }
 
 // An error's stack for a report: its type and the code locations it passed through. The
@@ -118,7 +148,7 @@ export class Reports {
     const candidate: CrashReport = {
       install: this.install(),
       version: (report.version ?? this.version).slice(0, 40),
-      os: (report.os ?? `macOS ${release()}`).slice(0, 80),
+      os: (report.os ?? macOSVersion()).slice(0, 80),
       component: report.component,
       kind: report.kind,
       what,
@@ -162,7 +192,11 @@ export class Reports {
 
   state() {
     const pending = this.pending();
-    return { count: pending.length, crash: pending.some((r) => r.kind === 'crash') };
+    return {
+      count: pending.length,
+      crash: pending.some((r) => r.kind === 'crash'),
+      since: pending[0]?.at,
+    };
   }
 
   discard() {

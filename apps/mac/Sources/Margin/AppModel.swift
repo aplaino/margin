@@ -43,8 +43,12 @@ final class AppModel {
   var moveError: String?
   // The how-it-works pages, opened again from Settings.
   var showGuide = false
-  // Crash and error reports waiting on this Mac.
-  var reports = (count: 0, crash: false)
+  // Crash and error reports waiting on this Mac, and when the oldest was kept.
+  var reports: (count: Int, crash: Bool, since: Date?) = (0, false, nil)
+  // Errors (not crashes) waited long enough to ask about in the drawer, and what they'd send
+  // once you ask to see it.
+  var askAboutErrors = false
+  var waitingReports: [WaitingReport]?
   // Find friends, the people you've blocked, and safety numbers shown so far.
   var directory: [Person] = []
   var blocked: [String] = []
@@ -54,7 +58,7 @@ final class AppModel {
   var settingsPage: SettingsPage? { didSet { cursor = nil } }
   private var askingAboutReports = false
 
-  var expanded = false
+  var expanded = false { didSet { if expanded { checkWaitingErrors() } } }
   var stripHovered = false
   // Where the drawer is showing right now: under the menu bar item, or at a screen edge
   // (including when macOS has hidden the menu bar item).
@@ -198,13 +202,14 @@ final class AppModel {
       if ok, let people = data?.people { directory = people }
       if ok, let list = data?.blocked { blocked = list }
       if ok, let handle = data?.handle, let number = data?.safety { safety[handle] = number }
+      if ok, op == "reports.list" { waitingReports = data?.reports ?? [] }
       // A friend you removed or blocked has no chat to stay in.
       if ok, op == "friend.remove" || op == "block" {
         chatWith = nil
         profileOf = nil
       }
-    case .reports(let count, let crash):
-      reports = (count, crash)
+    case .reports(let count, let crash, let since):
+      reports = (count, crash, since)
       handleReports()
     case .export(let data):
       results["account.export"] = (true, nil)
@@ -415,15 +420,34 @@ final class AppModel {
     request("settings.set", ["settings": object])
   }
 
-  // Always send, never send, or ask after a crash (errors that aren't crashes wait and go
-  // with the next report you send, or from Settings).
+  // Always send, never send, or ask: straight away after a crash, and in the drawer about
+  // errors that aren't crashes (see checkWaitingErrors).
   private func handleReports() {
+    checkWaitingErrors()
     guard reports.count > 0 else { return }
     switch prefs.crashReports {
     case "always": request("reports.send")
     case "never": request("reports.discard")
     default: if reports.crash, !askingAboutReports { askAboutReports() }
     }
+  }
+
+  // Errors are asked about once the oldest has waited three hours, so a burst is one question,
+  // and at most once a day. A crash waiting is asked about by itself, and the errors go with it.
+  private func checkWaitingErrors() {
+    let now = Date.now
+    askAboutErrors =
+      prefs.crashReports == "ask" && reports.count > 0 && !reports.crash
+      && reports.since.map { now.timeIntervalSince($0) >= 3 * 3600 } ?? false
+      && prefs.reportsAnsweredAt.map { now.timeIntervalSince($0) >= 24 * 3600 } ?? true
+  }
+
+  func answerWaitingErrors(send: Bool, always: Bool = false) {
+    if always { prefs.crashReports = "always" }
+    prefs.reportsAnsweredAt = .now
+    askAboutErrors = false
+    waitingReports = nil
+    request(send ? "reports.send" : "reports.discard")
   }
 
   private func askAboutReports() {
@@ -441,6 +465,7 @@ final class AppModel {
     alert.suppressionButton?.title = String(localized: "Always send reports")
     let send = alert.runModal() == .alertFirstButtonReturn
     if send, alert.suppressionButton?.state == .on { prefs.crashReports = "always" }
+    prefs.reportsAnsweredAt = .now
     request(send ? "reports.send" : "reports.discard")
     previous?.activate()
   }

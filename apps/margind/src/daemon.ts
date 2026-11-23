@@ -366,6 +366,8 @@ export async function startDaemon(options: DaemonOptions) {
         reports.discard();
         push({ type: 'reports', ...reports.state() });
         return undefined;
+      case 'reports.list':
+        return { reports: reports.pending() };
       case 'login':
         void login().catch((e) => {
           log('sign-in failed', e);

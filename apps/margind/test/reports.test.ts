@@ -45,6 +45,28 @@ describe('scrubbing', () => {
     expect(out).toContain('at recompute (/$bunfs/root/margind:812:14)');
     expect(out).toContain('https://margin-api.fly.dev/crash');
   });
+
+  test('stack frames keep their file and line, never the folders above them', () => {
+    const text = [
+      'PreKeyError',
+      '    at initIncoming (/Users/maya/code/stealth-launch/node_modules/.bun/libsignal@6.0.0/node_modules/libsignal/src/session_builder.js:66:30)',
+      '    at async <anonymous> (/Users/maya/code/stealth-launch/node_modules/@privacyresearch/libsignal-protocol-typescript/lib/session-cipher.js:205:44)',
+      '    at /Users/maya/code/stealth-launch/node_modules/optionator/lib/index.js:20:39',
+      '    at recompute (/Users/maya/maya-chen/apps/margind/src/tokens.ts:812:14)',
+      '    at processTicksAndRejections (native:7:39)',
+    ].join('\n');
+    const out = scrub(text, ['maya-chen'], '/Users/maya');
+    expect(out).toBe(
+      [
+        'PreKeyError',
+        '    at initIncoming (node_modules/libsignal/src/session_builder.js:66:30)',
+        '    at async <anonymous> (node_modules/@privacyresearch/libsignal-protocol-typescript/lib/session-cipher.js:205:44)',
+        '    at node_modules/optionator/lib/index.js:20:39',
+        '    at recompute (tokens.ts:812:14)',
+        '    at processTicksAndRejections (native:7:39)',
+      ].join('\n'),
+    );
+  });
 });
 
 describe('stacks', () => {
@@ -83,11 +105,13 @@ describe('the queue', () => {
     expect(pending[0]).toMatchObject({ version: '0.1.52', component: 'margind', kind: 'error' });
     expect(pending[0]?.detail).toBe('at <path>');
     expect(pending[0]?.install).toBe(reports.install());
-    expect(reports.state()).toEqual({ count: 1, crash: false });
+    // Since the oldest waiting report, so the app can ask once errors have waited a while.
+    const since = pending[0]?.at;
+    expect(reports.state()).toEqual({ count: 1, crash: false, since });
     reports.add({ component: 'app', kind: 'crash', what: 'EXC_BAD_ACCESS', detail: '' });
-    expect(reports.state()).toEqual({ count: 2, crash: true });
+    expect(reports.state()).toEqual({ count: 2, crash: true, since });
     reports.discard();
-    expect(reports.state()).toEqual({ count: 0, crash: false });
+    expect(reports.state()).toEqual({ count: 0, crash: false, since: undefined });
   });
 
   test('keeps at most 20, dropping the oldest', () => {
