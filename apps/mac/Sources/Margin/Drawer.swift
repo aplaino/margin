@@ -524,8 +524,16 @@ final class DrawerController {
       panel.makeKey()
     }
     // Clicking anywhere outside closes it. Global mouse monitors need no permission.
+    // macOS 26 draws menu bar items in another process, so pressing Margin's own item counts
+    // as a click outside too. That press is left to the item, which closes the drawer;
+    // closing here as well would only have the item open it again.
     clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
-      [weak self] _ in MainActor.assumeIsolated { self?.collapse() }
+      [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self else { return }
+        if let item = self.statusItem?.button?.window?.frame, item.contains(NSEvent.mouseLocation) { return }
+        self.collapse()
+      }
     }
   }
 
