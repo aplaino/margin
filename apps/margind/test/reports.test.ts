@@ -105,11 +105,13 @@ describe('the queue', () => {
     expect(pending[0]).toMatchObject({ version: '0.1.52', component: 'margind', kind: 'error' });
     expect(pending[0]?.detail).toBe('at <path>');
     expect(pending[0]?.install).toBe(reports.install());
-    expect(reports.state()).toEqual({ count: 1, crash: false });
+    // Since the oldest waiting report, so the app can ask once errors have waited a while.
+    const since = pending[0]?.at;
+    expect(reports.state()).toEqual({ count: 1, crash: false, since });
     reports.add({ component: 'app', kind: 'crash', what: 'EXC_BAD_ACCESS', detail: '' });
-    expect(reports.state()).toEqual({ count: 2, crash: true });
+    expect(reports.state()).toEqual({ count: 2, crash: true, since });
     reports.discard();
-    expect(reports.state()).toEqual({ count: 0, crash: false });
+    expect(reports.state()).toEqual({ count: 0, crash: false, since: undefined });
   });
 
   test('keeps at most 20, dropping the oldest', () => {

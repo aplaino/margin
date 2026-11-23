@@ -7903,6 +7903,34 @@
         }
       }
     },
+    "Something went wrong in the background" : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Κάτι πήγε στραβά στο παρασκήνιο"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Algo salió mal en segundo plano"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックグラウンドで問題が発生しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "后台出现了问题"
+          }
+        }
+      }
+    },
     "Square" : {
       "localizations" : {
         "el" : {

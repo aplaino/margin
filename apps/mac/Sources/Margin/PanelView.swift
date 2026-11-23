@@ -50,6 +50,7 @@ struct PanelView: View {
           Text("Offline · reconnecting").font(theme.caption).foregroundStyle(theme.secondary)
             .frame(maxWidth: .infinity).padding(.vertical, 6).background(theme.surface)
         }
+        if model.askAboutErrors, model.prefs.crashReports == "ask" { WaitingErrorsView() }
         Group {
           switch model.tab {
           case .friends: FriendsView()
@@ -146,6 +147,58 @@ struct PanelView: View {
 
   private func underline(_ selected: Bool) -> some View {
     Rectangle().fill(selected ? theme.text : .clear).frame(height: 2)
+  }
+}
+
+// Errors Margin got past, asked about with the same choices as after a crash. Show lists
+// exactly what would be sent.
+struct WaitingErrorsView: View {
+  @Environment(AppModel.self) private var model
+  @Environment(\.theme) private var theme
+  @State private var showing = false
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text("Something went wrong in the background").font(theme.bodyBold)
+      Text(
+        "Send a report so it can be fixed? It has the app and macOS versions, what went wrong and recent background log lines. Paths, names, repos and messages are removed first; it never includes your code, prompts or chats."
+      )
+      .font(theme.caption).foregroundStyle(theme.secondary).fixedSize(horizontal: false, vertical: true)
+      HStack(spacing: 12) {
+        Button("Send Report") { model.answerWaitingErrors(send: true) }
+        Button("Don’t Send") { model.answerWaitingErrors(send: false) }
+        Spacer()
+        Button(showing ? "Hide" : "Show") {
+          showing.toggle()
+          if showing { model.request("reports.list") }
+        }
+      }
+      .buttonStyle(.link)
+      Button("Always send reports") { model.answerWaitingErrors(send: true, always: true) }.buttonStyle(.link)
+      if showing, let reports = model.waitingReports {
+        ScrollView {
+          LazyVStack(alignment: .leading, spacing: 10) {
+            ForEach(reports.indices, id: \.self) { i in
+              let report = reports[i]
+              VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: report.what).font(theme.small).fontWeight(.semibold)
+                Text(verbatim: "\(report.kind) · \(report.version) · \(report.os)").font(theme.caption)
+                  .foregroundStyle(theme.tertiary)
+                Text(verbatim: report.detail).font(theme.mono).foregroundStyle(theme.secondary)
+              }
+            }
+          }
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.vertical, 8)
+        }
+        .frame(maxHeight: 220)
+        .edgeFade(8)
+      }
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(theme.surface)
   }
 }
 

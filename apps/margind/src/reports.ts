@@ -192,7 +192,11 @@ export class Reports {
 
   state() {
     const pending = this.pending();
-    return { count: pending.length, crash: pending.some((r) => r.kind === 'crash') };
+    return {
+      count: pending.length,
+      crash: pending.some((r) => r.kind === 'crash'),
+      since: pending[0]?.at,
+    };
   }
 
   discard() {

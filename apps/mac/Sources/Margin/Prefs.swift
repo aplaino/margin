@@ -41,6 +41,8 @@ final class Prefs {
   var alertsPaused: Bool { alertsPausedUntil.map { $0 > .now } ?? false }
   // Crash reports: "ask" after a crash, "always" send, or "never" send.
   var crashReports: String { didSet { defaults.set(crashReports, forKey: "crashReports") } }
+  // When you last answered about waiting reports; errors are asked about at most once a day.
+  var reportsAnsweredAt: Date? { didSet { defaults.set(reportsAnsweredAt, forKey: "reportsAnsweredAt") } }
   // Thin the strip to a faint hairline while nobody's online and nothing is unread.
   var fadeWhenQuiet: Bool { didSet { defaults.set(fadeWhenQuiet, forKey: "fadeWhenQuiet") } }
   // The unit your token total is shown in, or scientific notation instead.
@@ -82,6 +84,7 @@ final class Prefs {
     alert = defaults.string(forKey: "alert") ?? "preview"
     alertsPausedUntil = defaults.object(forKey: "alertsPausedUntil") as? Date
     crashReports = defaults.string(forKey: "crashReports") ?? "ask"
+    reportsAnsweredAt = defaults.object(forKey: "reportsAnsweredAt") as? Date
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
     tokenUnit = TokenUnit(rawValue: defaults.string(forKey: "tokenUnit") ?? "") ?? .m
     scientificTokens = defaults.bool(forKey: "scientificTokens")
