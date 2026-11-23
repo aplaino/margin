@@ -16,6 +16,13 @@ let package = Package(
       swiftSettings: [.swiftLanguageMode(.v5)],
       // Sparkle.framework ships in Margin.app/Contents/Frameworks.
       linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
-    )
+    ),
+    // The app's logic that doesn't need a screen: formatting and link handling (`bun run test:mac`).
+    .testTarget(
+      name: "MarginTests",
+      dependencies: ["Margin"],
+      path: "Tests/MarginTests",
+      swiftSettings: [.swiftLanguageMode(.v5)]
+    ),
   ]
 )

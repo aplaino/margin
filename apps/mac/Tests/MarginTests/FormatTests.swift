@@ -1,0 +1,41 @@
+import Testing
+
+@testable import Margin
+
+@Suite struct FormatTests {
+  @Test func tokens() {
+    #expect(Format.tokens(nil) == "0")
+    #expect(Format.tokens(0) == "0")
+    #expect(Format.tokens(999) == "999")
+    #expect(Format.tokens(1_234) == "1.2K")
+    #expect(Format.tokens(1_000_000) == "1M")
+    #expect(Format.tokens(48_190_000) == "48.1M")
+    #expect(Format.tokens(2_500_000_000) == "2.5B")
+  }
+
+  @Test func hours() {
+    #expect(Format.hours(0) == "0m")
+    #expect(Format.hours(45) == "45m")
+    #expect(Format.hours(60) == "1h")
+    #expect(Format.hours(845) == "14h")
+  }
+
+  @Test func statsLine() {
+    let presence = Presence(
+      status: "online", stats: Stats(today: 1_200_000, week: 8_400_000, minutes: 840, days: 9), at: 0)
+    #expect(Format.stats(presence) == "1.2M · 8.4M wk · 14h · 9/14d")
+    // Only what they share.
+    let some = Presence(status: "online", stats: Stats(minutes: 30), at: 0)
+    #expect(Format.stats(some) == "30m")
+    #expect(Format.stats(Presence(status: "online", at: 0)) == "")
+  }
+
+  @Test func whatTheyAreDoing() {
+    let tool = Activity(tool: "claude-code", project: Project(visibility: "public", repo: "maya/tidepool-ui"))
+    #expect(Format.what(Presence(status: "online", activity: tool, at: 0)) == "Claude Code · maya/tidepool-ui")
+    let hidden = Activity(tool: "codex", project: Project(visibility: "private"))
+    #expect(Format.what(Presence(status: "idle", activity: hidden, at: 0)) == "idle · Codex · private project")
+    #expect(Format.what(Presence(status: "online", at: 0)) == "online")
+    #expect(Format.what(Presence(status: "offline", activity: tool, at: 0)) == "offline")
+  }
+}
