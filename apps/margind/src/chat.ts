@@ -12,7 +12,7 @@ import * as v from 'valibot';
 import type { Connection } from './connection';
 import { DaemonError, log } from './errors';
 import { changedKey, healable, type Signal } from './signal';
-import type { Store } from './store';
+import type { OutboxKind, Store } from './store';
 
 // Messages and the encrypted controls that travel with them (Undo Send, receipts, link
 // previews), the outbox that holds both until the server has them, and asking a friend to
@@ -22,6 +22,17 @@ import type { Store } from './store';
 const UNSEND_MS = 24 * 60 * 60_000;
 // A preview follows its message within seconds; one arriving much later is refused.
 const PREVIEW_MS = 10 * 60_000;
+
+// What a refusal is logged as: never its text, handle or id.
+const REFUSED: Record<OutboxKind | 'unknown', string> = {
+  message: 'a message',
+  resend: 'a message sent again under a new session',
+  delivered: 'a delivery receipt',
+  read: 'a read receipt',
+  preview: 'a link preview',
+  unsend: 'an Undo Send',
+  unknown: 'something no longer in the outbox',
+};
 
 // The preview's address is a whole link in the text (not the start of a longer one) with no
 // user name or password, so the card opens exactly what the message shows.
@@ -203,8 +214,17 @@ export function createChat({
       retryOutboxSoon();
       return;
     }
-    store.dequeue(id);
-    log('the server refused a message');
+    const kind = store.dequeue(id);
+    const message = store.message(id);
+    const mine = message?.direction === 'out' && message.state === 'queued';
+    // The server's reasons are a few fixed phrases; anything else stays out of the log.
+    const reason = /^[a-z ]{1,40}$/.test(error) ? error : 'an unrecognised reason';
+    log(`the server refused ${REFUSED[kind ?? (mine ? 'message' : 'unknown')]} (${reason})`);
+    // A chat message shows as not delivered; receipts and other controls fail silently.
+    if (mine) {
+      store.setMessageState(id, 'failed');
+      chatChanged(message.peer, id);
+    }
   }
 
   // Receipts go out on their own, so none is sent while invisible: invisible looks exactly
@@ -251,7 +271,7 @@ export function createChat({
     };
     store.transaction(() => {
       alongside?.();
-      store.enqueue(frame.id, to, frame);
+      store.enqueue(frame.id, to, frame, control.t);
     });
     connection()?.send(frame);
   }
@@ -308,7 +328,7 @@ export function createChat({
     const ciphertext = await signal.encrypt(from, original.text, store.bundle(from));
     // A new id: the server has already delivered the old one. The chat keeps the original.
     const frame: ClientFrame = { t: 'send', id: crypto.randomUUID(), to: from, ciphertext };
-    store.enqueue(frame.id, from, frame);
+    store.enqueue(frame.id, from, frame, 'resend');
     connection()?.send(frame);
   }
 
@@ -324,13 +344,17 @@ export function createChat({
     return store.friend(handle)?.identityKey === key;
   }
 
-  async function send(to: string, text: string) {
+  async function encryptFor(to: string, text: string) {
     if (!store.friend(to)) throw new DaemonError(`${to} isn’t your friend`);
     if (!signal.hasSession(to) && !store.bundle(to)) await fetchBundle(to);
     if (!signal.hasSession(to) && !store.bundle(to)) {
       throw new DaemonError(`${to} hasn’t finished setting up Margin yet`);
     }
-    const ciphertext = await signal.encrypt(to, text, store.bundle(to));
+    return signal.encrypt(to, text, store.bundle(to));
+  }
+
+  async function send(to: string, text: string) {
+    const ciphertext = await encryptFor(to, text);
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       peer: to,
@@ -342,11 +366,27 @@ export function createChat({
     const frame: ClientFrame = { t: 'send', id: message.id, to, ciphertext };
     store.transaction(() => {
       store.saveMessage(message);
-      store.enqueue(message.id, to, frame);
+      store.enqueue(message.id, to, frame, 'message');
     });
     push({ type: 'message', message });
     connection()?.send(frame);
     return message;
+  }
+
+  // Try Again: a message the server refused goes again, keeping its id and place in the chat.
+  async function retry(id: string) {
+    const message = store.message(id);
+    if (message?.direction !== 'out' || message.state !== 'failed') {
+      throw new DaemonError('Only a message that wasn’t delivered can be sent again');
+    }
+    const ciphertext = await encryptFor(message.peer, message.text);
+    const frame: ClientFrame = { t: 'send', id, to: message.peer, ciphertext };
+    store.transaction(() => {
+      store.setMessageState(id, 'queued');
+      store.enqueue(id, message.peer, frame, 'message');
+    });
+    chatChanged(message.peer, id);
+    connection()?.send(frame);
   }
 
   return {
@@ -358,6 +398,7 @@ export function createChat({
     onRejected,
     onReset,
     send,
+    retry,
     sendReceipt,
     attachPreview,
     unsend,

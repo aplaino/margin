@@ -63,6 +63,11 @@ struct ChatRow: View {
               .lineLimit(1).fixedSize()
           }
           HStack(spacing: 6) {
+            // Not delivered, as in the chat.
+            if last.failed {
+              Image(systemName: "exclamationmark.circle.fill").font(theme.small).foregroundStyle(theme.danger)
+                .accessibilityLabel("Not Delivered")
+            }
             preview.font(theme.small).foregroundStyle(friend.unread > 0 ? theme.text : theme.secondary)
               .lineLimit(1)
             Spacer(minLength: 4)

@@ -80,6 +80,8 @@ export const Request = v.variant('op', [
   // delete a whole conversation from this Mac.
   v.object({ op: v.literal('delete'), id: MessageId }),
   v.object({ op: v.literal('unsend'), id: MessageId }),
+  // Try Again on a message the server refused.
+  v.object({ op: v.literal('retry'), id: MessageId }),
   // The preview the app fetched for a link in a message you just sent `to` someone.
   v.object({ op: v.literal('preview'), to: Handle, preview: LinkPreview }),
   v.object({
@@ -139,9 +141,9 @@ export const ChatMessage = v.object({
   text: v.union([ChatText, v.literal('')]),
   sentAt: Timestamp,
   // Outgoing: "queued" until the server has it, "delivered" once it's on their Mac, "read"
-  // once they've opened the chat (if they send read receipts). Either way: "unsent" once Undo
-  // Send removed it.
-  state: v.optional(v.picklist(['queued', 'sent', 'delivered', 'read', 'unsent'])),
+  // once they've opened the chat (if they send read receipts), "failed" if the server refused
+  // it. Either way: "unsent" once Undo Send removed it.
+  state: v.optional(v.picklist(['queued', 'sent', 'delivered', 'read', 'unsent', 'failed'])),
   readAt: v.optional(Timestamp),
   preview: v.optional(LinkPreview),
 });

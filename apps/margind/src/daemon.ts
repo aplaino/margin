@@ -397,6 +397,8 @@ export async function startDaemon(options: DaemonOptions) {
         return chat.attachPreview(request.to, request.preview);
       case 'unsend':
         return chat.unsend(request.id);
+      case 'retry':
+        return chat.retry(request.id);
       case 'chat.delete':
         store.deleteChat(request.handle);
         chatChanged(request.handle);
