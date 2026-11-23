@@ -37,6 +37,7 @@ final class DrawerController {
   var lastMenuBarLook: MenuBarLook?
   var welcome: WelcomeWindow?
   var strandedCheck: Timer?
+  var lastDesktops: [[Int]] = []
 
   var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
@@ -131,10 +132,13 @@ final class DrawerController {
     place()
     if !model.prefs.welcomed && !model.prefs.setupDone { showWelcome() }
     // The strip was once found far off the only screen, out of reach, with no display having
-    // come or gone; if it's ever on no screen at all, put it back.
+    // come or gone; if it's ever on no screen at all, put it back. macOS doesn't say when
+    // desktops are added, moved or removed, so this is also when that's noticed.
     strandedCheck = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
       MainActor.assumeIsolated {
-        guard let self, self.strip.isVisible, !self.model.expanded else { return }
+        guard let self else { return }
+        self.repairDesktops()
+        guard self.strip.isVisible, !self.model.expanded else { return }
         if !NSScreen.screens.contains(where: { $0.frame.intersects(self.strip.frame) }) { self.place() }
       }
     }
@@ -348,22 +352,35 @@ final class DrawerController {
     return NSRect(origin: CGPoint(x: x, y: y), size: peekSize)
   }
 
-  // Adding or rearranging desktops in Mission Control can leave windows that already exist on
-  // only some desktops, although they're set to be on all of them (new windows are placed on
-  // all). Any of the drawer's windows that should be showing and isn't on this desktop is
-  // ordered out and straight back in, in the same turn so it doesn't blink, which puts it on
-  // every desktop again. Hidden ones are left hidden, and nothing takes focus.
+  var drawerWindows: [(window: NSWindow, name: String)] { [(strip, "strip"), (panel, "drawer"), (peekPanel, "peek")] }
+
+  // Mission Control edits can leave the drawer's windows on only some desktops (see Desktops).
+  // Each one is checked against its display's desktops, showing or not, and put back on the
+  // ones it lost; nothing is ordered in or out, so nothing blinks or takes focus.
   func repairDesktops() {
-    let windows: [(window: NSWindow, name: String, showing: Bool)] = [
-      (strip, "strip", !inMenuBar), (panel, "drawer", model.expanded), (peekPanel, "peek", model.peek != nil),
-    ]
-    for (window, name, showing) in windows where showing && !window.isOnActiveSpace {
-      window.orderOut(nil)
-      window.orderFrontRegardless()
+    let displays = Desktops.displays()
+    if displays != lastDesktops {
+      if !lastDesktops.isEmpty {
+        drawerLog.notice("desktops added, moved or removed: \(displays.map(\.count), privacy: .public)")
+      }
+      lastDesktops = displays
+    }
+    for (window, name) in drawerWindows {
+      let missing = Desktops.missing(on: Desktops.of(window), displays: displays)
+      guard !missing.isEmpty else { continue }
+      Desktops.add(window, to: missing)
       drawerLog.notice(
-        "put the \(name, privacy: .public) back on this desktop (now here: \(window.isOnActiveSpace)): \(self.stateLine, privacy: .public)")
+        "put the \(name, privacy: .public) back on \(missing.count) desktops: \(self.stateLine, privacy: .public)")
     }
   }
+
+  #if DEBUG
+    // `kill -USR2 <pid>`: what a Mission Control edit can do, to test the repair.
+    func strandOnThisDesktop() {
+      for (window, _) in drawerWindows { Desktops.strand(window) }
+      drawerLog.notice("debug: left the drawer's windows on this desktop only: \(self.stateLine, privacy: .public)")
+    }
+  #endif
 
   func showPeek() {
     guard !model.expanded else {
@@ -496,8 +513,12 @@ final class DrawerController {
   // What the drawer and menu bar item are doing, for the log.
   var stateLine: String {
     let item = statusItem?.button?.window
+    let displays = Desktops.displays()
     return [
       "expanded=\(model.expanded)", "panelVisible=\(panel.isVisible)", "panelOnDesktop=\(panel.isOnActiveSpace)",
+      "panelDesktops=\(Desktops.summary(on: Desktops.of(panel), displays: displays))",
+      "stripDesktops=\(Desktops.summary(on: Desktops.of(strip), displays: displays))",
+      "peekDesktops=\(Desktops.summary(on: Desktops.of(peekPanel), displays: displays))",
       "menuBar=\(statusItem != nil)", "hiddenItem=\(model.menuBarHidden)",
       "item=\(item.map { NSStringFromRect($0.frame) } ?? "none")", "itemScreen=\(item?.screen != nil)",
       "itemVisible=\(item?.occlusionState.contains(.visible) ?? false)", "openOnClick=\(model.prefs.openOnClick)",
@@ -520,6 +541,7 @@ final class DrawerController {
     openTimer?.invalidate()
     closeTimer?.invalidate()
     keepOnThisDesktop()
+    repairDesktops()
     openedByHover = byHover
     model.peek = nil
     model.expanded = true

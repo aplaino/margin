@@ -34,5 +34,14 @@ MainActor.assumeIsolated {
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MainActor.assumeIsolated { launcher.ensureRunning() } }
   }
   let drawer = DrawerController(model: model)
-  withExtendedLifetime((drawer, launcher, terminate, freeze)) { app.run() }
+  #if DEBUG
+    // Debug builds: `kill -USR2 <pid>` leaves the drawer's windows on this desktop only.
+    signal(SIGUSR2, SIG_IGN)
+    let strand = DispatchSource.makeSignalSource(signal: SIGUSR2, queue: .main)
+    strand.setEventHandler { MainActor.assumeIsolated { drawer.strandOnThisDesktop() } }
+    strand.resume()
+  #else
+    let strand: DispatchSourceSignal? = nil
+  #endif
+  withExtendedLifetime((drawer, launcher, terminate, freeze, strand)) { app.run() }
 }
