@@ -211,6 +211,13 @@ final class AppModel {
     case .reports(let count, let crash, let since):
       reports = (count, crash, since)
       handleReports()
+    case .ping(let n):
+      // Straight to the socket: going through request() would touch observed state each time.
+      let alert = NSApp.modalWindow
+      client.send([
+        "op": "pong", "n": n, "menuBar": prefs.menuBar, "expanded": expanded,
+        "modal": alert != nil, "modalHidden": alert.map { !$0.occlusionState.contains(.visible) } ?? false,
+      ])
     case .export(let data):
       results["account.export"] = (true, nil)
       NSApp.activate()

@@ -171,6 +171,8 @@ enum Push {
   case export(Data)
   // Crash and error reports waiting on this Mac, and when the oldest was kept.
   case reports(count: Int, crash: Bool, since: Date?)
+  // Answered with a pong from the main thread, so margind can tell when it stops (a hang).
+  case ping(Int)
 
   private struct Envelope: Decodable {
     var type: String
@@ -180,6 +182,7 @@ enum Push {
     var error: String?
     var op: String?
     var ok: Bool?
+    var n: Int?
   }
   private struct SettingsPayload: Decodable { var settings: PrivacySettings }
   private struct ToolsPayload: Decodable { var tools: [ToolState] }
@@ -224,6 +227,7 @@ enum Push {
       return payload(ReportsPayload.self).map {
         .reports(count: $0.count, crash: $0.crash, since: $0.since.map { Date(timeIntervalSince1970: $0 / 1000) })
       }
+    case "ping": return envelope.n.map(Push.ping)
     case "result":
       if envelope.op == "account.export", envelope.ok == true,
         let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],

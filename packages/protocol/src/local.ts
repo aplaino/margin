@@ -17,6 +17,8 @@ import { Requests } from './server';
 // Newline-delimited JSON over margind's Unix socket: the app and reporters send
 // requests ({op}), margind sends pushes ({type}).
 
+const Pid = v.pipe(v.number(), v.integer(), v.minValue(1));
+
 export const ReporterEvent = v.object({
   tool: Tool,
   event: v.picklist(['start', 'prompt', 'stop', 'end', 'model']),
@@ -24,7 +26,7 @@ export const ReporterEvent = v.object({
   model: v.optional(v.pipe(v.string(), v.maxLength(80), NoControl)),
   // Local only: used to find the git remote, never sent.
   cwd: v.optional(v.pipe(v.string(), v.maxLength(4096), NoControl)),
-  pid: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+  pid: v.optional(Pid),
 });
 export type ReporterEvent = v.InferOutput<typeof ReporterEvent>;
 
@@ -68,8 +70,21 @@ const HandleOp = <T extends string>(op: T) => v.object({ op: v.literal(op), hand
 
 export const Request = v.variant('op', [
   v.object({ op: v.literal('event'), event: ReporterEvent }),
-  v.object({ op: v.literal('subscribe') }),
+  // The app gives its pid, so margind can tell when its main thread stops answering.
+  v.object({ op: v.literal('subscribe'), pid: v.optional(Pid) }),
   v.object({ op: v.literal('ping') }),
+  // The app's answer to a ping push, sent from its main thread, with what it was showing.
+  v.object({
+    op: v.literal('pong'),
+    n: Count,
+    menuBar: v.optional(v.boolean()),
+    expanded: v.optional(v.boolean()),
+    // An alert is up (it blocks the drawer), and whether any of it is on screen.
+    modal: v.optional(v.boolean()),
+    modalHidden: v.optional(v.boolean()),
+  }),
+  // Quitting or relaunching for an update: not a hang.
+  v.object({ op: v.literal('app.quitting') }),
   // Crash and error reports waiting on this Mac: send them, throw them away, or show exactly
   // what would be sent.
   v.object({ op: v.literal('reports.send') }),
@@ -182,6 +197,8 @@ export const Push = v.variant('type', [
     crash: v.boolean(),
     since: v.optional(Timestamp),
   }),
+  // Answered with a pong from the app's main thread (hang detection).
+  v.object({ type: v.literal('ping'), n: Count }),
   v.object({
     type: v.literal('tools'),
     tools: v.array(v.object({ tool: Tool, found: v.boolean(), connected: v.boolean() })),

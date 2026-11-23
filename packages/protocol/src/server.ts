@@ -59,7 +59,7 @@ export const CrashReport = v.strictObject({
   version: v.pipe(v.string(), v.minLength(1), v.maxLength(40), NoControl),
   os: v.pipe(v.string(), v.maxLength(80), NoControl),
   component: v.picklist(['app', 'margind']),
-  kind: v.picklist(['crash', 'error']),
+  kind: v.picklist(['crash', 'error', 'hang']),
   what: v.pipe(v.string(), v.minLength(1), v.maxLength(200), NoControl),
   detail: v.pipe(v.string(), v.maxLength(48_000), NoControlText),
   at: Timestamp,

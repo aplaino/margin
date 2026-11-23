@@ -96,7 +96,7 @@ final class DaemonClient: @unchecked Sendable {
       lock.unlock()
       wasConnected = true
       notify(true)
-      send(["op": "subscribe"])
+      send(["op": "subscribe", "pid": Int(getpid())])
 
       var pending = Data()
       var buffer = [UInt8](repeating: 0, count: 64 * 1024)
