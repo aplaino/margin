@@ -65,10 +65,11 @@ function claudeTranscript(user: string, outputTokens: number) {
 
 type User = Awaited<ReturnType<typeof startUser>>;
 
-async function startUser(handle: string) {
+// `data` is the data folder: another one is another Mac.
+async function startUser(handle: string, data = 'data') {
   const home = join(root, handle, 'home');
   mkdirSync(join(home, '.claude'), { recursive: true });
-  const where = paths(join(root, handle, 'data'));
+  const where = paths(join(root, handle, data));
   const daemon: Daemon = await startDaemon({
     paths: where,
     keys,
@@ -426,20 +427,30 @@ describe('two users, two daemons, one server', () => {
     expect(mine.safety).toBe(theirs.safety);
   });
 
-  test('a friend with a new identity key keeps messaging, with a new safety number', async () => {
+  test('signing in on another Mac moves the account there, and messaging carries on both ways', async () => {
     const before = (await maya.app.request({ op: 'safety', handle: 'leo' })) as { safety: string };
-    // Leo starts over with new keys, and the server lets the key change (today's server
-    // refuses it for an existing account).
+    // Leo's Mac is off; Maya writes to him on the session with his old key.
     leo.app.close();
     await leo.daemon.stop();
-    rmSync(join(root, 'leo', 'data'), { recursive: true, force: true });
-    await sql`DELETE FROM key_bundles WHERE account_id = (SELECT id FROM accounts WHERE handle = 'leo')`;
-    leo = await startUser('leo');
-    await leo.app.request({ op: 'login' });
-    await leo.app.until(friendIn('maya', () => true));
+    await maya.app.until(friendIn('leo', (f) => f.presence.status === 'offline'));
+    const waiting = (await maya.app.request({ op: 'send', to: 'leo', text: 'you around?' })) as {
+      id: string;
+    };
+    await maya.app.until(
+      (p) => p.type === 'message' && p.message.id === waiting.id && p.message.state === 'sent',
+    );
 
-    // Both ways, without anyone accepting anything. Maya's first message goes out on the old
-    // session, which Leo can't read; it's sent again on a new one.
+    // Leo signs in on a new Mac (a new data folder, new keys). What Maya queued for the old
+    // key is sent again, readable there.
+    leo = await startUser('leo', 'new-mac');
+    await leo.app.request({ op: 'login' });
+    await leo.app.until(
+      (p) =>
+        p.type === 'message' && p.message.direction === 'in' && p.message.text === 'you around?',
+      10_000,
+    );
+
+    // Both ways, without anyone accepting anything.
     await leo.app.request({ op: 'send', to: 'maya', text: 'new laptop, who dis' });
     await maya.app.until(
       (p) =>
@@ -457,7 +468,15 @@ describe('two users, two daemons, one server', () => {
     const leos = (await leo.app.request({ op: 'safety', handle: 'maya' })) as { safety: string };
     expect(now.safety).toBe(leos.safety);
     expect(now.safety).not.toBe(before.safety);
-  }, 15_000);
+  }, 20_000);
+
+  test('the old Mac, back on, is signed out and keeps its chats', async () => {
+    const old = await startUser('leo');
+    await old.app.until((p) => p.type === 'self' && p.connection === 'signed-out');
+    expect(old.daemon.store.history('maya').length).toBeGreaterThan(0);
+    old.app.close();
+    await old.daemon.stop();
+  });
 
   test('Undo Send removes a message for both; Delete removes it only here', async () => {
     const sent = (await maya.app.request({ op: 'send', to: 'leo', text: 'wrong chat, sorry' })) as {

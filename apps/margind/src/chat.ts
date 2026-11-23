@@ -304,7 +304,8 @@ export function createChat({
       await fetchBundle(from);
     }
     const original = store.message(id);
-    if (original?.direction !== 'out' || original.peer !== from || !store.bundle(from)) return;
+    if (original?.direction !== 'out' || original.state === 'unsent') return;
+    if (original.peer !== from || !store.bundle(from)) return;
     const ciphertext = await signal.encrypt(from, original.text, store.bundle(from));
     // A new id: the server has already delivered the old one. The chat keeps the original.
     const frame: ClientFrame = { t: 'send', id: crypto.randomUUID(), to: from, ciphertext };

@@ -168,6 +168,8 @@ export const Push = v.variant('type', [
     }),
     v.object({ type: v.literal('login'), state: v.literal('done') }),
     v.object({ type: v.literal('login'), state: v.literal('failed'), error: v.string() }),
+    // Signed out because the account signed in on another Mac.
+    v.object({ type: v.literal('login'), state: v.literal('elsewhere') }),
   ]),
   v.object({ type: v.literal('settings'), settings: Settings }),
   // How many reports are waiting, and whether one is a crash (the app asks after a crash).

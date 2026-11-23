@@ -256,7 +256,8 @@ export async function startDaemon(options: DaemonOptions) {
         }
       },
       onFrame,
-      onSessionEnded: () => {
+      onSessionEnded: (elsewhere) => {
+        if (elsewhere) push({ type: 'login', state: 'elsewhere' });
         signOutLocally();
       },
     });
@@ -296,9 +297,10 @@ export async function startDaemon(options: DaemonOptions) {
       );
       session = await client.call(Session, 'POST', '/auth/github', { accessToken });
     }
+    // A fresh account gets the full bundle; one signed in on another Mac moves here, with
+    // this Mac's key. Only then is it signed in here.
+    await client.withToken(session.token).call(null, 'PUT', '/keys', signal.bundle());
     store.setAccount({ server: options.server, ...session });
-    // A fresh account gets the full bundle; an existing one keeps its identity key.
-    await api().call(null, 'PUT', '/keys', signal.bundle());
     push({ type: 'login', state: 'done' });
     pushAll();
     connect();

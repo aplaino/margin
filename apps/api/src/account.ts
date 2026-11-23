@@ -43,10 +43,15 @@ export function accountRoutes(
     if (!token) return null;
     const tokenHash = hashToken(token);
     const [account] = await sql`
-      SELECT a.id, a.handle FROM sessions s JOIN accounts a ON a.id = s.account_id
+      SELECT a.id, a.handle, s.created_at FROM sessions s JOIN accounts a ON a.id = s.account_id
       WHERE s.token_hash = ${tokenHash}`;
     return account
-      ? { id: account.id as string, handle: account.handle as string, tokenHash }
+      ? {
+          id: account.id as string,
+          handle: account.handle as string,
+          tokenHash,
+          signedInAt: Number(account.created_at),
+        }
       : null;
   }
 

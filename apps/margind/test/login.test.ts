@@ -18,7 +18,7 @@ afterEach(async () => {
   for (const fn of cleanup.splice(0).reverse()) await fn();
 });
 
-async function setup(serverClientId: string, buildClientId: string | undefined) {
+async function startServer(serverClientId: string) {
   const sql = new SQL('sqlite://:memory:');
   await migrate(sql);
   const app = createApp(sql, {
@@ -32,13 +32,23 @@ async function setup(serverClientId: string, buildClientId: string | undefined) 
     fetch: app.fetch,
     websocket: app.websocket,
   });
+  cleanup.push(async () => {
+    server.stop(true);
+    await app.drain();
+    await sql.close();
+  });
+  return { sql, url: server.url.href.replace(/\/$/, '') };
+}
+
+// One Mac: its own data folder and keys, signing in as the GitHub user 'Maya'.
+async function startMac(serverUrl: string, buildClientId: string | undefined) {
   const root = mkdtempSync(join(tmpdir(), 'margind-login-'));
   const where = paths(join(root, 'd'));
   const usedClientIds: string[] = [];
   const daemon = await startDaemon({
     paths: where,
     keys: memoryKeys(),
-    server: server.url.href.replace(/\/$/, ''),
+    server: serverUrl,
     githubClientId: buildClientId,
     deviceLogin: async (clientId, onCode) => {
       usedClientIds.push(clientId);
@@ -57,16 +67,18 @@ async function setup(serverClientId: string, buildClientId: string | undefined) 
   cleanup.push(async () => {
     socket.destroy();
     await daemon.stop();
-    server.stop(true);
-    await app.drain();
-    await sql.close();
     rmSync(root, { recursive: true, force: true });
   });
   const waitFor = async (match: (p: Push) => boolean) => {
     for (let i = 0; i < 100 && !seen.some(match); i++) await Bun.sleep(20);
     return seen.find(match);
   };
-  return { socket, seen, waitFor, usedClientIds };
+  return { socket, seen, waitFor, usedClientIds, daemon };
+}
+
+async function setup(serverClientId: string, buildClientId: string | undefined) {
+  const { url } = await startServer(serverClientId);
+  return startMac(url, buildClientId);
 }
 
 describe('signing in with GitHub', () => {
@@ -95,6 +107,48 @@ describe('signing in with GitHub', () => {
     write(socket, { op: 'login' });
     expect(await waitFor((p) => p.type === 'login' && p.state === 'failed')).toBeTruthy();
     expect(usedClientIds).toEqual([]);
+  });
+});
+
+describe('signing in on another Mac', () => {
+  test('a new data folder can sign in to an account that already has keys', async () => {
+    const { url } = await startServer('Iv1.margin');
+    const first = await startMac(url, 'Iv1.margin');
+    write(first.socket, { op: 'login' });
+    expect(await first.waitFor((p) => p.type === 'self' && p.connection === 'online')).toBeTruthy();
+
+    const second = await startMac(url, 'Iv1.margin');
+    write(second.socket, { op: 'login' });
+    const outcome = await second.waitFor(
+      (p) =>
+        (p.type === 'login' && p.state === 'failed') ||
+        (p.type === 'self' && p.connection === 'online'),
+    );
+    expect(outcome).toMatchObject({ type: 'self', connection: 'online', handle: 'maya' });
+
+    // The first Mac is told why it was signed out, and keeps its data folder.
+    expect(await first.waitFor((p) => p.type === 'login' && p.state === 'elsewhere')).toBeTruthy();
+    expect(
+      await first.waitFor((p) => p.type === 'self' && p.connection === 'signed-out'),
+    ).toBeTruthy();
+    expect(first.daemon.store.account()).toBeUndefined();
+  });
+
+  test('a sign-in whose keys are refused leaves this Mac signed out', async () => {
+    const { url, sql } = await startServer('Iv1.margin');
+    const first = await startMac(url, 'Iv1.margin');
+    write(first.socket, { op: 'login' });
+    await first.waitFor((p) => p.type === 'self' && p.connection === 'online');
+
+    // Keys can only move with a fresh sign-in; this one is made to look old.
+    await sql`CREATE TRIGGER stale AFTER INSERT ON sessions BEGIN
+      UPDATE sessions SET created_at = 0 WHERE token_hash = NEW.token_hash; END`;
+    const second = await startMac(url, 'Iv1.margin');
+    write(second.socket, { op: 'login' });
+    expect(await second.waitFor((p) => p.type === 'login' && p.state === 'failed')).toMatchObject({
+      error: 'identity key already registered',
+    });
+    expect(second.daemon.store.account()).toBeUndefined();
   });
 });
 
