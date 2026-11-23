@@ -166,6 +166,10 @@ final class AppModel {
       signingIn = false
       loginCode = nil
       loginError = error
+    case .signedInElsewhere:
+      signingIn = false
+      loginCode = nil
+      loginError = String(localized: "You signed in on another Mac.")
     case .settings(let s): settings = s
     case .tools(let t): tools = t
     case .roster(let r):

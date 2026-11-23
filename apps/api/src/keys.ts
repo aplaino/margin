@@ -1,24 +1,31 @@
 import { KeyBundle, type PeerBundle, PreKey } from '@margin/protocol';
 import * as v from 'valibot';
 import { HttpError, json, notFound, param, parseBody } from './http';
-import type { Account, Context } from './shared';
+import type { Account, Context, SocketData } from './shared';
 
 // Public key bundles: publishing your own, topping up one-time prekeys, and fetching a
 // friend's bundle to start a session with them.
 
 const PREKEY_CAP = 200;
 const PREKEY_LOW = 20;
+// How soon after signing in a Mac may replace the account's identity key.
+const REPLACE_WINDOW_MS = 10 * 60_000;
 
 const PreKeysBody = v.object({ preKeys: v.pipe(v.array(PreKey), v.maxLength(PREKEY_CAP)) });
 
-export function keyRoutes({ sql, limits, sendTo, accountByHandle, areFriends }: Context) {
+export function keyRoutes({ sql, online, limits, sendTo, accountByHandle, areFriends }: Context) {
   async function prekeyCount(accountId: string) {
     const [row] =
       await sql`SELECT COUNT(*) AS n FROM one_time_prekeys WHERE account_id = ${accountId}`;
     return Number(row.n);
   }
 
-  return async (req: Request, url: URL, me: Account): Promise<Response | null> => {
+  return async (
+    req: Request,
+    url: URL,
+    me: Account,
+    session: Pick<SocketData, 'tokenHash' | 'signedInAt'>,
+  ): Promise<Response | null> => {
     const { method } = req;
     const path = url.pathname;
 
@@ -26,8 +33,11 @@ export function keyRoutes({ sql, limits, sendTo, accountByHandle, areFriends }: 
       const bundle = await parseBody(KeyBundle, req);
       const [existing] =
         await sql`SELECT identity_key FROM key_bundles WHERE account_id = ${me.id}`;
-      // Identity is account-level until device linking exists.
-      if (existing && existing.identity_key !== bundle.identityKey) {
+      // One account, one Mac: a different key means the account has moved to another Mac (a
+      // new one, a reinstall, a wiped data folder). Only a sign-in from just now may move it,
+      // not a session token kept from before.
+      const moving = !!existing && existing.identity_key !== bundle.identityKey;
+      if (moving && Date.now() - session.signedInAt > REPLACE_WINDOW_MS) {
         throw new HttpError(409, 'identity key already registered');
       }
       const row = {
@@ -37,16 +47,39 @@ export function keyRoutes({ sql, limits, sendTo, accountByHandle, areFriends }: 
         signed_prekey: JSON.stringify(bundle.signedPreKey),
         updated_at: Date.now(),
       };
+      // Messages waiting for the old key can't be read on this Mac; each becomes a request to
+      // its sender to send it again on a new session. Controls (receipts, previews, Undo
+      // Send) refer to history this Mac doesn't have, so they just go.
+      let unreadable: { id: string; from_id: string; sent_at: number }[] = [];
       await sql.begin(async (tx) => {
         await tx`INSERT INTO key_bundles ${tx(row)} ON CONFLICT (account_id) DO UPDATE SET
-          registration_id = ${row.registration_id}, signed_prekey = ${row.signed_prekey},
-          updated_at = ${row.updated_at}`;
+          registration_id = ${row.registration_id}, identity_key = ${row.identity_key},
+          signed_prekey = ${row.signed_prekey}, updated_at = ${row.updated_at}`;
+        if (moving) {
+          await tx`DELETE FROM sessions WHERE account_id = ${me.id} AND token_hash <> ${session.tokenHash}`;
+          unreadable = await tx`
+            SELECT id, from_id, sent_at FROM queued_messages
+            WHERE to_id = ${me.id} AND NOT control`;
+          for (const q of unreadable) {
+            if (online.has(q.from_id)) continue;
+            await tx`INSERT INTO queued_resets ${tx({ to_id: q.from_id, from_id: me.id, message_id: q.id, sent_at: Number(q.sent_at) })}
+              ON CONFLICT DO NOTHING`;
+          }
+          await tx`DELETE FROM queued_messages WHERE to_id = ${me.id}`;
+        }
         await tx`DELETE FROM one_time_prekeys WHERE account_id = ${me.id}`;
         for (const pk of bundle.preKeys) {
           await tx`INSERT INTO one_time_prekeys ${tx({ account_id: me.id, key_id: pk.keyId, public_key: pk.publicKey })}
             ON CONFLICT DO NOTHING`;
         }
       });
+      if (moving) {
+        for (const socket of online.get(me.id)?.sockets ?? []) {
+          if (socket.data.tokenHash !== session.tokenHash)
+            socket.close(4003, 'signed in elsewhere');
+        }
+        for (const q of unreadable) sendTo(q.from_id, { t: 'reset', from: me.handle, id: q.id });
+      }
       return json({ ok: true, remaining: await prekeyCount(me.id) });
     }
     if (method === 'GET' && path === '/keys/count') {

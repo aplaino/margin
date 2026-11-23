@@ -9470,6 +9470,34 @@
         }
       }
     },
+    "You signed in on another Mac." : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Συνδεθήκατε σε άλλο Mac."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iniciaste sesión en otro Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のMacでサインインしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你已在另一台 Mac 上登录。"
+          }
+        }
+      }
+    },
     "You unsent a message" : {
       "localizations" : {
         "el" : {

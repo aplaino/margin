@@ -9,7 +9,8 @@ export type ConnectionHandlers = {
   onState(state: ConnectionState): void;
   onFrame(frame: ServerFrame): void;
   // The server ended this session (signed out elsewhere or account deleted).
-  onSessionEnded(): void;
+  // `elsewhere`: the account signed in on another Mac.
+  onSessionEnded(elsewhere: boolean): void;
 };
 
 // One authenticated WebSocket to the server, reconnecting with backoff (1 s up to 30 s).
@@ -56,9 +57,9 @@ export class Connection {
     ws.onclose = (event) => {
       this.open = false;
       if (this.ws !== ws || this.stopped) return;
-      if (event.code === 4001 || event.code === 4002) {
+      if (event.code === 4001 || event.code === 4002 || event.code === 4003) {
         this.stopped = true;
-        this.handlers.onSessionEnded();
+        this.handlers.onSessionEnded(event.code === 4003);
         return;
       }
       this.handlers.onState('offline');
