@@ -40,6 +40,8 @@ export class Connection {
     if (this.stopped) return;
     this.handlers.onState('connecting');
     if (!(await this.handlers.beforeConnect().catch(() => true)) || this.stopped) return;
+    clearTimeout(this.retry);
+    clearTimeout(this.opening);
     const ws = new WebSocket(`${this.server.replace(/^http/, 'ws')}/ws?protocol=${PROTOCOL}`, {
       headers: { authorization: `Bearer ${this.token}` },
     } as unknown as string[]);
@@ -49,8 +51,8 @@ export class Connection {
       if (ended) return;
       ended = true;
       clearTimeout(opening);
-      this.open = false;
       if (this.ws !== ws || this.stopped) return;
+      this.open = false;
       this.handlers.onState('offline');
       this.retry = setTimeout(() => void this.start(), this.backoff);
       this.backoff = Math.min(this.backoff * 2, 30_000);
@@ -61,6 +63,8 @@ export class Connection {
     }, this.options.openTimeoutMs ?? 15_000);
     this.opening = opening;
     ws.onopen = () => {
+      // Too late: this attempt was already given up.
+      if (ended || this.ws !== ws || this.stopped) return ws.close();
       clearTimeout(opening);
       this.open = true;
       this.backoff = 1000;
