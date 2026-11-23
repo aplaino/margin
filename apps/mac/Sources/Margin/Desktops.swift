@@ -4,11 +4,10 @@ import AppKit
 // public API for this, so it uses the window server's private calls, loaded with dlsym; if one
 // is ever missing, windows are read as on no desktop and nothing is changed.
 //
-// Adding, moving or removing a desktop in Mission Control can cut a window that's set to be on
-// every desktop down to some of them (new windows aren't affected), and ordering it out and
-// back in doesn't undo that. Adding it to the desktops it's missing is the repair: on a window
-// cut down with CGSRemoveWindowsFromSpaces it works, showing or not, where order out/in and
-// setting collectionBehavior again don't (docs/KNOWLEDGE.md has what's been seen).
+// Adding, moving or removing a desktop in Mission Control, or a full-screen desktop closing,
+// can cut a window that's set to be on every desktop down to some of them (new windows aren't
+// affected). Ordering it out and back in, or setting its collectionBehavior again, doesn't
+// undo that; adding it to the desktops it's missing does, showing or not (docs/KNOWLEDGE.md).
 enum Desktops {
   // The desktops a window should be on and isn't: the rest of its display's, full-screen ones
   // included. A window on no desktop has never been shown, and joins them all when it is.
