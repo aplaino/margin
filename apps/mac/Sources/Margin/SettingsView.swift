@@ -417,25 +417,44 @@ struct SettingsView: View {
 
   private var notifications: some View {
     @Bindable var prefs = model.prefs
+    let macos = prefs.alerts == "macos"
+    let mode = Binding(get: { prefs.alerts }, set: { model.setAlerts($0) })
+    let contents = macos ? ["preview", "name"] : ["preview", "name", "glow"]
     return VStack(alignment: .leading, spacing: 4) {
       SettingsGroup("New messages") {
+        Picker("Alerts", selection: mode) {
+          Text("Margin").tag("margin")
+          Text("macOS").tag("macos")
+        }
+        .pickerStyle(.segmented).labelsHidden()
+        .padding(.vertical, 8)
+        .control("Alerts", choice: mode, from: ["margin", "macos"])
+      }
+      SettingsGroup {
         SettingsRow(label: "Show", last: false) {
-          Picker("New messages", selection: $prefs.alert) {
+          Picker("Show", selection: $prefs.alert) {
             Text("Preview").tag("preview")
             Text("Name only").tag("name")
-            Text("Glow only").tag("glow")
+            if !macos { Text("Glow only").tag("glow") }
           }
           .labelsHidden().fixedSize()
-          .control("New messages", choice: $prefs.alert, from: ["preview", "name", "glow"])
+          .control("Show", choice: $prefs.alert, from: contents)
         }
-        switchRow(
-          "macOS notifications", Binding(get: { prefs.notifications }, set: { model.setNotifications($0) }))
         pauseRow
       }
-      if prefs.alert == "preview" {
-        note("The first words show beside the strip, where anyone looking at your screen can see them.")
+      if macos, model.notificationAccess == .off {
+        note("macOS notifications are off for Margin, so it uses its own alerts until you allow them.")
+        Button("Open System Settings") { model.notifier.openSettings() }.buttonStyle(.link).font(theme.caption)
+          .padding(.horizontal, 2)
+          .control("Open System Settings") { model.notifier.openSettings() }
+      } else if prefs.alert == "preview" {
+        note(
+          macos
+            ? "Previews leave Margin’s encrypted store: macOS can show them on the lock screen and keeps them in Notification Center."
+            : "The first words show beside the strip, where anyone looking at your screen can see them.")
       }
     }
+    .onAppear { model.notifier.refresh() }
   }
 
   // Off, or until when; choosing a length starts the pause and Resume ends it early.

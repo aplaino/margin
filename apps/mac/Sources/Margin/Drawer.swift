@@ -53,6 +53,7 @@ final class DrawerController {
     stripView.rootView = AnyView(Themed(model: model) { StripView() })
     panelView.rootView = AnyView(Themed(model: model) { PanelView(onClose: onClose) })
     let onPeek: () -> Void = { [weak self] in self?.openPeek() }
+    model.onOpenChat = { [weak self] handle in self?.openChat(handle) }
     peekView.rootView = AnyView(Themed(model: model) { PeekView(onOpen: onPeek) })
     peekView.sizingOptions = []
     peekView.onHover = { [weak self] inside in self?.peekHover(inside) }
@@ -401,6 +402,11 @@ final class DrawerController {
 
   func openPeek() {
     guard let handle = model.peek?.handle else { return }
+    openChat(handle)
+  }
+
+  // From the tab beside the strip, or a click on a macOS notification.
+  func openChat(_ handle: String) {
     model.peek = nil
     expand(byHover: false, focus: false)
     // Messages live on Chats, so that's where Back goes from here.

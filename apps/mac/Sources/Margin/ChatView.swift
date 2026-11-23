@@ -191,18 +191,7 @@ struct ChatView: View {
   private func send() {
     let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else { return }
-    model.request("send", ["to": handle, "text": text])
-    // The preview is fetched here, on the sender's Mac, and follows the message.
-    if model.settings?.linkPreviews ?? true, let url = LinkPreviews.firstLink(in: text) {
-      let to = handle
-      Task {
-        guard let preview = await LinkPreviews.fetch(url),
-          let data = try? JSONEncoder().encode(preview),
-          let object = try? JSONSerialization.jsonObject(with: data)
-        else { return }
-        model.request("preview", ["to": to, "preview": object])
-      }
-    }
+    model.send(text, to: handle)
     draft = ""
     focused = true
   }

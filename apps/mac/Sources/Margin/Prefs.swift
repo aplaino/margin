@@ -28,8 +28,11 @@ final class Prefs {
   // "system", "light", "dark"
   var appearance: String { didSet { defaults.set(appearance, forKey: "appearance") } }
   var accent: Accent { didSet { defaults.set(accent.rawValue, forKey: "accent") } }
-  var notifications: Bool { didSet { defaults.set(notifications, forKey: "notifications") } }
-  // New messages: "preview" (a tab with the name and first words), "name", or "glow" (strip only).
+  // How new messages alert you: "margin" (Margin's own, beside the strip) or "macos" (macOS
+  // notifications), never both.
+  var alerts: String { didSet { defaults.set(alerts, forKey: "alerts") } }
+  // What alerts show: "preview" (the name and first words), "name", or "glow" (strip only,
+  // Margin's own alerts only).
   var alert: String { didSet { defaults.set(alert, forKey: "alert") } }
   // New messages arrive quietly until then: no pulse, no tab, no macOS notification. Margin's
   // own alerts aren't macOS notifications, so Focus doesn't silence them; this does.
@@ -62,9 +65,10 @@ final class Prefs {
   var welcomed: Bool { didSet { defaults.set(welcomed, forKey: "welcomed") } }
 
   init() {
+    Prefs.migrate(defaults)
     defaults.register(defaults: [
       "openOnHover": true, "openOnClick": true, "openOnHotkey": true, "edge": "right", "menuBar": false,
-      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "notifications": false, "alert": "preview", "crashReports": "ask", "fadeWhenQuiet": true, "tokenUnit": TokenUnit.m.rawValue, "scientificTokens": false, "setupDone": false, "welcomed": false,
+      "style": ThemeStyle.graphite.rawValue, "appearance": "system", "accent": Accent.blue.rawValue, "alerts": "margin", "alert": "preview", "crashReports": "ask", "fadeWhenQuiet": true, "tokenUnit": TokenUnit.m.rawValue, "scientificTokens": false, "setupDone": false, "welcomed": false,
     ])
     openOnHover = defaults.bool(forKey: "openOnHover")
     openOnClick = defaults.bool(forKey: "openOnClick")
@@ -78,7 +82,7 @@ final class Prefs {
       ?? CustomTheme()
     appearance = defaults.string(forKey: "appearance") ?? "system"
     accent = Accent(rawValue: defaults.string(forKey: "accent") ?? "") ?? .blue
-    notifications = defaults.bool(forKey: "notifications")
+    alerts = defaults.string(forKey: "alerts") ?? "margin"
     alert = defaults.string(forKey: "alert") ?? "preview"
     alertsPausedUntil = defaults.object(forKey: "alertsPausedUntil") as? Date
     crashReports = defaults.string(forKey: "crashReports") ?? "ask"
@@ -92,6 +96,17 @@ final class Prefs {
     launchLanguage = language
     setupDone = defaults.bool(forKey: "setupDone")
     welcomed = defaults.bool(forKey: "welcomed")
+  }
+
+  // macOS notifications used to be a switch beside Margin's own alerts. Whoever turned it on
+  // keeps them, showing the name only as before: no more leaves Margin than they agreed to.
+  nonisolated static func migrate(_ defaults: UserDefaults) {
+    guard defaults.object(forKey: "notifications") != nil else { return }
+    if defaults.bool(forKey: "notifications") {
+      defaults.set("macos", forKey: "alerts")
+      defaults.set("name", forKey: "alert")
+    }
+    defaults.removeObject(forKey: "notifications")
   }
 
   // The theme to draw with: the chosen one, or the custom theme on top of its starting point.

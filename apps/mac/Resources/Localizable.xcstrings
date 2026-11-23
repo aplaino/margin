@@ -997,6 +997,34 @@
         }
       }
     },
+    "Alerts" : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ειδοποιήσεις"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avisos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提醒"
+          }
+        }
+      }
+    },
     "All" : {
       "localizations" : {
         "el" : {
@@ -4589,6 +4617,34 @@
         }
       }
     },
+    "Margin" : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin"
+          }
+        }
+      }
+    },
     "Margin adds a small hook to each tool you turn on, and backs up the file first. It never prints anything into your sessions." : {
       "localizations" : {
         "el" : {
@@ -4847,6 +4903,34 @@
         }
       }
     },
+    "Mark as Read" : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Σήμανση ως αναγνωσμένο"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marcar como leído"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既読にする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标记为已读"
+          }
+        }
+      }
+    },
     "Medium" : {
       "localizations" : {
         "el" : {
@@ -4904,7 +4988,6 @@
       }
     },
     "Message" : {
-      "extractionState" : "stale",
       "localizations" : {
         "el" : {
           "stringUnit" : {
@@ -5268,30 +5351,30 @@
         }
       }
     },
-    "New message from %@" : {
+    "New message" : {
       "localizations" : {
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Νέο μήνυμα από %@"
+            "value" : "Νέο μήνυμα"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nuevo mensaje de %@"
+            "value" : "Mensaje nuevo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@からの新着メッセージ"
+            "value" : "新着メッセージ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "来自 %@ 的新消息"
+            "value" : "新消息"
           }
         }
       }
@@ -5744,6 +5827,34 @@
         }
       }
     },
+    "Open System Settings" : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Άνοιγμα Ρυθμίσεων συστήματος"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Ajustes del Sistema"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システム設定を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开系统设置"
+          }
+        }
+      }
+    },
     "Open at login" : {
       "localizations" : {
         "el" : {
@@ -6132,6 +6243,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预览"
+          }
+        }
+      }
+    },
+    "Previews leave Margin’s encrypted store: macOS can show them on the lock screen and keeps them in Notification Center." : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Οι προεπισκοπήσεις φεύγουν από τον κρυπτογραφημένο χώρο του Margin: το macOS μπορεί να τις δείχνει στην οθόνη κλειδώματος και τις κρατά στο Κέντρο γνωστοποιήσεων."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las previsualizaciones salen del almacén cifrado de Margin: macOS puede mostrarlas en la pantalla bloqueada y las guarda en el Centro de notificaciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレビューはMarginの暗号化された保存領域の外に出ます。macOSはロック画面に表示することがあり、通知センターに残します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览会离开 Margin 的加密存储：macOS 可能会在锁定屏幕上显示它们，并保留在通知中心里。"
           }
         }
       }
@@ -6527,6 +6666,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移除 %@ 的覆盖设置"
+          }
+        }
+      }
+    },
+    "Reply" : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Απάντηση"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Responder"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回复"
           }
         }
       }
@@ -9415,6 +9582,34 @@
         }
       }
     },
+    "Your reply to %@ wasn’t sent" : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η απάντησή σας προς %@ δεν στάλθηκε"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu respuesta a %@ no se envió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@への返信は送信されませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你给 %@ 的回复未发送"
+          }
+        }
+      }
+    },
     "You’ll stop being friends, they can’t message you or find you, and anything they sent that you haven’t received is deleted. To them it looks as if you’re not on Margin. You can unblock in Settings → Privacy." : {
       "localizations" : {
         "el" : {
@@ -9695,30 +9890,58 @@
         }
       }
     },
-    "macOS notifications" : {
+    "macOS" : {
       "localizations" : {
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "γνωστοποιήσεις macOS"
+            "value" : "macOS"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Notificaciones de macOS"
+            "value" : "macOS"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOSの通知"
+            "value" : "macOS"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS 通知"
+            "value" : "macOS"
+          }
+        }
+      }
+    },
+    "macOS notifications are off for Margin, so it uses its own alerts until you allow them." : {
+      "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Οι γνωστοποιήσεις macOS είναι απενεργοποιημένες για το Margin, οπότε χρησιμοποιεί τις δικές του ειδοποιήσεις μέχρι να τις επιτρέψετε."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las notificaciones de macOS están desactivadas para Margin, así que usa sus propios avisos hasta que las permitas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MarginのmacOSの通知はオフになっています。許可するまでMargin独自の通知を使います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 的 macOS 通知已关闭，因此在你允许之前，Margin 会使用自己的提醒。"
           }
         }
       }

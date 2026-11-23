@@ -1,7 +1,6 @@
 import AppKit
 import Foundation
 import Observation
-import UserNotifications
 
 enum Tab { case friends, chats, add, settings }
 enum SetupStep { case welcome, guide, signIn, tools, addFriend }
@@ -11,8 +10,16 @@ final class AppModel {
   let prefs = Prefs()
   let client = DaemonClient(path: DaemonClient.defaultPath())
   let updates = Updates()
+  @ObservationIgnored let notifier = Notifier()
+  var notificationAccess = NotificationAccess.unknown
   // Called when the connection to margind drops, so a new one can be started.
   var onDaemonLost: (() -> Void)?
+  // Opens the drawer on a chat, as clicking the tab beside the strip does.
+  @ObservationIgnored var onOpenChat: ((String) -> Void)?
+  // Replies from notifications wait here while margind isn't connected yet.
+  @ObservationIgnored private var pendingReplies: [(handle: String, text: String)] = []
+  // The friend the last reply from a notification went to, until margind answers.
+  @ObservationIgnored private var replyingTo: String?
 
   var daemonUp = false
   var me: SelfInfo?
@@ -108,14 +115,20 @@ final class AppModel {
   init() {
     updates.model = self
     client.onConnected = { [weak self] up in
-      self?.daemonUp = up
-      if !up {
-        self?.me = nil
-        self?.onDaemonLost?()
+      guard let self else { return }
+      daemonUp = up
+      if up {
+        let waiting = pendingReplies
+        pendingReplies = []
+        for reply in waiting { self.reply(reply.text, to: reply.handle) }
+      } else {
+        me = nil
+        onDaemonLost?()
       }
     }
     client.onPush = { [weak self] push in self?.handle(push) }
     client.start()
+    notifier.start(self)
   }
 
   func request(_ op: String, _ fields: [String: Any] = [:]) {
@@ -159,6 +172,7 @@ final class AppModel {
       var list = conversations[message.peer] ?? []
       if let index = list.firstIndex(where: { $0.id == message.id }) {
         list[index] = message
+        if message.unsent { notifier.remove([message.id]) }
       } else {
         list.append(message)
         if message.incoming { received(message) }
@@ -177,6 +191,10 @@ final class AppModel {
       latest = Dictionary(list.map { ($0.peer, $0) }, uniquingKeysWith: { first, _ in first })
     case .result(let op, let ok, let data, let error):
       results[op] = (ok, ok ? data?.note : error)
+      if op == "send", let to = replyingTo {
+        replyingTo = nil
+        if !ok { notifier.replyFailed(to: to, name: friend(to)?.displayName ?? to, error: error) }
+      }
       if ok, let people = data?.people { directory = people }
       if ok, let list = data?.blocked { blocked = list }
       if ok, let handle = data?.handle, let number = data?.safety { safety[handle] = number }
@@ -199,30 +217,60 @@ final class AppModel {
   }
 
   private func received(_ message: ChatMessage) {
-    // Paused: it still counts as unread, it just doesn't call for attention.
-    if prefs.alertsPaused { return }
-    let reading = expanded && chatWith == message.peer
-    // A burst from one friend alerts once; the rest still count as unread.
+    // Whether macOS still allows notifications decides which kind this is.
+    if prefs.alerts == "macos" { notifier.refresh { [weak self] in self?.alert(message) } } else { alert(message) }
+  }
+
+  // Paused, a burst from the same friend, or the chat open: it still counts as unread, it just
+  // doesn't call for attention.
+  private func alert(_ message: ChatMessage) {
     let now = Date.now
-    if !reading, let last = lastAlert[message.peer], now.timeIntervalSince(last) < 30 { return }
-    if !reading { lastAlert[message.peer] = now }
-    if !reading {
+    let alert = Alerts.decide(
+      message, from: friend(message.peer), mode: prefs.alerts, content: prefs.alert,
+      allowed: notificationAccess == .allowed, paused: prefs.alertsPaused,
+      reading: expanded && chatWith == message.peer, expanded: expanded, lastAlert: lastAlert[message.peer], now: now)
+    if alert != .quiet { lastAlert[message.peer] = now }
+    switch alert {
+    case .quiet: break
+    case .pulse: pulse += 1
+    case .peek(let next):
       pulse += 1
-      if prefs.alert != "glow", !expanded {
-        let line = message.text.split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
-        let words = line.trimmingCharacters(in: .whitespaces)
-        peek = Peek(
-          id: message.id, handle: message.peer, name: friend(message.peer)?.displayName ?? message.peer,
-          preview: prefs.alert == "preview" && !words.isEmpty ? (words.count > 60 ? words.prefix(60) + "…" : words) : nil)
-      }
+      peek = next
+    case .notify(let content): notifier.post(content)
     }
-    guard prefs.notifications, !reading else { return }
-    // Metadata only: who, never what.
-    let content = UNMutableNotificationContent()
-    content.title = "Margin"
-    content.body = String(localized: "New message from \(friend(message.peer)?.displayName ?? message.peer)")
-    UNUserNotificationCenter.current().add(
-      UNNotificationRequest(identifier: message.id, content: content, trigger: nil))
+  }
+
+  // The chat field's send: the link preview is fetched here, on the sender's Mac, and follows
+  // the message.
+  func send(_ text: String, to handle: String) {
+    request("send", ["to": handle, "text": text])
+    guard settings?.linkPreviews ?? true, let url = LinkPreviews.firstLink(in: text) else { return }
+    Task {
+      guard let preview = await LinkPreviews.fetch(url),
+        let data = try? JSONEncoder().encode(preview),
+        let object = try? JSONSerialization.jsonObject(with: data)
+      else { return }
+      request("preview", ["to": handle, "preview": object])
+    }
+  }
+
+  // Reply on a notification: sent like the chat field, and the chat is read, as in Messages.
+  // Waits for margind if clicking Reply is what opened Margin.
+  func reply(_ text: String, to handle: String) {
+    let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty else { return }
+    guard daemonUp else {
+      pendingReplies.append((handle, text))
+      return
+    }
+    replyingTo = handle
+    send(text, to: handle)
+    markRead(handle)
+  }
+
+  func markRead(_ handle: String) {
+    request("read", ["handle": handle])
+    notifier.removeThread(handle)
   }
 
   // ↑/↓ through the list on screen: friends, or chats.
@@ -273,6 +321,7 @@ final class AppModel {
     guard alert.runModal() == .alertFirstButtonReturn else { return }
     if cursor == message.id { cursor = nil }
     request("delete", ["id": message.id])
+    notifier.remove([message.id])
   }
 
   func undoSend(_ message: ChatMessage) {
@@ -291,6 +340,7 @@ final class AppModel {
     guard alert.runModal() == .alertFirstButtonReturn else { return }
     cursor = nil
     request("chat.delete", ["handle": handle])
+    notifier.removeThread(handle)
   }
 
   func showTab(_ next: Tab) {
@@ -348,7 +398,7 @@ final class AppModel {
     chatWith = handle
     cursor = nil
     request("history", ["with": handle])
-    request("read", ["handle": handle])
+    markRead(handle)
   }
 
   func updateSettings(_ change: (inout PrivacySettings) -> Void) {
@@ -391,10 +441,11 @@ final class AppModel {
     previous?.activate()
   }
 
-  func setNotifications(_ on: Bool) {
-    prefs.notifications = on
-    if on {
-      UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { _, _ in }
-    }
+  // Margin's own alerts or macOS notifications; macOS has no glow, so that becomes the name.
+  func setAlerts(_ mode: String) {
+    prefs.alerts = mode
+    guard mode == "macos" else { return }
+    if prefs.alert == "glow" { prefs.alert = "name" }
+    notifier.ask()
   }
 }

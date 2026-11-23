@@ -112,7 +112,7 @@ What worked, what felt wrong, and what comes next, then production (signed app, 
 - **Fly.io** (api) + **Neon** (Postgres) — decided.
 - **Open source** under AGPL-3.0-or-later (owner's call, 2026-11-22): the repo is public, the bundled libsignal-node is GPL-3.0, and AGPL also keeps modified servers open.
 - Signed, notarized direct download + Homebrew; not the Mac App Store (Margin installs hooks into other tools' config files).
-- Apple Developer Program before the beta (ad-hoc signed builds until then).
+- Apple Developer Program before the beta (ad-hoc signed builds until then). Waiting on it for macOS notifications: the friend's GitHub picture in place of Margin's icon, as Messages shows senders. That's a Communication Notification (an `INSendMessageIntent` donated with each message), which needs the `com.apple.developer.usernotifications.communication` entitlement and a provisioning profile, and an ad-hoc signature can't carry either. It would also let Focus allow chosen friends through. The one way to show a picture today is an image attachment, a thumbnail on the right of the banner, where macOS puts sent images; left out so a notification never looks like a friend sent a photo (owner's call, 2026-11-22).
 - **Open:** domain (`margin.dev`, `getmargin.app`, `usemargin.dev` — check availability).
 
 ## 7. Risks

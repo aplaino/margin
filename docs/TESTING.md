@@ -17,6 +17,7 @@ As of 2026-11-22, commit `676e0fa`, Margin 0.1.82. Automated: **178 tests pass, 
 | Presence | Pass | **Pass** (Claude Code, Codex and the shell, both ways, on 0.1.82) | Done |
 | Privacy | Pass | **Pass** (both ways, on 0.1.82) | Done |
 | Chat | Pass | **Pass** (every §5 step, both ways, on 0.1.82) | Done |
+| Notifications | Pass (`AlertsTests`: content, modes, fallback, migration) | Not yet (§5a) | Open |
 | Tokens | Pass | **Pass** (both ways, on 0.1.82) | Done |
 | Drawer | n/a (UI) | **Pass** (both ways, on 0.1.82) | Done |
 | Tools | Pass | **Pass** (both ways, on 0.1.82) | Done |
@@ -88,6 +89,18 @@ Two people, **A** and **B**, each on their own Mac with Margin 0.1.82 or later (
 - [PASS] No message lost — note anything sent that never arrived (Gaps §3).
 - [ ] A→B [ ] B→A — Read receipts: A sends B a message; under it A sees "Delivered", then "Read" and the time once B opens the chat. B turns off Settings → Privacy → **Send read receipts**: A's next message stays "Delivered" after B reads it, and B no longer sees "Read" under its own messages.
 - [ ] A→B [ ] B→A — Links: A sends a Spotify track link. Within a few seconds both chats show a card (cover, song, artist · album, Spotify) above the link; clicking the card or the link opens it. A turns off **Link previews**: the next link arrives as a plain clickable link.
+
+### 5a. Notifications (B receives; A sends. B looks at the notifications; nothing drives B's screen)
+- [ ] A→B [ ] B→A — Margin's own: B's Settings → Notifications is on **Margin**, Show **Preview**. A sends a message: the tab slides out beside B's strip with A's name and first words, the strip pulses, and **no macOS notification** appears. **Name only** shows the name alone; **Glow only** pulses without a tab.
+- [ ] A→B [ ] B→A — macOS, preview: B chooses **macOS** and allows notifications when asked; **Glow only** disappears from Show, and the lock-screen line shows under it with **Preview**. A sends a message: a banner with a sound, titled with A's name, with what A is doing as the subtitle (only what A shares with B; none while A isn't in a tool) and the message as the body. No tab beside the strip, no pulse; the unread count still goes up. **Name only**: the body reads "New message".
+- [ ] A→B [ ] B→A — Thread and burst: A sends three messages within 30 seconds: one banner. A minute later another one: a second banner, stacked with the first under A in Notification Center.
+- [ ] A→B [ ] B→A — Active and open: B opens the drawer on another chat; A sends: the banner still shows. B opens A's chat; A sends: no banner, the message appears in the chat.
+- [ ] A→B [ ] B→A — Click: B clicks a banner (or its entry in Notification Center): the drawer opens on A's chat, and A's notifications leave Notification Center.
+- [ ] A→B [ ] B→A — Reply: B hovers a banner → Options → **Reply**, types, Send. A receives it; on B's Mac it's in the chat, the chat is read and A's notifications are gone. **Mark as Read** on another: the unread count drops and the notifications go.
+- [ ] A→B [ ] B→A — Reply when quit: B quits Margin, A sends (B's notification arrives once Margin is open again, or leave one in Notification Center before quitting). B replies from Notification Center with Margin quit: Margin opens and the reply reaches A.
+- [ ] A→B [ ] B→A — Unsend and delete: A sends, then **Undo Send**: B's notification for it disappears. B deletes a message from the chat: its notification goes too.
+- [ ] Each Mac — Denied: System Settings → Notifications → Margin → turn off **Allow notifications**. Settings → Notifications (still on **macOS**) says macOS notifications are off and shows **Open System Settings**, which opens Margin's page there. A sends: the tab beside the strip shows instead, with the same Show choice. Turn notifications back on and reopen the page: the note goes and banners return.
+- [ ] Each Mac — Moving over: on a Mac that had the old **macOS notifications** switch on before updating, Settings → Notifications shows **macOS** with **Name only**; on one that had it off, **Margin** with its old Show choice.
 
 ### 6. Tokens
 - [ ] A→B [ ] B→A — Profile: B clicks A on Friends: A's picture, name, handle and status, this week's tokens, prompts and time, the 14-day chart, today, all time and this week. A sends a prompt in Claude Code: prompts today goes up within a minute on B's Mac. Return on the profile opens the chat; ‹ in the chat comes back to the profile; Esc goes back to the list. A's name in the chat header opens the profile. A clicks their own total: their profile as B sees it.
