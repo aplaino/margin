@@ -241,7 +241,7 @@ final class AppModel {
       message, from: friend(message.peer), mode: prefs.alerts, content: prefs.alert,
       allowed: notificationAccess == .allowed, paused: prefs.alertsPaused,
       reading: expanded && chatWith == message.peer, expanded: expanded, lastAlert: lastAlert[message.peer], now: now)
-    if alert != .quiet { lastAlert[message.peer] = now }
+    if alert.loud { lastAlert[message.peer] = now }
     switch alert {
     case .quiet: break
     case .pulse: pulse += 1

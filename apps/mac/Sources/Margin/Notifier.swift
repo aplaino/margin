@@ -62,7 +62,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     content.body = message.body
     content.threadIdentifier = message.thread
     content.categoryIdentifier = "message"
-    content.sound = .default
+    content.sound = message.sound ? .default : nil
     content.userInfo = ["handle": message.thread]
     center.add(UNNotificationRequest(identifier: message.id, content: content, trigger: nil))
   }

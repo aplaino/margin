@@ -46,7 +46,7 @@ import Testing
         == .notify(
           NotificationContent(
             id: "m1", thread: "maya", title: "Maya Chen", subtitle: "Claude Code · maya/tidepool-ui",
-            body: "want to pair?\nafter lunch")))
+            body: "want to pair?\nafter lunch", sound: true)))
     let long = String(repeating: "b", count: 320)
     guard case .notify(let content) = decide(long, mode: "macos") else { Issue.record("no notification"); return }
     #expect(content.body == String(repeating: "b", count: 300) + "…")
@@ -76,20 +76,38 @@ import Testing
     #expect(decide(mode: "macos", content: "name", allowed: false) == .peek(Peek(id: "m1", handle: "maya", name: "Maya Chen", preview: nil)))
   }
 
-  @Test func quietWhenPausedReadingOrInABurst() {
+  @Test func quietWhenPausedOrReading() {
     for mode in ["margin", "macos"] {
       #expect(decide(mode: mode, paused: true) == .quiet)
       #expect(decide(mode: mode, reading: true, expanded: true) == .quiet)
-      #expect(decide(mode: mode, lastAlert: now.addingTimeInterval(-29)) == .quiet)
-      #expect(decide(mode: mode, lastAlert: now.addingTimeInterval(-31)) != .quiet)
     }
+  }
+
+  // Margin's own alerts show once per burst; macOS gets every message, with one sound.
+  @Test func bursts() {
+    let recent = now.addingTimeInterval(-29)
+    let earlier = now.addingTimeInterval(-31)
+    #expect(decide(lastAlert: recent) == .quiet)
+    #expect(decide(lastAlert: earlier).loud)
+    guard case .notify(let inBurst) = decide(mode: "macos", lastAlert: recent),
+      case .notify(let after) = decide(mode: "macos", lastAlert: earlier)
+    else {
+      Issue.record("no notification")
+      return
+    }
+    #expect(!inBurst.sound && inBurst.body == "want to pair?\nafter lunch")
+    #expect(after.sound)
+    // A silent one doesn't start a new burst, so a steady chat still sounds every 30 s.
+    #expect(!MessageAlert.notify(inBurst).loud)
+    #expect(MessageAlert.notify(after).loud)
+    #expect(!MessageAlert.quiet.loud)
   }
 
   @Test func unknownSenderUsesTheHandle() {
     let alert = Alerts.decide(
       message("hi"), from: nil, mode: "macos", content: "preview", allowed: true, paused: false, reading: false,
       expanded: false, lastAlert: nil, now: now)
-    #expect(alert == .notify(NotificationContent(id: "m1", thread: "maya", title: "maya", subtitle: "", body: "hi")))
+    #expect(alert == .notify(NotificationContent(id: "m1", thread: "maya", title: "maya", subtitle: "", body: "hi", sound: true)))
   }
 
   @Test func subtitleIsOnlyWhatTheyShare() {
