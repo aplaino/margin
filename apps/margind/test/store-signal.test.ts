@@ -170,6 +170,43 @@ describe('store', () => {
     expect(store.history('sam').map((m) => m.text)).toEqual(['hi']);
   });
 
+  test('search finds text in any chat, newest first, ignoring case and unsent messages', () => {
+    const store = new Store(':memory:', keys('search'));
+    const save = (peer: string, text: string, sentAt: number) => {
+      const id = crypto.randomUUID();
+      store.saveMessage({ id, peer, direction: 'in', text, sentAt });
+      return id;
+    };
+    save('leo', 'the Big fixtures', 1);
+    save('sam', 'nothing here', 2);
+    const gone = save('sam', 'big plans', 3);
+    save('maya', 'BIG news', 4);
+    store.unsend(gone);
+    expect(store.search('big').map((m) => [m.peer, m.text])).toEqual([
+      ['maya', 'BIG news'],
+      ['leo', 'the Big fixtures'],
+    ]);
+    expect(store.search('big', 1)).toHaveLength(1);
+    expect(store.search('missing')).toEqual([]);
+  });
+
+  test('a chat opened at an old message starts a little before it and runs to the newest', () => {
+    const store = new Store(':memory:', keys('around'));
+    const ids: string[] = [];
+    for (let i = 1; i <= 100; i++) {
+      const id = crypto.randomUUID();
+      ids.push(id);
+      store.saveMessage({ id, peer: 'leo', direction: 'in', text: `m${i}`, sentAt: i });
+    }
+    const around = store.historyAround('leo', ids[9] ?? '', 3);
+    expect(around.map((m) => m.text).slice(0, 4)).toEqual(['m7', 'm8', 'm9', 'm10']);
+    expect(around.at(-1)?.text).toBe('m100');
+    expect(around).toHaveLength(94);
+    // Already in the latest page, or not in this chat: the latest page.
+    expect(store.historyAround('leo', ids[95] ?? '')).toEqual(store.history('leo'));
+    expect(store.historyAround('sam', ids[9] ?? '')).toEqual(store.history('sam'));
+  });
+
   test('a saved message id is never stored twice', () => {
     const store = new Store(':memory:', keys('d'));
     const id = crypto.randomUUID();

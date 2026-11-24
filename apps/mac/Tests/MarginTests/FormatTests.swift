@@ -14,6 +14,17 @@ import Testing
     #expect(Format.tokens(2_500_000_000) == "2.5B")
   }
 
+  // The match keeps its own case and is the only bold run; a long lead-in is cut to "…".
+  @Test func searchSnippet() {
+    let short = Format.snippet("the Big\nfixtures", matching: "big")
+    #expect(String(short.characters) == "the Big fixtures")
+    let bold = short.runs.filter { $0.inlinePresentationIntent == .stronglyEmphasized }
+    #expect(bold.map { String(short[$0.range].characters) } == ["Big"])
+    let long = Format.snippet("one two three four five six seven big", matching: "BIG", before: 6)
+    #expect(String(long.characters) == "…seven big")
+    #expect(String(Format.snippet("no match", matching: "zzz").characters) == "no match")
+  }
+
   // Sent at 11:30 PM in Toronto (4:30 AM in London) and seen an hour later: yesterday's
   // message in Toronto, today's in London.
   @Test func timesFollowTheTimeZone() {

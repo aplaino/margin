@@ -969,6 +969,34 @@
         }
       }
     },
+    "Add a friend to message them" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade un amigo para escribirle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加好友后即可发消息"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友達を追加するとメッセージを送れます"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πρόσθεσε έναν φίλο για να του στείλεις μήνυμα"
+          }
+        }
+      }
+    },
     "Add your first friend" : {
       "localizations" : {
         "el" : {
@@ -1329,6 +1357,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "返回设置"
+          }
+        }
+      }
+    },
+    "Back to chats" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a los chats"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回聊天"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チャットに戻る"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πίσω στις συνομιλίες"
           }
         }
       }
@@ -1889,6 +1945,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "经典"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borrar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "消去"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Απαλοιφή"
           }
         }
       }
@@ -5043,6 +5127,34 @@
         }
       }
     },
+    "Messages" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mensajes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "消息"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メッセージ"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Μηνύματα"
+          }
+        }
+      }
+    },
     "Midnight" : {
       "localizations" : {
         "el" : {
@@ -5323,6 +5435,34 @@
         }
       }
     },
+    "Name or handle" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre o usuario"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名称或用户名"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前またはユーザー名"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Όνομα ή όνομα χρήστη"
+          }
+        }
+      }
+    },
     "Never" : {
       "localizations" : {
         "el" : {
@@ -5347,6 +5487,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "永不"
+          }
+        }
+      }
+    },
+    "New Chat" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nuevo chat"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新聊天"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新規チャット"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Νέα συνομιλία"
+          }
+        }
+      }
+    },
+    "New Chat (⌘N)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nuevo chat (⌘N)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新聊天（⌘N）"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新規チャット（⌘N）"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Νέα συνομιλία (⌘N)"
           }
         }
       }
@@ -5543,6 +5739,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "还没有朋友"
+          }
+        }
+      }
+    },
+    "No results" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin resultados"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无结果"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結果なし"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Κανένα αποτέλεσμα"
           }
         }
       }
@@ -7282,6 +7506,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "屏幕边缘"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buscar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検索"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Αναζήτηση"
           }
         }
       }

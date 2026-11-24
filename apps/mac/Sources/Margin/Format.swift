@@ -188,6 +188,20 @@ enum Format {
     return formatter.string(from: date)
   }
 
+  // A search result on one line: from a few words before the match ("…" when cut), with the
+  // match in bold.
+  static func snippet(_ text: String, matching query: String, before: Int = 20) -> AttributedString {
+    let line = text.replacingOccurrences(of: "\n", with: " ")
+    guard !query.isEmpty, let match = line.range(of: query, options: .caseInsensitive) else {
+      return AttributedString(line)
+    }
+    let start = line.index(match.lowerBound, offsetBy: -before, limitedBy: line.startIndex) ?? line.startIndex
+    var found = AttributedString(line[match])
+    found.inlinePresentationIntent = .stronglyEmphasized
+    return AttributedString((start > line.startIndex ? "…" : "") + line[start..<match.lowerBound]) + found
+      + AttributedString(line[match.upperBound...])
+  }
+
   // "1.2M · 8.4M wk · 14h · 9/14d": tokens today and this week, time in a tool this week,
   // active days of the last 14. Each part only if they share it.
   static func stats(_ presence: Presence) -> String {

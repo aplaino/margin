@@ -8,6 +8,8 @@ struct ChatView: View {
   @State private var draft = ""
   @FocusState private var focused: Bool
   @State private var showingSafety = false
+  // The search result this chat was opened at, outlined for a moment.
+  @State private var found: String?
 
   var body: some View {
     let friend = model.friend(handle)
@@ -80,8 +82,9 @@ struct ChatView: View {
         }
         .edgeFade(10)
         .defaultScrollAnchor(.bottom)
+        .onAppear { jump(proxy, in: messages) }
         .onChange(of: messages.count) {
-          if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
+          if !jump(proxy, in: messages), let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
         }
         .onChange(of: model.cursor) {
           if let cursor = model.cursor { proxy.scrollTo(cursor) }
@@ -192,6 +195,21 @@ struct ChatView: View {
     if alert.suppressionButton?.state == .on { model.request("block", ["handle": handle]) }
   }
 
+  // Once the chat holds the search result it was opened at: scrolled to the middle and
+  // outlined for a moment, as in Messages.
+  @discardableResult private func jump(_ proxy: ScrollViewProxy, in messages: [ChatMessage]) -> Bool {
+    guard let id = model.jumpTo, messages.contains(where: { $0.id == id }) else { return false }
+    model.jumpTo = nil
+    // After the scroll view's own move to the bottom on appearing.
+    DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
+    found = id
+    Task {
+      try? await Task.sleep(for: .seconds(1.6))
+      withAnimation(.easeOut(duration: 0.6)) { if found == id { found = nil } }
+    }
+    return true
+  }
+
   private func send() {
     let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else { return }
@@ -210,7 +228,7 @@ struct ChatView: View {
         .frame(maxWidth: .infinity)
         .overlay {
           RoundedRectangle(cornerRadius: theme.controlRadius + 3)
-            .strokeBorder(model.keyboardNav && model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
+            .strokeBorder(model.keyboardNav && model.cursor == message.id || found == message.id ? theme.accent : .clear, lineWidth: 1.5)
         }
         .contextMenu {
           Button("Delete…") { model.delete(message) }
@@ -320,7 +338,7 @@ struct ChatView: View {
         .fill(message.incoming ? theme.surface : theme.accent))
       .overlay {
         RoundedRectangle(cornerRadius: theme.bubbleRadius + 3)
-          .strokeBorder(model.keyboardNav && model.cursor == message.id ? theme.accent : .clear, lineWidth: 1.5)
+          .strokeBorder(model.keyboardNav && model.cursor == message.id || found == message.id ? theme.accent : .clear, lineWidth: 1.5)
           .padding(-3)
       }
       .contextMenu {

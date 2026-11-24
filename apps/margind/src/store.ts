@@ -365,6 +365,42 @@ export class Store {
       .map((r) => this.toMessage(r));
   }
 
+  // A chat opened at a search result: a few messages before it, then everything up to the
+  // newest, so new messages still arrive at the end. The latest page when it's already there.
+  historyAround(peer: string, id: string, context = 20): ChatMessage[] {
+    const latest = this.history(peer);
+    const target = this.db
+      .query<{ sent_at: number }, [string, string]>(
+        'SELECT sent_at FROM messages WHERE id = ? AND peer = ?',
+      )
+      .get(id, peer);
+    if (!target || latest.some((m) => m.id === id)) return latest;
+    const from = this.history(peer, target.sent_at, context)[0]?.sentAt ?? target.sent_at;
+    return this.db
+      .query<MessageRow, [string, number]>(
+        'SELECT * FROM messages WHERE peer = ? AND sent_at >= ? ORDER BY sent_at',
+      )
+      .all(peer, from)
+      .map((r) => this.toMessage(r));
+  }
+
+  // Messages whose text contains `query`, ignoring case, newest first. Bodies are sealed, so
+  // each is opened here; unsent ones have no text left to match.
+  search(query: string, limit = 50): ChatMessage[] {
+    const needle = query.toLocaleLowerCase();
+    const found: ChatMessage[] = [];
+    for (const row of this.db
+      .query<MessageRow, []>(
+        "SELECT * FROM messages WHERE state IS NOT 'unsent' ORDER BY sent_at DESC",
+      )
+      .iterate()) {
+      if (!this.open(row.body).toString().toLocaleLowerCase().includes(needle)) continue;
+      found.push(this.toMessage(row));
+      if (found.length === limit) break;
+    }
+    return found;
+  }
+
   // The newest message with each person, most recent conversation first.
   latest(): ChatMessage[] {
     const seen = new Set<string>();

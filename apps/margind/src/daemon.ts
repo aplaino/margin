@@ -423,10 +423,18 @@ export async function startDaemon(options: DaemonOptions) {
       case 'send':
         return chat.send(request.to, request.text);
       case 'history': {
-        const messages = store.history(request.with, request.before, request.limit);
+        const messages = request.around
+          ? store.historyAround(request.with, request.around)
+          : store.history(request.with, request.before, request.limit);
         write(socket, { type: 'history', with: request.with, messages });
         return undefined;
       }
+      // Only chats with current friends, as on the Chats tab.
+      case 'search':
+        return {
+          query: request.query,
+          messages: store.search(request.query).filter((m) => store.friend(m.peer)),
+        };
       case 'delete': {
         const message = store.message(request.id);
         if (!message) return undefined;
