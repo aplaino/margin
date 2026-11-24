@@ -1,5 +1,11 @@
 import AppKit
 import UserNotifications
+import os
+
+// What macOS answers about Margin's notifications, and any notification it refuses, so a Mac
+// that keeps using Margin's own alerts on macOS can be explained from the log (`log show
+// --predicate 'subsystem == "dev.margin.app" AND category == "notifications"'`). Never names or text.
+private let notificationLog = Logger(subsystem: "dev.margin.app", category: "notifications")
 
 // Whether macOS lets Margin show notifications, as System Settings → Notifications has it.
 enum NotificationAccess { case unknown, notAsked, allowed, off }
@@ -27,7 +33,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
   }
 
   func ask() {
-    center.requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in
+    center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
+      notificationLog.notice(
+        "asked: granted \(granted, privacy: .public), error \(error.map { "\($0)" } ?? "none", privacy: .public)")
       Task { @MainActor in self?.refresh() }
     }
   }
@@ -41,6 +49,10 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         case .authorized, .provisional: settings.alertStyle == .none ? .off : .allowed
         default: .off
         }
+      // Raw values: status 0 not asked, 1 denied, 2 authorized, 3 provisional; style 0 none,
+      // 1 banners, 2 alerts; alerts and center 0 unsupported, 1 off, 2 on.
+      notificationLog.notice(
+        "settings: status \(settings.authorizationStatus.rawValue, privacy: .public), style \(settings.alertStyle.rawValue, privacy: .public), alerts \(settings.alertSetting.rawValue, privacy: .public), center \(settings.notificationCenterSetting.rawValue, privacy: .public) -> \(String(describing: access), privacy: .public)")
       Task { @MainActor in
         self?.model?.notificationAccess = access
         done?()
@@ -64,7 +76,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     content.categoryIdentifier = "message"
     content.sound = message.sound ? .default : nil
     content.userInfo = ["handle": message.thread]
-    center.add(UNNotificationRequest(identifier: message.id, content: content, trigger: nil))
+    center.add(UNNotificationRequest(identifier: message.id, content: content, trigger: nil)) { error in
+      if let error { notificationLog.error("post failed: \(error, privacy: .public)") }
+    }
   }
 
   // A reply from a notification that margind turned down.
