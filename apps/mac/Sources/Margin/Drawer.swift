@@ -403,7 +403,7 @@ final class DrawerController {
       slideIn(peekPanel, to: peekFrame(), duration: 0.36)
       if !model.atTop { strip.orderFrontRegardless() }
     }
-    schedulePeekHide(after: 4)
+    schedulePeekHide(after: model.peek?.online == nil ? 4 : 3.5)
   }
 
   func schedulePeekHide(after seconds: TimeInterval) {
@@ -429,9 +429,13 @@ final class DrawerController {
     }
   }
 
+  // A message, or one friend online, opens their chat; several online opens Friends.
   func openPeek() {
     guard let handle = model.peek?.handle else { return }
-    openChat(handle)
+    guard handle.isEmpty else { return openChat(handle) }
+    model.peek = nil
+    expand(byHover: false, focus: false)
+    model.showTab(.friends)
   }
 
   // From the tab beside the strip, or a click on a macOS notification.

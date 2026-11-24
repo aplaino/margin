@@ -454,6 +454,17 @@ struct SettingsView: View {
             ? "Previews leave Margin’s encrypted store: macOS can show them on the lock screen and keeps them in Notification Center."
             : "The first words show beside the strip, where anyone looking at your screen can see them.")
       }
+      SettingsGroup("Friends coming online") {
+        Picker("Friends coming online", selection: $prefs.friendsOnline) {
+          Text("Off").tag("off")
+          Text("Close friends").tag("close")
+          Text("Everyone").tag("everyone")
+        }
+        .pickerStyle(.segmented).labelsHidden()
+        .padding(.vertical, 8)
+        .control("Friends coming online", choice: $prefs.friendsOnline, from: ["off", "close", "everyone"])
+      }
+      note("A quiet note beside the strip, at most once an hour for each friend and never for a quick reconnect.")
     }
     .onAppear { model.notifier.refresh() }
   }

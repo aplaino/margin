@@ -74,3 +74,43 @@ enum Alerts {
     text.count > length ? text.prefix(length) + "…" : text
   }
 }
+
+// Who coming online gets a note beside the strip (Settings → Notifications → Friends coming
+// online), kept quiet: not someone back within a quarter of an hour (sleep, flaky Wi-Fi), at
+// most once an hour each, nobody in the minute after Margin starts, reconnects or the Mac
+// wakes (everyone already online would look new), and at most three notes a minute.
+struct Arrivals {
+  static let flap: TimeInterval = 15 * 60
+  static let perFriend: TimeInterval = 60 * 60
+  static let perMinute = 3
+  static let settle: TimeInterval = 60
+  // Arrivals this close together show as one note.
+  static let batch: TimeInterval = 3
+
+  var wentOffline: [String: Date] = [:]
+  var shown: [String: Date] = [:]
+  var notes: [Date] = []
+  var quietUntil = Date.distantPast
+
+  mutating func settle(from now: Date) { quietUntil = now.addingTimeInterval(Self.settle) }
+
+  mutating func left(_ handle: String, at now: Date) { wentOffline[handle] = now }
+
+  // Whether this friend coming online is worth a note.
+  mutating func arrived(_ handle: String, at now: Date) -> Bool {
+    let away = wentOffline.removeValue(forKey: handle)
+    if now < quietUntil { return false }
+    if let away, now.timeIntervalSince(away) < Self.flap { return false }
+    if let last = shown[handle], now.timeIntervalSince(last) < Self.perFriend { return false }
+    return true
+  }
+
+  // One note for these (gathered over `batch`), if the minute's allowance has room.
+  mutating func show(_ handles: [String], at now: Date) -> Bool {
+    notes.removeAll { now.timeIntervalSince($0) >= 60 }
+    guard !handles.isEmpty, notes.count < Self.perMinute else { return false }
+    notes.append(now)
+    for handle in handles { shown[handle] = now }
+    return true
+  }
+}

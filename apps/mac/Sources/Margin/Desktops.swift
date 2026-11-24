@@ -51,9 +51,8 @@ enum Desktops {
   // window server's list of displays. With "Displays have separate Spaces" off there's one
   // entry, "Main", for every display.
   static func fullScreen(display: String, in list: [[String: Any]]) -> Bool {
-    let entry = list.first { ($0["Display Identifier"] as? String) == display } ?? list.first {
-      ($0["Display Identifier"] as? String) == "Main"
-    }
+    let id = { (entry: [String: Any]) in (entry["Display Identifier"] as? String)?.uppercased() }
+    let entry = list.first { id($0) == display.uppercased() } ?? (list.count == 1 && id(list[0]) == "MAIN" ? list[0] : nil)
     return (entry?["Current Space"] as? [String: Any])?["type"] as? Int == 4
   }
 

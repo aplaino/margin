@@ -59,5 +59,9 @@ import Testing
     // "Displays have separate Spaces" off: one entry for every display.
     #expect(Desktops.fullScreen(display: "37D8832A", in: [["Display Identifier": "Main", "Current Space": app]]))
     #expect(!Desktops.fullScreen(display: "37D8832A", in: []))
+    #expect(Desktops.fullScreen(display: "b1c2", in: two))
+    // "Main" stands for every display only when it's the only entry.
+    let mixed: [[String: Any]] = [["Display Identifier": "Main", "Current Space": app], two[0]]
+    #expect(!Desktops.fullScreen(display: "FFFF", in: mixed))
   }
 }

@@ -40,6 +40,9 @@ final class AppModel {
   // The message tab beside the strip, while it's out.
   var peek: Peek?
   @ObservationIgnored private var lastAlert: [String: Date] = [:]
+  // Friends coming online: the rules, and who's gathered for the next note.
+  @ObservationIgnored private var arrivals = Arrivals()
+  @ObservationIgnored private var arriving: [String] = []
   var moveError: String?
   // The how-it-works pages, opened again from Settings.
   var showGuide = false
@@ -195,6 +198,10 @@ final class AppModel {
         self?.timeZone = .current
       }
     }
+    arrivals.settle(from: .now)
+    NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) {
+      [weak self] _ in MainActor.assumeIsolated { self?.arrivals.settle(from: .now) }
+    }
     client.start()
     notifier.start(self)
   }
@@ -213,6 +220,8 @@ final class AppModel {
     case .selfInfo(let info):
       // Too old for the server: look for an update straight away.
       if info.connection == "update-required", me?.connection != "update-required" { updates.checkInBackground() }
+      // Back online: everyone's presence arrives again, and none of it is anyone arriving.
+      if info.connection == "online", me?.connection != "online" { arrivals.settle(from: .now) }
       me = info
       if info.connection == "signed-out" { setupStep = prefs.setupDone ? .signIn : setupStep }
     case .loginCode(let code, let uri):
@@ -237,7 +246,9 @@ final class AppModel {
     case .settings(let s): settings = s
     case .tools(let t): tools = t
     case .roster(let r):
+      let wasOnline = Dictionary(friends.map { ($0.handle, $0.isOnline) }, uniquingKeysWith: { first, _ in first })
       friends = r
+      noticeArrivals(wasOnline)
       if let selected, !r.contains(where: { $0.handle == selected }) { self.selected = nil }
       readOpenChat()
     case .requests(let r): requests = r
@@ -356,6 +367,55 @@ final class AppModel {
   func markRead(_ handle: String) {
     request("read", ["handle": handle])
     notifier.removeThread(handle)
+  }
+
+  // Settings → Notifications → Friends coming online: who went offline, and who came online
+  // worth a note. The first list from margind is where everyone already was.
+  private func noticeArrivals(_ wasOnline: [String: Bool]) {
+    guard !wasOnline.isEmpty else { return }
+    let now = Date.now
+    let start = arriving.isEmpty
+    for friend in friends {
+      guard let was = wasOnline[friend.handle], was != friend.isOnline else { continue }
+      if !friend.isOnline {
+        arrivals.left(friend.handle, at: now)
+      } else if wantsArrival(friend.handle), arrivals.arrived(friend.handle, at: now) {
+        arriving.append(friend.handle)
+      }
+    }
+    guard start, !arriving.isEmpty else { return }
+    Task {
+      try? await Task.sleep(for: .seconds(Arrivals.batch))
+      showArrivals()
+    }
+  }
+
+  private func wantsArrival(_ handle: String) -> Bool {
+    switch prefs.friendsOnline {
+    case "everyone": true
+    case "close": settings?.closeFriends.contains(handle) ?? false
+    default: false
+    }
+  }
+
+  // One note for everyone gathered who's still online. A message showing wins, and nothing
+  // shows while alerts are paused or the drawer is open.
+  private func showArrivals() {
+    let handles = arriving.filter { friend($0)?.isOnline == true }
+    arriving = []
+    guard let first = handles.first.flatMap(friend), !prefs.alertsPaused, !expanded, peek == nil || peek?.online != nil,
+      arrivals.show(handles, at: .now)
+    else { return }
+    let names = handles.compactMap(friend).map(\.displayName)
+    let line =
+      switch names.count {
+      case 1: String(localized: "\(names[0]) is online")
+      case 2: String(localized: "\(names[0]) and \(names[1]) are online")
+      default: String(localized: "\(names[0]), \(names[1]) and \(names.count - 2) more are online")
+      }
+    peek = Peek(
+      id: UUID().uuidString, handle: names.count == 1 ? first.handle : "", name: line,
+      preview: names.count == 1 ? Alerts.doing(first.presence) : nil, online: first.presence.status)
   }
 
   // A chat on screen leaves nothing in it unread: when a message arrives in it, and when the

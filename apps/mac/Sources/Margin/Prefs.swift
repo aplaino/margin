@@ -48,6 +48,8 @@ final class Prefs {
   var reportsAnsweredAt: Date? { didSet { defaults.set(reportsAnsweredAt, forKey: "reportsAnsweredAt") } }
   // Thin the strip to a faint hairline while nobody's online and nothing is unread.
   var fadeWhenQuiet: Bool { didSet { defaults.set(fadeWhenQuiet, forKey: "fadeWhenQuiet") } }
+  // A note beside the strip when a friend comes online: "off", "close" friends, or "everyone".
+  var friendsOnline: String { didSet { defaults.set(friendsOnline, forKey: "friendsOnline") } }
   // Take the strip away while its display shows a full-screen app (Screen edge only).
   var hideInFullScreen: Bool { didSet { defaults.set(hideInFullScreen, forKey: "hideInFullScreen") } }
   // The unit your token total is shown in, or scientific notation instead.
@@ -93,6 +95,7 @@ final class Prefs {
     reportsAnsweredAt = defaults.object(forKey: "reportsAnsweredAt") as? Date
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
     hideInFullScreen = defaults.bool(forKey: "hideInFullScreen")
+    friendsOnline = defaults.string(forKey: "friendsOnline") ?? "off"
     tokenUnit = TokenUnit(rawValue: defaults.string(forKey: "tokenUnit") ?? "") ?? .m
     scientificTokens = defaults.bool(forKey: "scientificTokens")
     // Only Margin's own choice, not the Mac's languages; System Settings may store "es-ES" for "es".

@@ -5,9 +5,13 @@ struct Peek: Equatable {
   var handle: String
   var name: String
   var preview: String?
+  // A friend coming online rather than a message: their status, for the dot. `name` is the
+  // whole line ("Maya is online"), and `handle` is empty when it names several.
+  var online: String? = nil
 }
 
-// The tab that slides out beside the strip, or down from the menu bar, when a message arrives.
+// The tab that slides out beside the strip, or down from the menu bar, when a message arrives,
+// or, quieter, when a friend comes online.
 struct PeekView: View {
   var onOpen: () -> Void
   @Environment(AppModel.self) private var model
@@ -17,9 +21,14 @@ struct PeekView: View {
     if let peek = model.peek {
       Button(action: onOpen) {
         HStack(spacing: 8) {
-          Circle().fill(theme.unread).frame(width: 7, height: 7)
-          Text(peek.name).font(theme.bodyBold).lineLimit(1).fixedSize()
-          if let preview = peek.preview {
+          if let status = peek.online {
+            PresenceDot(status: status, size: theme.rowDot)
+            Text(verbatim: peek.name).font(theme.small).lineLimit(1).fixedSize()
+          } else {
+            Circle().fill(theme.unread).frame(width: 7, height: 7)
+            Text(peek.name).font(theme.bodyBold).lineLimit(1).fixedSize()
+          }
+          if let preview = peek.preview, !preview.isEmpty {
             Text(preview).font(theme.small).foregroundStyle(theme.secondary).lineLimit(1)
           }
           Spacer(minLength: 0)
@@ -31,7 +40,7 @@ struct PeekView: View {
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
-      .accessibilityLabel("New message from \(peek.name). Open chat.")
+      .accessibilityLabel(peek.online == nil ? "New message from \(peek.name). Open chat." : "\(peek.name).")
     }
   }
 
