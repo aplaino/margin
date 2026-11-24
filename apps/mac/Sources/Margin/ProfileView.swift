@@ -115,8 +115,10 @@ struct ProfileView: View {
       SectionLabel("Last 14 days").padding(.leading, 2)
       if let daily = stats?.daily, !daily.isEmpty {
         let peak = max(daily.max() ?? 0, 1)
+        // Days as categories: a bar's width ratio is a share of its category's slot, and a
+        // numeric axis has no slots, so every bar would be drawn zero wide.
         Chart(Array(daily.enumerated()), id: \.offset) { day, tokens in
-          BarMark(x: .value("Day", day), y: .value("Tokens", tokens), width: .ratio(0.7))
+          BarMark(x: .value("Day", String(day)), y: .value("Tokens", tokens), width: .ratio(0.7))
             .foregroundStyle(day == daily.count - 1 ? theme.accent : theme.accent.opacity(0.45))
             .cornerRadius(2)
         }
