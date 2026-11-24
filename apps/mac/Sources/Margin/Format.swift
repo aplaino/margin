@@ -144,14 +144,23 @@ enum Format {
   // In the time zone the Mac is in now, so a message's time follows you when you travel.
   static func time(_ ms: Double, in zone: TimeZone = .current, now: Date = .now) -> String {
     let date = Date(timeIntervalSince1970: ms / 1000)
-    let today = sameDay(date, now, in: zone)
+    var calendar = Calendar.current
+    calendar.timeZone = zone
+    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day ?? 0
     let formatter = DateFormatter()
     formatter.timeZone = zone
-    formatter.doesRelativeDateFormatting = true
-    formatter.dateStyle = today ? .none : .short
-    formatter.timeStyle = .short
-    let time = formatter.string(from: date)
-    return today ? String(localized: "Today \(time)") : time
+    if days <= 1 {
+      formatter.doesRelativeDateFormatting = true
+      formatter.dateStyle = days == 0 ? .none : .short
+      formatter.timeStyle = .short
+      let time = formatter.string(from: date)
+      return days == 0 ? String(localized: "Today \(time)") : time
+    }
+    // As in Messages: the weekday within the last week, then the date (with the year, from
+    // another year).
+    let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+    formatter.setLocalizedDateFormatFromTemplate(days < 7 ? "EEEEjmm" : sameYear ? "EEEMMMdjmm" : "EEEMMMdyjmm")
+    return formatter.string(from: date)
   }
 
   private static func sameDay(_ a: Date, _ b: Date, in zone: TimeZone) -> Bool {
@@ -186,6 +195,16 @@ enum Format {
     formatter.dateStyle = today ? .none : .short
     formatter.timeStyle = today ? .short : .none
     return formatter.string(from: date)
+  }
+
+  // A new stretch of conversation starts with the first message, after an hour's quiet, or on
+  // a new day; the chat shows when each began.
+  static let segmentGap: Double = 3_600_000
+
+  static func startsSegment(_ ms: Double, after previous: Double?, in zone: TimeZone = .current) -> Bool {
+    guard let previous else { return true }
+    let date = Date(timeIntervalSince1970: ms / 1000)
+    return ms - previous >= segmentGap || !sameDay(Date(timeIntervalSince1970: previous / 1000), date, in: zone)
   }
 
   // A search result on one line: from a few words before the match ("…" when cut), with the

@@ -1,8 +1,8 @@
 #!/bin/sh
 # Builds, signs and publishes a Margin.app release; installed copies update themselves.
 #   bun run release
-# Needs a clean, committed tree. The build number is the commit count, so each release
-# is newer than the last. Signing uses the Sparkle key in this Mac's Keychain (account
+# Needs a clean, committed tree, pushed. The build number is the commit count, so each release
+# is newer than the last. It also goes on GitHub's Releases page (tag vX.Y.Z) with its changes. Signing uses the Sparkle key in this Mac's Keychain (account
 # "margin"); uploading uses the release token saved there by the server setup.
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -12,6 +12,12 @@ export MARGIN_GITHUB_CLIENT_ID=${MARGIN_GITHUB_CLIENT_ID:-Ov23lih46hAtRfO5kTd3}
 
 if [ -n "$(git -C "$root" status --porcelain)" ]; then
   echo "commit your changes first: a release is built from what's committed" >&2
+  exit 1
+fi
+# Each release is tagged on GitHub at the commit it was built from, so that commit has to be there.
+git -C "$root" fetch -q origin
+if [ -z "$(git -C "$root" branch -r --contains HEAD)" ]; then
+  echo "push first: the GitHub release is tagged at this commit" >&2
   exit 1
 fi
 # Every string in the app translated, and the catalog in step with the code, so a release
@@ -43,4 +49,20 @@ echo
 curl -fsS -X POST "$server/updates/releases/$MARGIN_BUILD/dmg" -H @"$headers" \
   -H "content-type: application/x-apple-diskimage" --data-binary @"$root/apps/mac/build/Margin.dmg"
 echo
+
+# The same build on GitHub's Releases page, tagged vX.Y.Z, with what changed since the last one
+# (the commits' own subjects; merges left out).
+previous=$(gh release view --json tagName -q .tagName 2>/dev/null || true)
+if [ -n "$previous" ]; then
+  git -C "$root" fetch -q origin tag "$previous"
+  changes=$(git -C "$root" log --no-merges --format='- %s' "$previous..HEAD")
+else
+  changes=$(git -C "$root" log --no-merges --format='- %s' -n 20)
+fi
+build="$root/apps/mac/build"
+cp "$zip" "$build/Margin-$MARGIN_VERSION.zip"
+cp "$build/Margin.dmg" "$build/Margin-$MARGIN_VERSION.dmg"
+gh release create "v$MARGIN_VERSION" --target "$(git -C "$root" rev-parse HEAD)" \
+  --title "Margin $MARGIN_VERSION" --notes "$(printf '%s — %s\n\n%s\n' "$MARGIN_VERSION" "$(date '+%b %-d, %Y')" "${changes:-- Maintenance}")" \
+  "$build/Margin-$MARGIN_VERSION.zip" "$build/Margin-$MARGIN_VERSION.dmg"
 echo "released Margin $MARGIN_VERSION (build $MARGIN_BUILD): $server/download"

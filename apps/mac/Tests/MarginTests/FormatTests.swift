@@ -14,6 +14,38 @@ import Testing
     #expect(Format.tokens(2_500_000_000) == "2.5B")
   }
 
+  // A stretch of conversation begins with the first message, after an hour's quiet, or at
+  // midnight where the Mac is.
+  @Test func segments() {
+    let london = TimeZone(identifier: "Europe/London")!
+    let noon = 1_795_435_200_000.0  // 12:00 in London
+    let minute = 60_000.0
+    #expect(Format.startsSegment(noon, after: nil, in: london))
+    #expect(!Format.startsSegment(noon + 59 * minute, after: noon, in: london))
+    #expect(Format.startsSegment(noon + 60 * minute, after: noon, in: london))
+    let beforeMidnight = noon + 11 * 60 * minute + 50 * minute  // 23:50
+    #expect(Format.startsSegment(beforeMidnight + 20 * minute, after: beforeMidnight, in: london))
+  }
+
+  // Today, then the weekday within the last week, then the date; the year only from another year.
+  @Test func separatorTimes() {
+    let london = TimeZone(identifier: "Europe/London")!
+    let now = Date(timeIntervalSince1970: 1_795_435_200)  // Mon 23 Nov 2026, 12:00 in London
+    let day = 86_400_000.0
+    let at = now.timeIntervalSince1970 * 1000
+    func named(_ template: String, _ ms: Double) -> String {
+      let f = DateFormatter()
+      f.timeZone = london
+      f.setLocalizedDateFormatFromTemplate(template)
+      return f.string(from: Date(timeIntervalSince1970: ms / 1000))
+    }
+    #expect(Format.time(at - 60_000, in: london, now: now).hasPrefix("Today"))
+    #expect(Format.time(at - 3 * day, in: london, now: now).contains(named("EEEE", at - 3 * day)))
+    let month = Format.time(at - 30 * day, in: london, now: now)
+    #expect(month.contains(named("MMM", at - 30 * day)) && !month.contains("2026"))
+    #expect(Format.time(at - 400 * day, in: london, now: now).contains("2025"))
+  }
+
   // The match keeps its own case and is the only bold run; a long lead-in is cut to "…".
   @Test func searchSnippet() {
     let short = Format.snippet("the Big\nfixtures", matching: "big")

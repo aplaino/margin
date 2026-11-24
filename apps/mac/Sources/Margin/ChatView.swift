@@ -10,6 +10,9 @@ struct ChatView: View {
   @State private var showingSafety = false
   // The search result this chat was opened at, outlined for a moment.
   @State private var found: String?
+  private static let end = "end"
+  // Whether the bottom of the chat is in view (or nearly), as you last scrolled.
+  @State private var atBottom = true
 
   var body: some View {
     let friend = model.friend(handle)
@@ -69,22 +72,41 @@ struct ChatView: View {
 
       ScrollViewReader { proxy in
         ScrollView {
-          VStack(spacing: 6) {
-            if let first = messages.first {
-              Text(Format.time(first.sentAt, in: model.timeZone)).font(theme.font(10.5)).foregroundStyle(theme.tertiary)
-                .padding(.bottom, 4)
+          VStack(spacing: 0) {
+            VStack(spacing: 6) {
+              ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                // When each stretch of conversation began, as in Messages.
+                if Format.startsSegment(message.sentAt, after: index > 0 ? messages[index - 1].sentAt : nil, in: model.timeZone) {
+                  Text(Format.time(message.sentAt, in: model.timeZone)).font(theme.font(10.5)).foregroundStyle(theme.tertiary)
+                    .padding(.top, index > 0 ? 8 : 0).padding(.bottom, 4)
+                }
+                bubble(message).id(message.id)
+              }
             }
-            ForEach(messages) { message in
-              bubble(message).id(message.id)
-            }
+            .padding(12)
+            // Below the padding, so scrolling here clears the fade with the last status line.
+            Color.clear.frame(height: 0).id(ChatView.end)
           }
-          .padding(12)
         }
         .edgeFade(10)
         .defaultScrollAnchor(.bottom)
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+          geometry.contentOffset.y + geometry.containerSize.height >= geometry.contentSize.height - 60
+        } action: { _, near in
+          atBottom = near
+        }
         .onAppear { jump(proxy, in: messages) }
+        // Your own message always brings the chat to the bottom; theirs, and a status line
+        // under yours, only while you're there already, not while you've scrolled up to read.
         .onChange(of: messages.count) {
-          if !jump(proxy, in: messages), let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
+          if jump(proxy, in: messages) { return }
+          if atBottom || messages.last?.incoming == false { proxy.scrollTo(ChatView.end, anchor: .bottom) }
+        }
+        .onChange(of: messages.last?.state) {
+          if atBottom { proxy.scrollTo(ChatView.end, anchor: .bottom) }
+        }
+        .onChange(of: messages.last?.preview?.url) {
+          if atBottom { proxy.scrollTo(ChatView.end, anchor: .bottom) }
         }
         .onChange(of: model.cursor) {
           if let cursor = model.cursor { proxy.scrollTo(cursor) }
