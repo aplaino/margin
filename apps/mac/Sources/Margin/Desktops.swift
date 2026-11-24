@@ -47,6 +47,26 @@ enum Desktops {
     }
   }
 
+  // Whether a display is showing a full-screen app (its current desktop has type 4), from the
+  // window server's list of displays. With "Displays have separate Spaces" off there's one
+  // entry, "Main", for every display.
+  static func fullScreen(display: String, in list: [[String: Any]]) -> Bool {
+    let entry = list.first { ($0["Display Identifier"] as? String) == display } ?? list.first {
+      ($0["Display Identifier"] as? String) == "Main"
+    }
+    return (entry?["Current Space"] as? [String: Any])?["type"] as? Int == 4
+  }
+
+  static func fullScreen(_ screen: NSScreen) -> Bool {
+    guard let connection, let displaySpaces,
+      let list = displaySpaces(connection)?.takeRetainedValue() as? [[String: Any]],
+      let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+      let uuid = CGDisplayCreateUUIDFromDisplayID(number)?.takeRetainedValue(),
+      let id = CFUUIDCreateString(nil, uuid) as String?
+    else { return false }
+    return fullScreen(display: id, in: list)
+  }
+
   // All of a window's desktops (mask 7: the current one, the others and full-screen ones).
   static func of(_ window: NSWindow) -> [Int] {
     guard let connection, let spacesForWindows else { return [] }

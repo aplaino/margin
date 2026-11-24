@@ -119,6 +119,9 @@ final class DrawerController {
         drawerLog.notice("desktop changed: \(self.stateLine, privacy: .public)")
         if self.statusItem != nil { self.menuBarVisibilityChanged() }
         self.repairDesktops()
+        // Into or out of a full-screen app; again once the switch has settled.
+        self.place()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.place() }
       }
     }
     center.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main) {
@@ -138,6 +141,8 @@ final class DrawerController {
       MainActor.assumeIsolated {
         guard let self else { return }
         self.repairDesktops()
+        // Showing over a full-screen app it should hide from, or hidden after leaving one.
+        if !self.inMenuBar, self.strip.isVisible == self.hiddenForFullScreen { self.place() }
         guard self.strip.isVisible, !self.model.expanded else { return }
         if !NSScreen.screens.contains(where: { $0.frame.intersects(self.strip.frame) }) { self.place() }
       }
@@ -167,7 +172,7 @@ final class DrawerController {
     withObservationTracking {
       _ = (
         model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey,
-        model.prefs.menuBar, model.prefs.alwaysDark
+        model.prefs.menuBar, model.prefs.alwaysDark, model.prefs.hideInFullScreen
       )
     } onChange: { [weak self] in
       DispatchQueue.main.async {
@@ -245,13 +250,20 @@ final class DrawerController {
     return NSRect(x: x, y: y, width: width, height: height)
   }
 
+  // Settings → Position → Hide in full-screen apps, and the strip's display showing one. Messages
+  // still count as unread, and ⌥M still opens the drawer over it.
+  var hiddenForFullScreen: Bool {
+    !inMenuBar && model.prefs.hideInFullScreen && screen.map(Desktops.fullScreen) == true
+  }
+
   // An open drawer stays where it opened while the strip or menu bar item changes size (a
   // friend coming online, a chat being read); it moves only with the screen or placement.
   func place(movingDrawer: Bool = false) {
     if model.atTop != inMenuBar { model.atTop = inMenuBar }
     guard let screen else { return }
-    if inMenuBar {
+    if inMenuBar || hiddenForFullScreen {
       strip.orderOut(nil)
+      if hiddenForFullScreen { model.peek = nil }
     } else {
       strip.setFrame(stripFrame(on: screen), display: true)
       if !strip.isVisible { strip.orderFrontRegardless() }
@@ -383,7 +395,7 @@ final class DrawerController {
   #endif
 
   func showPeek() {
-    guard !model.expanded else {
+    guard !model.expanded, !hiddenForFullScreen else {
       model.peek = nil
       return
     }

@@ -392,7 +392,8 @@ struct SettingsView: View {
         }
       } else {
         SettingsGroup {
-          switchRow("Fade when nobody’s online", $prefs.fadeWhenQuiet, last: !(prefs.position != nil || prefs.edge != "right"))
+          switchRow("Fade when nobody’s online", $prefs.fadeWhenQuiet)
+          switchRow("Hide in full-screen apps", $prefs.hideInFullScreen, last: !(prefs.position != nil || prefs.edge != "right"))
           if prefs.position != nil || prefs.edge != "right" {
             SettingsRow(label: "Position", last: true) {
               Button("Reset") { prefs.resetPosition() }.buttonStyle(.link)
