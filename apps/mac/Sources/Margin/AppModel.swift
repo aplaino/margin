@@ -412,12 +412,13 @@ final class AppModel {
   }
 
   // One note for everyone gathered who's still online. A message showing wins, and nothing
-  // shows while alerts are paused or the drawer is open.
+  // shows while alerts are paused or the drawer is open. It follows Notifications → Show as
+  // message tabs do: none on Glow only, and what they're doing only on Preview.
   private func showArrivals() {
     let handles = arriving.filter { friend($0)?.isOnline == true }
     arriving = []
-    guard let first = handles.first.flatMap(friend), !prefs.alertsPaused, !expanded, peek == nil || peek?.online != nil,
-      arrivals.show(handles, at: .now)
+    guard let first = handles.first.flatMap(friend), !prefs.alertsPaused, prefs.alert != "glow", !expanded,
+      peek == nil || peek?.online != nil, arrivals.show(handles, at: .now)
     else { return }
     let names = handles.compactMap(friend).map(\.displayName)
     let line =
@@ -428,7 +429,8 @@ final class AppModel {
       }
     peek = Peek(
       id: UUID().uuidString, handle: names.count == 1 ? first.handle : "", name: line,
-      preview: names.count == 1 ? Alerts.doing(first.presence) : nil, online: first.presence.status)
+      preview: names.count == 1 && prefs.alert == "preview" ? Alerts.doing(first.presence) : nil,
+      online: first.presence.status)
   }
 
   // A chat on screen leaves nothing in it unread: when a message arrives in it, and when the
