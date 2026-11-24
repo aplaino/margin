@@ -134,6 +134,9 @@ struct ResultData: Decodable {
   var safety: String?
   // The reports waiting on this Mac, exactly as they'd be sent.
   var reports: [WaitingReport]?
+  // Messages found by search on the Chats tab, and what was searched for.
+  var query: String?
+  var messages: [ChatMessage]?
 }
 
 struct WaitingReport: Decodable {

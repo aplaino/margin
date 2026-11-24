@@ -106,6 +106,13 @@ export const Request = v.variant('op', [
     with: Handle,
     before: v.optional(Timestamp),
     limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(200))),
+    // Opens the chat at this message (a search result) instead of the latest page.
+    around: v.optional(MessageId),
+  }),
+  // Messages on this Mac containing `query`, for search on the Chats tab. Never leaves the Mac.
+  v.object({
+    op: v.literal('search'),
+    query: v.pipe(v.string(), v.minLength(1), v.maxLength(100), NoControlText),
   }),
   HandleOp('read'),
   HandleOp('chat.delete'),

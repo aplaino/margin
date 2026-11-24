@@ -339,6 +339,18 @@ describe('two users, two daemons, one server', () => {
     await maya.app.until(
       (p) => p.type === 'message' && p.message.text === 'nice, how fast is it now?\nbenchmarks?',
     );
+
+    // Search on the Chats tab finds it on this Mac, and the chat opens at it.
+    const found = (await leo.app.request({ op: 'search', query: 'PARSER' })) as {
+      query: string;
+      messages: { id: string; peer: string }[];
+    };
+    expect(found.query).toBe('PARSER');
+    expect(found.messages.map((m) => [m.id, m.peer])).toEqual([[sent.id, 'maya']]);
+    const opened = leo.app.next((p) => p.type === 'history' && p.with === 'maya');
+    await leo.app.request({ op: 'history', with: 'maya', around: sent.id });
+    const history = await opened;
+    expect(history.type === 'history' && history.messages.some((m) => m.id === sent.id)).toBe(true);
   });
 
   test('a message the friend can’t read is sent again under a new session', async () => {

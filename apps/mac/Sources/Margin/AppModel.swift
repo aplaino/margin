@@ -66,6 +66,18 @@ final class AppModel {
   var menuBarHidden = false
   var tab: Tab = .friends
   var chatWith: String?
+  // Search on the Chats tab: what's typed (kept while a chat opened from it is open, as in
+  // Messages), the messages found and the search they answer.
+  var chatSearch = ""
+  var searchResults: [ChatMessage] = []
+  var searchedFor: String?
+  // Asks the Chats tab to put the keyboard in its search field (⌘F).
+  var wantsSearchFocus = false
+  // New chat on the Chats tab: a friend picker, and what it's filtered by.
+  var newChat = false
+  var newChatFilter = ""
+  // A message to scroll to and outline briefly once its chat has it (a search result).
+  var jumpTo: String?
   // The profile open (a friend's, or yours); a chat opened from it comes back to it.
   var profileOf: String?
   // GitHub profile pictures, fetched once each (URLCache keeps them across launches).
@@ -103,6 +115,39 @@ final class AppModel {
   // Friends you've talked to, most recent conversation first.
   var chats: [Friend] {
     friends.filter { latest[$0.handle] != nil }.sorted { latest[$0.handle]!.sentAt > latest[$1.handle]!.sentAt }
+  }
+
+  // What's sent to margind, which takes up to 100 characters.
+  var searchQuery: String { String(chatSearch.trimmingCharacters(in: .whitespaces).prefix(100)) }
+  var searching: Bool { !searchQuery.isEmpty }
+
+  // Friends whose name or handle has the search in it, by name.
+  var searchFriends: [Friend] {
+    let query = searchQuery
+    return byName(friends.filter {
+      $0.displayName.localizedCaseInsensitiveContains(query) || $0.handle.localizedCaseInsensitiveContains(query)
+    })
+  }
+
+  // Everyone you could message, by name, narrowed by the New chat filter.
+  var newChatFriends: [Friend] {
+    let filter = newChatFilter.trimmingCharacters(in: .whitespaces)
+    return byName(friends.filter {
+      filter.isEmpty || $0.displayName.localizedCaseInsensitiveContains(filter)
+        || $0.handle.localizedCaseInsensitiveContains(filter)
+    })
+  }
+
+  private func byName(_ list: [Friend]) -> [Friend] {
+    list.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+  }
+
+  // What ↑/↓ moves through on the Chats tab: the New chat picker, search results (friends, then
+  // messages as "m:" and their id), or the chats.
+  var chatsList: [String] {
+    if newChat { return newChatFriends.map(\.handle) }
+    if searching { return searchFriends.map(\.handle) + searchResults.map { "m:\($0.id)" } }
+    return chats.map(\.handle)
   }
 
   // In a tool first, then online, then idle; offline listed apart.
@@ -217,6 +262,11 @@ final class AppModel {
       if ok, let list = data?.blocked { blocked = list }
       if ok, let handle = data?.handle, let number = data?.safety { safety[handle] = number }
       if ok, op == "reports.list" { waitingReports = data?.reports ?? [] }
+      // Only the answer to what's in the field now; an older search can answer late.
+      if ok, op == "search", let query = data?.query, query == searchQuery {
+        searchResults = data?.messages ?? []
+        searchedFor = query
+      }
       // A friend you removed or blocked has no chat to stay in.
       if ok, op == "friend.remove" || op == "block" {
         chatWith = nil
@@ -301,7 +351,7 @@ final class AppModel {
 
   // ↑/↓ through the list on screen: friends, or chats.
   func moveSelection(_ delta: Int) {
-    let handles = (tab == .chats ? chats : onlineFriends + offlineFriends).map(\.handle)
+    let handles = tab == .chats ? chatsList : (onlineFriends + offlineFriends).map(\.handle)
     guard !handles.isEmpty else { return }
     // The first press after using the mouse shows where you are rather than moving on.
     if !keyboardNav, let selected, handles.contains(selected) {
@@ -376,6 +426,7 @@ final class AppModel {
   func showTab(_ next: Tab) {
     chatWith = nil
     profileOf = nil
+    newChat = false
     showThemeEditor = false
     settingsPage = nil
     cursor = nil
@@ -421,14 +472,57 @@ final class AppModel {
     }
   }
 
-  func openChat(_ handle: String) {
+  // `at` opens it on that message instead of the newest (a search result).
+  func openChat(_ handle: String, at message: String? = nil) {
     if peek?.handle == handle { peek = nil }
     if profileOf != handle { profileOf = nil }
-    selected = handle
+    if message == nil { selected = handle }
+    newChat = false
+    jumpTo = message
     chatWith = handle
     cursor = nil
-    request("history", ["with": handle])
+    request("history", message.map { ["with": handle, "around": $0] } ?? ["with": handle])
     markRead(handle)
+  }
+
+  // Return on the Chats tab: the outlined row, or from a field with nothing outlined, the first.
+  func openSelected(orFirst: Bool) {
+    let list = chatsList
+    guard let item = keyboardNav ? selected.flatMap({ list.contains($0) ? $0 : nil }) : (orFirst ? list.first : nil)
+    else { return }
+    if item.hasPrefix("m:") {
+      let id = String(item.dropFirst(2))
+      guard let message = searchResults.first(where: { $0.id == id }) else { return }
+      selected = item
+      openChat(message.peer, at: id)
+    } else {
+      openChat(item)
+    }
+  }
+
+  func startNewChat() {
+    showTab(.chats)
+    newChatFilter = ""
+    newChat = true
+    selected = nil
+  }
+
+  func searchChats() {
+    showTab(.chats)
+    wantsSearchFocus = true
+  }
+
+  // Esc on the Chats tab: out of New chat, then out of search; false when there's neither.
+  func leaveChatsMode() -> Bool {
+    if newChat {
+      newChat = false
+    } else if !chatSearch.isEmpty {
+      chatSearch = ""
+    } else {
+      return false
+    }
+    selected = nil
+    return true
   }
 
   func updateSettings(_ change: (inout PrivacySettings) -> Void) {

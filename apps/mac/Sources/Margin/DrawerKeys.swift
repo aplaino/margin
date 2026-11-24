@@ -5,8 +5,9 @@ import Carbon.HIToolbox
 extension DrawerController {
   // ↑/↓ through friends or chats, Return to chat, Tab or ⌘1–4 between tabs. On Add and Settings ↑/↓
   // outline a control, Space or Return presses it and ←/→ change it. In a chat, ↑ from an
-  // empty field outlines your last message and ⌘C copies it. While you're typing in a field,
-  // keys stay with the field.
+  // empty field outlines your last message and ⌘C copies it. ⌘F searches chats and ⌘N starts
+  // one. While you're typing in a field, keys stay with the field (but for ↑/↓ and Return under
+  // the Chats search).
   func key(_ event: NSEvent) -> Bool {
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
     let field = panel.firstResponder as? NSTextView
@@ -14,6 +15,11 @@ extension DrawerController {
       let key = event.charactersIgnoringModifiers?.lowercased()
       if key == "c", field == nil, let message = model.cursorMessage {
         model.copy(message)
+        return true
+      }
+      // Search and New chat, as in Messages.
+      if key == "f" || key == "n", !model.needsSetup, !model.showGuide {
+        if key == "f" { model.searchChats() } else { model.startNewChat() }
         return true
       }
       guard let digit = key.flatMap(Int.init), (1...4).contains(digit) else { return false }
@@ -35,6 +41,20 @@ extension DrawerController {
       }
       return true
     }
+    // From the search or New chat field, ↑/↓ and Return reach the list below it, and Esc
+    // leaves the field and the search (or New chat) at once.
+    if field != nil, model.tab == .chats {
+      switch Int(event.keyCode) {
+      case kVK_UpArrow: model.moveSelection(-1)
+      case kVK_DownArrow: model.moveSelection(1)
+      case kVK_Return, kVK_ANSI_KeypadEnter: model.openSelected(orFirst: true)
+      case kVK_Escape:
+        panel.makeFirstResponder(nil)
+        _ = model.leaveChatsMode()
+      default: return false
+      }
+      return true
+    }
     if field != nil {
       // Esc leaves a field on Add or Settings without closing the drawer.
       guard event.keyCode == kVK_Escape else { return false }
@@ -51,7 +71,7 @@ extension DrawerController {
     // Return does what a click does: a friend's profile on Friends, the chat on Chats.
     case kVK_Return where list, kVK_ANSI_KeypadEnter where list:
       guard model.keyboardNav, let handle = model.selected else { return false }
-      if model.tab == .chats { model.openChat(handle) } else { model.openProfile(handle) }
+      if model.tab == .chats { model.openSelected(orFirst: false) } else { model.openProfile(handle) }
     case kVK_UpArrow:
       model.moveCursor(-1)
     case kVK_DownArrow:
@@ -125,7 +145,7 @@ extension DrawerController {
       model.showThemeEditor = false
     } else if model.tab == .settings, model.settingsPage != nil {
       model.settingsPage = nil
-    } else {
+    } else if model.tab != .chats || !model.leaveChatsMode() {
       collapse()
     }
   }
