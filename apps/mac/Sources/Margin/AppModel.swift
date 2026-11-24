@@ -166,6 +166,8 @@ final class AppModel {
 
   init() {
     updates.model = self
+    // Friends right after setup, to find people; Chats on every launch after, for talking.
+    if prefs.setupDone { tab = .chats }
     client.onConnected = { [weak self] up in
       guard let self else { return }
       daemonUp = up

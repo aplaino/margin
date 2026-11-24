@@ -14,6 +14,19 @@ import Testing
     #expect(Format.tokens(2_500_000_000) == "2.5B")
   }
 
+  // A stretch of conversation begins with the first message, after an hour's quiet, or at
+  // midnight where the Mac is.
+  @Test func segments() {
+    let london = TimeZone(identifier: "Europe/London")!
+    let noon = 1_795_435_200_000.0  // 12:00 in London
+    let minute = 60_000.0
+    #expect(Format.startsSegment(noon, after: nil, in: london))
+    #expect(!Format.startsSegment(noon + 59 * minute, after: noon, in: london))
+    #expect(Format.startsSegment(noon + 60 * minute, after: noon, in: london))
+    let beforeMidnight = noon + 11 * 60 * minute + 50 * minute  // 23:50
+    #expect(Format.startsSegment(beforeMidnight + 20 * minute, after: beforeMidnight, in: london))
+  }
+
   // The match keeps its own case and is the only bold run; a long lead-in is cut to "…".
   @Test func searchSnippet() {
     let short = Format.snippet("the Big\nfixtures", matching: "big")

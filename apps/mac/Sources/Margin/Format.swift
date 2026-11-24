@@ -188,6 +188,16 @@ enum Format {
     return formatter.string(from: date)
   }
 
+  // A new stretch of conversation starts with the first message, after an hour's quiet, or on
+  // a new day; the chat shows when each began.
+  static let segmentGap: Double = 3_600_000
+
+  static func startsSegment(_ ms: Double, after previous: Double?, in zone: TimeZone = .current) -> Bool {
+    guard let previous else { return true }
+    let date = Date(timeIntervalSince1970: ms / 1000)
+    return ms - previous >= segmentGap || !sameDay(Date(timeIntervalSince1970: previous / 1000), date, in: zone)
+  }
+
   // A search result on one line: from a few words before the match ("…" when cut), with the
   // match in bold.
   static func snippet(_ text: String, matching query: String, before: Int = 20) -> AttributedString {
