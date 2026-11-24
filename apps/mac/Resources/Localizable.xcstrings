@@ -69,6 +69,40 @@
         }
       }
     },
+    "%@ and %@ are online" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ and %2$@ are online"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ y %2$@ están conectados"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 和 %2$@ 已上线"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ と %2$@ がオンラインになりました"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ο/Η %1$@ και ο/η %2$@ είναι online"
+          }
+        }
+      }
+    },
     "%@ appearance" : {
       "localizations" : {
         "el" : {
@@ -121,6 +155,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@颜色"
+          }
+        }
+      }
+    },
+    "%@ is online" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ está conectado"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 已上线"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ がオンラインになりました"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ο/Η %@ είναι online"
+          }
+        }
+      }
+    },
+    "%@ sent you a nudge" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ te ha dado un toque"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 拍了拍你"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ がつつきました"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ο/Η %@ σου έστειλε ένα σκούντημα"
           }
         }
       }
@@ -275,6 +365,68 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "%@, %@ and %lld more are online" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@ and %3$lld more are online"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@ y %3$lld más están conectados"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@、%2$@ 和另外 %3$lld 人已上线"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@、%2$@ ほか %3$lld 人がオンラインになりました"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Οι %1$@, %2$@ και %3$lld ακόμη είναι online"
+          }
+        }
+      }
+    },
+    "%@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@。"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@."
+          }
+        }
+      }
     },
     "%lld" : {
       "shouldTranslate" : false
@@ -661,6 +813,62 @@
         }
       }
     },
+    "A friend’s nudge shakes Margin at most once every few minutes; Quiet shows it only in the chat." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El toque de un amigo sacude Margin como mucho una vez cada pocos minutos; con Silencioso solo aparece en el chat."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好友的拍一拍最多每隔几分钟让 Margin 晃动一次；选择“安静”则只在聊天中显示。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友達のつつきで Margin が揺れるのは数分に1回までです。「静か」ではチャットに表示されるだけです。"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το σκούντημα ενός φίλου κουνάει το Margin το πολύ μία φορά κάθε λίγα λεπτά· με το Αθόρυβα εμφανίζεται μόνο στη συνομιλία."
+          }
+        }
+      }
+    },
+    "A quiet note beside the strip, at most once an hour for each friend and never for a quick reconnect." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un aviso discreto junto a la franja, como mucho una vez por hora para cada amigo y nunca por una reconexión rápida."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在边条旁显示一条低调提示，每位好友每小时最多一次，短暂重连不会提示。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ストリップの横に控えめな通知を表示します。友達ごとに1時間に1回まで、すぐの再接続では表示しません。"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Μια διακριτική σημείωση δίπλα στη λωρίδα, το πολύ μία φορά την ώρα για κάθε φίλο και ποτέ για μια γρήγορη επανασύνδεση."
+          }
+        }
+      }
+    },
     "A report has the app and macOS versions, what went wrong and recent background log lines, with paths, names, repos and messages removed." : {
       "localizations" : {
         "el" : {
@@ -971,16 +1179,16 @@
     },
     "Add a friend to message them" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πρόσθεσε έναν φίλο για να του στείλεις μήνυμα"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Añade un amigo para escribirle"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加好友后即可发消息"
           }
         },
         "ja" : {
@@ -989,10 +1197,10 @@
             "value" : "友達を追加するとメッセージを送れます"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Πρόσθεσε έναν φίλο για να του στείλεις μήνυμα"
+            "value" : "添加好友后即可发消息"
           }
         }
       }
@@ -1363,16 +1571,16 @@
     },
     "Back to chats" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πίσω στις συνομιλίες"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Volver a los chats"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回聊天"
           }
         },
         "ja" : {
@@ -1381,10 +1589,10 @@
             "value" : "チャットに戻る"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Πίσω στις συνομιλίες"
+            "value" : "返回聊天"
           }
         }
       }
@@ -1725,6 +1933,62 @@
         }
       }
     },
+    "Bottom left" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abajo a la izquierda"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左下角"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左下"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Κάτω αριστερά"
+          }
+        }
+      }
+    },
+    "Bottom right" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abajo a la derecha"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右下角"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右下"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Κάτω δεξιά"
+          }
+        }
+      }
+    },
     "Brackets" : {
       "localizations" : {
         "el" : {
@@ -1951,16 +2215,16 @@
     },
     "Clear" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Απαλοιφή"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Borrar"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除"
           }
         },
         "ja" : {
@@ -1969,10 +2233,10 @@
             "value" : "消去"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Απαλοιφή"
+            "value" : "清除"
           }
         }
       }
@@ -2281,6 +2545,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "拷贝"
+          }
+        }
+      }
+    },
+    "Corner" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esquina"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "角落"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隅"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Γωνία"
           }
         }
       }
@@ -3069,6 +3361,34 @@
         }
       }
     },
+    "Drag the strip to another corner, or pick one here. It keeps a little clear of the very corner, so a macOS Hot Corner there still works." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrastra la franja a otra esquina o elige una aquí. Se queda un poco apartada del vértice, para que una esquina activa de macOS siga funcionando."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将边条拖到另一个角落，或在这里选择。它会与屏幕最角落保持一点距离，因此那里的 macOS 触发角仍然有效。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ストリップを別の隅へドラッグするか、ここで選びます。画面の角から少し離れるので、そこにある macOS のホットコーナーもそのまま使えます。"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Σύρε τη λωρίδα σε άλλη γωνία ή διάλεξε μία εδώ. Μένει λίγο μακριά από την άκρη της γωνίας, ώστε μια Ενεργή γωνία του macOS εκεί να λειτουργεί ακόμα."
+          }
+        }
+      }
+    },
     "Drag the strip up or down the edge, or across the screen to the other side. It stays where you leave it, on every Space and over full-screen apps." : {
       "localizations" : {
         "el" : {
@@ -3289,6 +3609,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "英文"
+          }
+        }
+      }
+    },
+    "Everyone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有人"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全員"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Όλοι"
           }
         }
       }
@@ -3569,6 +3917,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "朋友"
+          }
+        }
+      }
+    },
+    "Friends coming online" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amigos que se conectan"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好友上线"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友達のオンライン"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Φίλοι που συνδέονται"
           }
         }
       }
@@ -4073,6 +4449,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完全隐藏某个仓库，或无论 GitHub 上如何设置，都只显示为“私人项目”。"
+          }
+        }
+      }
+    },
+    "Hide in full-screen apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ocultar en apps a pantalla completa"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在全屏 App 中隐藏"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フルスクリーンのアプリでは隠す"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Απόκρυψη σε εφαρμογές πλήρους οθόνης"
           }
         }
       }
@@ -5129,16 +5533,16 @@
     },
     "Messages" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Μηνύματα"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mensajes"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "消息"
           }
         },
         "ja" : {
@@ -5147,10 +5551,10 @@
             "value" : "メッセージ"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Μηνύματα"
+            "value" : "消息"
           }
         }
       }
@@ -5437,16 +5841,16 @@
     },
     "Name or handle" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Όνομα ή όνομα χρήστη"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nombre o usuario"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "名称或用户名"
           }
         },
         "ja" : {
@@ -5455,10 +5859,10 @@
             "value" : "名前またはユーザー名"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Όνομα ή όνομα χρήστη"
+            "value" : "名称或用户名"
           }
         }
       }
@@ -5493,16 +5897,16 @@
     },
     "New Chat" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Νέα συνομιλία"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nuevo chat"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新聊天"
           }
         },
         "ja" : {
@@ -5511,26 +5915,26 @@
             "value" : "新規チャット"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Νέα συνομιλία"
+            "value" : "新聊天"
           }
         }
       }
     },
     "New Chat (⌘N)" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Νέα συνομιλία (⌘N)"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nuevo chat (⌘N)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新聊天（⌘N）"
           }
         },
         "ja" : {
@@ -5539,10 +5943,10 @@
             "value" : "新規チャット（⌘N）"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Νέα συνομιλία (⌘N)"
+            "value" : "新聊天（⌘N）"
           }
         }
       }
@@ -5745,16 +6149,16 @@
     },
     "No results" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Κανένα αποτέλεσμα"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sin resultados"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无结果"
           }
         },
         "ja" : {
@@ -5763,10 +6167,10 @@
             "value" : "結果なし"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Κανένα αποτέλεσμα"
+            "value" : "无结果"
           }
         }
       }
@@ -5935,6 +6339,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通知"
+          }
+        }
+      }
+    },
+    "Nudge %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dar un toque a %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍一拍 %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ をつつく"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Σκούντημα στον/στην %@"
+          }
+        }
+      }
+    },
+    "Nudge %@ (or type /nudge)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dar un toque a %@ (o escribe /nudge)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍一拍 %@（或输入 /nudge）"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ をつつく（/nudge と入力しても可）"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Σκούντημα στον/στην %@ (ή γράψε /nudge)"
+          }
+        }
+      }
+    },
+    "Nudges" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toques"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍一拍"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "つつき"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Σκουντήματα"
           }
         }
       }
@@ -6303,6 +6791,34 @@
         }
       }
     },
+    "Peek out" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asomarse"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "探出提示"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "のぞかせる"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Να ξεπροβάλλει"
+          }
+        }
+      }
+    },
     "People appear here unless they’ve switched it off in Settings → Privacy." : {
       "localizations" : {
         "el" : {
@@ -6663,6 +7179,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "紫色"
+          }
+        }
+      }
+    },
+    "Quiet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Silencioso"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安静"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "静か"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Αθόρυβα"
           }
         }
       }
@@ -7512,16 +8056,16 @@
     },
     "Search" : {
       "localizations" : {
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Αναζήτηση"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buscar"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索"
           }
         },
         "ja" : {
@@ -7530,10 +8074,10 @@
             "value" : "検索"
           }
         },
-        "el" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Αναζήτηση"
+            "value" : "搜索"
           }
         }
       }
@@ -7898,6 +8442,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
+          }
+        }
+      }
+    },
+    "Shake" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sacudir"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "晃动"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "揺らす"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Κούνημα"
           }
         }
       }
@@ -8490,6 +9062,34 @@
         }
       }
     },
+    "Stay in the corner" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quedarse en la esquina"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "留在角落"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隅にとどめる"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Να μένει στη γωνία"
+          }
+        }
+      }
+    },
     "System" : {
       "localizations" : {
         "el" : {
@@ -9018,6 +9618,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "工具"
+          }
+        }
+      }
+    },
+    "Top left" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arriba a la izquierda"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左上角"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左上"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πάνω αριστερά"
+          }
+        }
+      }
+    },
+    "Top right" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arriba a la derecha"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右上角"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右上"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πάνω δεξιά"
           }
         }
       }
@@ -9718,6 +10374,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你可以随时在“设置”中更改。"
+          }
+        }
+      }
+    },
+    "You sent a nudge" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Has dado un toque"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你拍了拍对方"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "つつきました"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Έστειλες ένα σκούντημα"
           }
         }
       }
@@ -10561,6 +11245,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "公开仓库"
+          }
+        }
+      }
+    },
+    "sent you a nudge" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "te ha dado un toque"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍了拍你"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "がつつきました"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "σου έστειλε ένα σκούντημα"
           }
         }
       }
