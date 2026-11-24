@@ -375,17 +375,43 @@ struct SettingsView: View {
 
   private var placement: some View {
     @Bindable var prefs = model.prefs
+    // Screen edge, a corner (the top of the strip's side to start), or the menu bar.
+    let mode = Binding<String>(
+      get: { prefs.menuBar ? "menu" : prefs.corner == nil ? "edge" : "corner" },
+      set: { next in
+        prefs.menuBar = next == "menu"
+        if next == "edge" { prefs.setCorner(nil) }
+        if next == "corner", prefs.corner == nil { prefs.setCorner("top-\(prefs.edge)") }
+      })
     return VStack(alignment: .leading, spacing: 4) {
       SettingsGroup("Show Margin") {
-        Picker("Show Margin", selection: $prefs.menuBar) {
-          Text("Screen edge").tag(false)
-          Text("Menu bar").tag(true)
+        Picker("Show Margin", selection: mode) {
+          Text("Screen edge").tag("edge")
+          Text("Corner").tag("corner")
+          Text("Menu bar").tag("menu")
         }
         .pickerStyle(.segmented).labelsHidden()
         .padding(.vertical, 8)
-        .control("Show Margin", choice: $prefs.menuBar, from: [false, true])
+        .control("Show Margin", choice: mode, from: ["edge", "corner", "menu"])
       }
-      if prefs.menuBar {
+      if !prefs.menuBar, prefs.corner != nil {
+        SettingsGroup {
+          CornerPicker(corner: prefs.corner ?? "top-right") { prefs.setCorner($0) }
+            .padding(.vertical, 10)
+          Divider().overlay(theme.divider)
+          SettingsRow(label: "New messages", last: false) {
+            Picker("New messages", selection: $prefs.cornerPeek) {
+              Text("Peek out").tag(true)
+              Text("Stay in the corner").tag(false)
+            }
+            .labelsHidden().fixedSize()
+            .control("New messages", choice: $prefs.cornerPeek, from: [true, false])
+          }
+          switchRow("Fade when nobody’s online", $prefs.fadeWhenQuiet)
+          switchRow("Hide in full-screen apps", $prefs.hideInFullScreen, last: true)
+        }
+        note("Drag the strip to another corner, or pick one here. It keeps a little clear of the very corner, so a macOS Hot Corner there still works.")
+      } else if prefs.menuBar {
         note("Beside the notch, or at the right of the menu bar. ⌘-drag it to move it.")
         if model.menuBarHidden {
           note("The menu bar is full, so macOS has hidden it under the notch; the strip is at the screen edge until there’s room.")

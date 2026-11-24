@@ -155,6 +155,45 @@ struct AccentRow: View {
   }
 }
 
+// A little screen with a spot in each corner; the chosen one is filled, its name underneath.
+struct CornerPicker: View {
+  var corner: String
+  var choose: (String) -> Void
+  @Environment(\.theme) private var theme
+
+  static let corners: [(id: String, name: LocalizedStringResource, alignment: Alignment)] = [
+    ("top-left", "Top left", .topLeading), ("top-right", "Top right", .topTrailing),
+    ("bottom-left", "Bottom left", .bottomLeading), ("bottom-right", "Bottom right", .bottomTrailing),
+  ]
+
+  var body: some View {
+    VStack(spacing: 6) {
+      ZStack {
+        RoundedRectangle(cornerRadius: theme.nested(8)).fill(theme.surface)
+          .overlay(RoundedRectangle(cornerRadius: theme.nested(8)).strokeBorder(theme.border, lineWidth: max(theme.borderWidth, 1)))
+        ForEach(Self.corners, id: \.id) { option in
+          Button {
+            choose(option.id)
+          } label: {
+            RoundedRectangle(cornerRadius: 2)
+              .fill(corner == option.id ? theme.accent : theme.tertiary.opacity(0.35))
+              .frame(width: 5, height: 18)
+              .padding(5).contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel(Text(option.name))
+          .accessibilityAddTraits(corner == option.id ? .isSelected : [])
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: option.alignment)
+        }
+      }
+      .frame(width: 120, height: 76)
+      Text(Self.corners.first { $0.id == corner }?.name ?? "Top right").font(theme.caption).foregroundStyle(theme.secondary)
+    }
+    .frame(maxWidth: .infinity)
+    .control("Corner", choice: Binding(get: { corner }, set: choose), from: Self.corners.map(\.id))
+  }
+}
+
 // A colour row: the label, and a swatch that opens a palette in place, with a hex box and the
 // system colour picker. (SwiftUI's ColorPicker can't bring the colour window forward from the
 // drawer, which never activates Margin on its own.)

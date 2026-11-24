@@ -173,7 +173,7 @@ final class DrawerController {
     withObservationTracking {
       _ = (
         model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey,
-        model.prefs.menuBar, model.prefs.alwaysDark, model.prefs.hideInFullScreen
+        model.prefs.menuBar, model.prefs.alwaysDark, model.prefs.hideInFullScreen, model.prefs.corner
       )
     } onChange: { [weak self] in
       DispatchQueue.main.async {
@@ -199,7 +199,7 @@ final class DrawerController {
     peekPanel.appearance = appearance
     hotKey?.set(enabled: model.prefs.openOnHotkey)
     setMenuBar(model.prefs.menuBar)
-    let placement = "\(model.prefs.menuBar) \(model.prefs.edge) \(model.prefs.resolvedPosition)"
+    let placement = "\(model.prefs.menuBar) \(model.prefs.edge) \(model.prefs.resolvedPosition) \(model.prefs.corner ?? "")"
     place(movingDrawer: placement != lastPlacement)
     lastPlacement = placement
   }
@@ -227,10 +227,15 @@ final class DrawerController {
     return NSRect(x: x, y: y, width: width, height: height)
   }
 
-  // The lowest y of the strip's frame at the top and at the bottom of its travel.
+  // The lowest y of the strip's frame at the top and at the bottom of its travel. In a corner
+  // it keeps clear of the screen's very corner, where a macOS Hot Corner would fire too.
   func travel(on screen: NSScreen, height: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
     let visible = screen.visibleFrame
-    return (visible.maxY - height, visible.minY)
+    let full = screen.frame
+    let gap: CGFloat = model.prefs.corner == nil ? 0 : 6
+    let top = visible.maxY - (visible.maxY >= full.maxY ? gap : 0)
+    let bottom = visible.minY + (visible.minY <= full.minY ? gap : 0)
+    return (top - height, bottom)
   }
 
   func panelFrame(on screen: NSScreen) -> NSRect {
@@ -439,7 +444,9 @@ final class DrawerController {
   #endif
 
   func showPeek() {
-    guard !model.expanded, !hiddenForFullScreen else {
+    // In a corner set to stay put, the strip's glow is all there is.
+    let staysInCorner = !inMenuBar && model.prefs.corner != nil && !model.prefs.cornerPeek
+    guard !model.expanded, !hiddenForFullScreen, !staysInCorner else {
       model.peek = nil
       return
     }
@@ -517,6 +524,11 @@ final class DrawerController {
     guard let screen = strip.screen ?? screen else { return }
     let (top, bottom) = travel(on: screen, height: stripSize.height)
     let fraction = top > bottom ? Double((top - strip.frame.minY) / (top - bottom)) : 0.5
+    // In a corner, it settles into the nearest one.
+    if model.prefs.corner != nil {
+      model.prefs.setCorner("\(fraction < 0.5 ? "top" : "bottom")-\(edge)")
+      return
+    }
     model.prefs.position = min(max(fraction, 0), 1)
     model.prefs.edge = edge
   }
