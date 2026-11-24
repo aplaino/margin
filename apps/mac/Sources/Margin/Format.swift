@@ -144,14 +144,23 @@ enum Format {
   // In the time zone the Mac is in now, so a message's time follows you when you travel.
   static func time(_ ms: Double, in zone: TimeZone = .current, now: Date = .now) -> String {
     let date = Date(timeIntervalSince1970: ms / 1000)
-    let today = sameDay(date, now, in: zone)
+    var calendar = Calendar.current
+    calendar.timeZone = zone
+    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day ?? 0
     let formatter = DateFormatter()
     formatter.timeZone = zone
-    formatter.doesRelativeDateFormatting = true
-    formatter.dateStyle = today ? .none : .short
-    formatter.timeStyle = .short
-    let time = formatter.string(from: date)
-    return today ? String(localized: "Today \(time)") : time
+    if days <= 1 {
+      formatter.doesRelativeDateFormatting = true
+      formatter.dateStyle = days == 0 ? .none : .short
+      formatter.timeStyle = .short
+      let time = formatter.string(from: date)
+      return days == 0 ? String(localized: "Today \(time)") : time
+    }
+    // As in Messages: the weekday within the last week, then the date (with the year, from
+    // another year).
+    let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+    formatter.setLocalizedDateFormatFromTemplate(days < 7 ? "EEEEjmm" : sameYear ? "EEEMMMdjmm" : "EEEMMMdyjmm")
+    return formatter.string(from: date)
   }
 
   private static func sameDay(_ a: Date, _ b: Date, in zone: TimeZone) -> Bool {

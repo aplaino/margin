@@ -339,6 +339,19 @@ describe('two users, two daemons, one server', () => {
     await maya.app.until(
       (p) => p.type === 'message' && p.message.text === 'nice, how fast is it now?\nbenchmarks?',
     );
+    // Read the moment it arrives, as the app does with the chat open (#4): the count clears
+    // and nothing brings it back.
+    const cleared = maya.app.next(friendIn('leo', (f) => f.unread === 0));
+    await maya.app.request({ op: 'read', handle: 'leo' });
+    await cleared;
+    expect(
+      await failure(
+        maya.app.next(
+          friendIn('leo', (f) => f.unread > 0),
+          1500,
+        ),
+      ),
+    ).toBe('timed out waiting for a push');
 
     // Search on the Chats tab finds it on this Mac, and the chat opens at it.
     const found = (await leo.app.request({ op: 'search', query: 'PARSER' })) as {

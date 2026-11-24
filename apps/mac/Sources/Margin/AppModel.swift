@@ -58,7 +58,14 @@ final class AppModel {
   var settingsPage: SettingsPage? { didSet { cursor = nil } }
   private var askingAboutReports = false
 
-  var expanded = false { didSet { if expanded { checkWaitingErrors() } } }
+  var expanded = false {
+    didSet {
+      if expanded {
+        checkWaitingErrors()
+        readOpenChat()
+      }
+    }
+  }
   var stripHovered = false
   // Where the drawer is showing right now: under the menu bar item, or at a screen edge
   // (including when macOS has hidden the menu bar item).
@@ -232,6 +239,7 @@ final class AppModel {
     case .roster(let r):
       friends = r
       if let selected, !r.contains(where: { $0.handle == selected }) { self.selected = nil }
+      readOpenChat()
     case .requests(let r): requests = r
     case .message(let message):
       var list = conversations[message.peer] ?? []
@@ -248,7 +256,6 @@ final class AppModel {
       if shown == nil || shown?.id == message.id || message.sentAt >= shown?.sentAt ?? 0 {
         latest[message.peer] = message
       }
-      if message.incoming, expanded, chatWith == message.peer { request("read", ["handle": message.peer]) }
     case .history(let with, let messages):
       conversations[with] = messages
       if let last = messages.last, last.sentAt >= latest[with]?.sentAt ?? 0 { latest[with] = last }
@@ -349,6 +356,13 @@ final class AppModel {
   func markRead(_ handle: String) {
     request("read", ["handle": handle])
     notifier.removeThread(handle)
+  }
+
+  // A chat on screen leaves nothing in it unread: when a message arrives in it, and when the
+  // drawer opens back onto it after messages came while it was closed (it stays on that chat).
+  private func readOpenChat() {
+    guard expanded, let chatWith, (friend(chatWith)?.unread ?? 0) > 0 else { return }
+    markRead(chatWith)
   }
 
   // ↑/↓ through the list on screen: friends, or chats.
