@@ -35,7 +35,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
   func ask() {
     center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
       notificationLog.notice(
-        "asked: granted \(granted, privacy: .public), error \(error.map { "\($0)" } ?? "none", privacy: .public)")
+        "asked: granted \(granted, privacy: .public), error \((error as NSError?).map { "\($0.domain) \($0.code)" } ?? "none", privacy: .public)")
       Task { @MainActor in self?.refresh() }
     }
   }
@@ -77,7 +77,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     content.sound = message.sound ? .default : nil
     content.userInfo = ["handle": message.thread]
     center.add(UNNotificationRequest(identifier: message.id, content: content, trigger: nil)) { error in
-      if let error { notificationLog.error("post failed: \(error, privacy: .public)") }
+      if let error = error as NSError? {
+        notificationLog.error("post failed: \(error.domain, privacy: .public) \(error.code, privacy: .public)")
+      }
     }
   }
 
