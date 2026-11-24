@@ -245,6 +245,9 @@ struct ChatRow: View {
     if last.unsent {
       return last.incoming ? Text("\(friend.displayName) unsent a message") : Text("You unsent a message")
     }
+    if last.nudge {
+      return last.incoming ? Text("\(friend.displayName) sent you a nudge") : Text("You sent a nudge")
+    }
     let text = last.text.replacingOccurrences(of: "\n", with: " ")
     return last.incoming ? Text(verbatim: text) : Text("You: \(text)")
   }

@@ -20,6 +20,15 @@ final class Prefs {
       if let position { defaults.set(position, forKey: "position") } else { defaults.removeObject(forKey: "position") }
     }
   }
+  // Tucked into a corner ("top-left", "top-right", "bottom-left", "bottom-right") instead of
+  // somewhere along the edge; nil on the edge or in the menu bar. `edge` follows its side.
+  var corner: String? {
+    didSet {
+      if let corner { defaults.set(corner, forKey: "corner") } else { defaults.removeObject(forKey: "corner") }
+    }
+  }
+  // In a corner, whether a new message's tab slides out of it or the corner only glows.
+  var cornerPeek: Bool { didSet { defaults.set(cornerPeek, forKey: "cornerPeek") } }
   var style: ThemeStyle { didSet { defaults.set(style.rawValue, forKey: "style") } }
   // Your changes for the Custom theme.
   var customTheme: CustomTheme {
@@ -48,6 +57,12 @@ final class Prefs {
   var reportsAnsweredAt: Date? { didSet { defaults.set(reportsAnsweredAt, forKey: "reportsAnsweredAt") } }
   // Thin the strip to a faint hairline while nobody's online and nothing is unread.
   var fadeWhenQuiet: Bool { didSet { defaults.set(fadeWhenQuiet, forKey: "fadeWhenQuiet") } }
+  // Whether a friend's nudge shakes Margin ("shake") or only shows in the chat ("quiet").
+  var nudges: String { didSet { defaults.set(nudges, forKey: "nudges") } }
+  // A note beside the strip when a friend comes online: "off", "close" friends, or "everyone".
+  var friendsOnline: String { didSet { defaults.set(friendsOnline, forKey: "friendsOnline") } }
+  // Take the strip away while its display shows a full-screen app (Screen edge only).
+  var hideInFullScreen: Bool { didSet { defaults.set(hideInFullScreen, forKey: "hideInFullScreen") } }
   // The unit your token total is shown in, or scientific notation instead.
   var tokenUnit: TokenUnit { didSet { defaults.set(tokenUnit.rawValue, forKey: "tokenUnit") } }
   var scientificTokens: Bool { didSet { defaults.set(scientificTokens, forKey: "scientificTokens") } }
@@ -78,6 +93,8 @@ final class Prefs {
     edge = defaults.string(forKey: "edge") ?? "right"
     menuBar = defaults.bool(forKey: "menuBar")
     position = defaults.object(forKey: "position") as? Double
+    corner = defaults.string(forKey: "corner")
+    cornerPeek = defaults.object(forKey: "cornerPeek") as? Bool ?? true
     style = ThemeStyle(rawValue: defaults.string(forKey: "style") ?? "") ?? .graphite
     customTheme =
       defaults.data(forKey: "customTheme").flatMap { try? JSONDecoder().decode(CustomTheme.self, from: $0) }
@@ -90,6 +107,9 @@ final class Prefs {
     crashReports = defaults.string(forKey: "crashReports") ?? "ask"
     reportsAnsweredAt = defaults.object(forKey: "reportsAnsweredAt") as? Date
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
+    hideInFullScreen = defaults.bool(forKey: "hideInFullScreen")
+    friendsOnline = defaults.string(forKey: "friendsOnline") ?? "off"
+    nudges = defaults.string(forKey: "nudges") ?? "shake"
     tokenUnit = TokenUnit(rawValue: defaults.string(forKey: "tokenUnit") ?? "") ?? .m
     scientificTokens = defaults.bool(forKey: "scientificTokens")
     // Only Margin's own choice, not the Mac's languages; System Settings may store "es-ES" for "es".
@@ -133,7 +153,16 @@ final class Prefs {
     UserDefaults(suiteName: "com.apple.dock")?.string(forKey: "orientation") ?? "bottom"
   }
 
-  var resolvedPosition: Double { position ?? (Prefs.dockEdge == edge ? 0 : 0.5) }
+  var resolvedPosition: Double {
+    if let corner { return corner.hasPrefix("top") ? 0 : 1 }
+    return position ?? (Prefs.dockEdge == edge ? 0 : 0.5)
+  }
+
+  // Into a corner, or back onto the edge with nil.
+  func setCorner(_ next: String?) {
+    corner = next
+    if let next { edge = next.hasSuffix("left") ? "left" : "right" }
+  }
 
   func resetPosition() {
     edge = "right"

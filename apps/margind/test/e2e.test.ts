@@ -3,8 +3,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { connect, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Friend, Push } from '@margin/protocol';
+import { type Friend, NUDGE, type Push, Request } from '@margin/protocol';
 import { SQL } from 'bun';
+import * as v from 'valibot';
 import { createApp } from '../../api/src/app';
 import { migrate } from '../../api/src/db';
 import { type Daemon, startDaemon } from '../src/daemon';
@@ -619,6 +620,23 @@ describe('two users, two daemons, one server', () => {
       preview: { url: 'https://example.com/elsewhere', title: 'Not this' },
     });
     expect(JSON.stringify(maya.daemon.store.history('leo'))).not.toContain('Not this');
+  });
+
+  test('a nudge arrives as a nudge, at most one every 45 seconds', async () => {
+    const sent = (await maya.app.request({ op: 'nudge', to: 'leo' })) as {
+      id: string;
+      kind?: string;
+    };
+    expect(sent.kind).toBe('nudge');
+    const got = await leo.app.until<Extract<Push, { type: 'message' }>>(
+      (p) => p.type === 'message' && p.message.id === sent.id,
+    );
+    expect(got.message).toMatchObject({ kind: 'nudge', text: '', direction: 'in' });
+    expect(leo.daemon.store.message(sent.id)?.kind).toBe('nudge');
+    expect(await failure(maya.app.request({ op: 'nudge', to: 'leo' }))).toContain('that often');
+    // Nudges aren't text to search, and typed text can't pass for one.
+    expect(leo.daemon.store.search('👋').some((m) => m.id === sent.id)).toBe(false);
+    expect(v.safeParse(Request, { op: 'send', to: 'leo', text: NUDGE }).success).toBe(false);
   });
 
   test('a message the server refuses ends Not Delivered, and Try Again sends it', async () => {

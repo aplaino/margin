@@ -44,4 +44,24 @@ import Testing
     #expect(Desktops.missing(on: [9], displays: []) == [])
     #expect(Desktops.summary(on: [9], displays: []) == "-")
   }
+
+  // Shaped like the window server's list on the owner's Mac: a display's UUID and its current
+  // desktop, type 0 for a desktop and 4 for a full-screen app.
+  @Test func showingFullScreenApp() {
+    let desk: [String: Any] = ["type": 0]
+    let app: [String: Any] = ["type": 4]
+    let two: [[String: Any]] = [
+      ["Display Identifier": "37D8832A", "Current Space": desk],
+      ["Display Identifier": "B1C2", "Current Space": app],
+    ]
+    #expect(!Desktops.fullScreen(display: "37D8832A", in: two))
+    #expect(Desktops.fullScreen(display: "B1C2", in: two))
+    // "Displays have separate Spaces" off: one entry for every display.
+    #expect(Desktops.fullScreen(display: "37D8832A", in: [["Display Identifier": "Main", "Current Space": app]]))
+    #expect(!Desktops.fullScreen(display: "37D8832A", in: []))
+    #expect(Desktops.fullScreen(display: "b1c2", in: two))
+    // "Main" stands for every display only when it's the only entry.
+    let mixed: [[String: Any]] = [["Display Identifier": "Main", "Current Space": app], two[0]]
+    #expect(!Desktops.fullScreen(display: "FFFF", in: mixed))
+  }
 }

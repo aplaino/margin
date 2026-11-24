@@ -7,6 +7,10 @@ export const PROTOCOL = 1;
 // overrides and isolates, zero-width and direction marks, soft hyphens, line separators)
 // can rewrite a terminal or disguise text in the drawer.
 export const CONTROL = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
+// A nudge travels as an ordinary encrypted message with this text: two invisible separators
+// (format characters, which no typed message may contain) and a wave. A Margin that doesn't
+// know nudges strips the separators and shows the wave.
+export const NUDGE = '⁣⁣👋';
 export const NoControl = v.regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*$/u);
 // Chat also keeps newlines, tabs, and the zero-width (non-)joiners that emoji sequences
 // and scripts like Persian and Hindi need.

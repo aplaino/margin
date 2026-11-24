@@ -79,6 +79,7 @@ final class DrawerController {
     observePeek()
     observeMenuBar()
     observePulse()
+    observeShake()
 
     let center = NotificationCenter.default
     // Clicking anywhere in the drawer gives it the keyboard (not just a text field), so the
@@ -119,6 +120,9 @@ final class DrawerController {
         drawerLog.notice("desktop changed: \(self.stateLine, privacy: .public)")
         if self.statusItem != nil { self.menuBarVisibilityChanged() }
         self.repairDesktops()
+        // Into or out of a full-screen app; again once the switch has settled.
+        self.place()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.place() }
       }
     }
     center.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main) {
@@ -138,6 +142,8 @@ final class DrawerController {
       MainActor.assumeIsolated {
         guard let self else { return }
         self.repairDesktops()
+        // Showing over a full-screen app it should hide from, or hidden after leaving one.
+        if !self.inMenuBar, self.strip.isVisible == self.hiddenForFullScreen { self.place() }
         guard self.strip.isVisible, !self.model.expanded else { return }
         if !NSScreen.screens.contains(where: { $0.frame.intersects(self.strip.frame) }) { self.place() }
       }
@@ -167,7 +173,7 @@ final class DrawerController {
     withObservationTracking {
       _ = (
         model.prefs.appearance, model.prefs.edge, model.prefs.position, model.prefs.openOnHotkey,
-        model.prefs.menuBar, model.prefs.alwaysDark
+        model.prefs.menuBar, model.prefs.alwaysDark, model.prefs.hideInFullScreen, model.prefs.corner
       )
     } onChange: { [weak self] in
       DispatchQueue.main.async {
@@ -193,7 +199,7 @@ final class DrawerController {
     peekPanel.appearance = appearance
     hotKey?.set(enabled: model.prefs.openOnHotkey)
     setMenuBar(model.prefs.menuBar)
-    let placement = "\(model.prefs.menuBar) \(model.prefs.edge) \(model.prefs.resolvedPosition)"
+    let placement = "\(model.prefs.menuBar) \(model.prefs.edge) \(model.prefs.resolvedPosition) \(model.prefs.corner ?? "")"
     place(movingDrawer: placement != lastPlacement)
     lastPlacement = placement
   }
@@ -221,10 +227,15 @@ final class DrawerController {
     return NSRect(x: x, y: y, width: width, height: height)
   }
 
-  // The lowest y of the strip's frame at the top and at the bottom of its travel.
+  // The lowest y of the strip's frame at the top and at the bottom of its travel. In a corner
+  // it keeps clear of the screen's very corner, where a macOS Hot Corner would fire too.
   func travel(on screen: NSScreen, height: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
     let visible = screen.visibleFrame
-    return (visible.maxY - height, visible.minY)
+    let full = screen.frame
+    let gap: CGFloat = model.prefs.corner == nil ? 0 : 6
+    let top = visible.maxY - (visible.maxY >= full.maxY ? gap : 0)
+    let bottom = visible.minY + (visible.minY <= full.minY ? gap : 0)
+    return (top - height, bottom)
   }
 
   func panelFrame(on screen: NSScreen) -> NSRect {
@@ -245,13 +256,20 @@ final class DrawerController {
     return NSRect(x: x, y: y, width: width, height: height)
   }
 
+  // Settings → Position → Hide in full-screen apps, and the strip's display showing one. Messages
+  // still count as unread, and ⌥M still opens the drawer over it.
+  var hiddenForFullScreen: Bool {
+    !inMenuBar && model.prefs.hideInFullScreen && screen.map(Desktops.fullScreen) == true
+  }
+
   // An open drawer stays where it opened while the strip or menu bar item changes size (a
   // friend coming online, a chat being read); it moves only with the screen or placement.
   func place(movingDrawer: Bool = false) {
     if model.atTop != inMenuBar { model.atTop = inMenuBar }
     guard let screen else { return }
-    if inMenuBar {
+    if inMenuBar || hiddenForFullScreen {
       strip.orderOut(nil)
+      if hiddenForFullScreen { model.peek = nil }
     } else {
       strip.setFrame(stripFrame(on: screen), display: true)
       if !strip.isVisible { strip.orderFrontRegardless() }
@@ -324,6 +342,49 @@ final class DrawerController {
     place()
   }
 
+  // MARK: nudges
+
+  func observeShake() {
+    withObservationTracking {
+      _ = model.shake
+    } onChange: { [weak self] in
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          self?.shakeForNudge()
+          self?.observeShake()
+        }
+      }
+    }
+  }
+
+  // The open drawer shakes side to side, the strip along its edge; in the menu bar, with Reduce
+  // Motion, or with the strip hidden over a full-screen app, it glows instead (or nothing).
+  func shakeForNudge() {
+    if model.expanded, !reduceMotion {
+      shake(panel, vertical: false)
+    } else if strip.isVisible, !reduceMotion {
+      shake(strip, vertical: true)
+    } else if !hiddenForFullScreen {
+      model.pulse += 1
+    }
+  }
+
+  func shake(_ window: NSWindow, vertical: Bool) {
+    let origin = window.frame.origin
+    let path = CGMutablePath()
+    path.move(to: origin)
+    for (i, distance) in [7.0, 6, 5, 4, 2].enumerated() {
+      let offset = i.isMultiple(of: 2) ? distance : -distance
+      path.addLine(to: vertical ? CGPoint(x: origin.x, y: origin.y + offset) : CGPoint(x: origin.x + offset, y: origin.y))
+    }
+    path.addLine(to: origin)
+    let animation = CAKeyframeAnimation()
+    animation.path = path
+    animation.duration = 0.45
+    window.animations = ["frameOrigin": animation]
+    window.animator().setFrameOrigin(origin)
+  }
+
   // MARK: the message peek
 
   func observePeek() {
@@ -383,7 +444,9 @@ final class DrawerController {
   #endif
 
   func showPeek() {
-    guard !model.expanded else {
+    // In a corner set to stay put, the strip's glow is all there is.
+    let staysInCorner = !inMenuBar && model.prefs.corner != nil && !model.prefs.cornerPeek
+    guard !model.expanded, !hiddenForFullScreen, !staysInCorner else {
       model.peek = nil
       return
     }
@@ -391,7 +454,7 @@ final class DrawerController {
       slideIn(peekPanel, to: peekFrame(), duration: 0.36)
       if !model.atTop { strip.orderFrontRegardless() }
     }
-    schedulePeekHide(after: 4)
+    schedulePeekHide(after: model.peek?.online == nil ? 4 : 3.5)
   }
 
   func schedulePeekHide(after seconds: TimeInterval) {
@@ -417,9 +480,13 @@ final class DrawerController {
     }
   }
 
+  // A message, or one friend online, opens their chat; several online opens Friends.
   func openPeek() {
     guard let handle = model.peek?.handle else { return }
-    openChat(handle)
+    guard handle.isEmpty else { return openChat(handle) }
+    model.peek = nil
+    expand(byHover: false, focus: false)
+    model.showTab(.friends)
   }
 
   // From the tab beside the strip, or a click on a macOS notification.
@@ -457,6 +524,11 @@ final class DrawerController {
     guard let screen = strip.screen ?? screen else { return }
     let (top, bottom) = travel(on: screen, height: stripSize.height)
     let fraction = top > bottom ? Double((top - strip.frame.minY) / (top - bottom)) : 0.5
+    // In a corner, it settles into the nearest one.
+    if model.prefs.corner != nil {
+      model.prefs.setCorner("\(fraction < 0.5 ? "top" : "bottom")-\(edge)")
+      return
+    }
     model.prefs.position = min(max(fraction, 0), 1)
     model.prefs.edge = edge
   }

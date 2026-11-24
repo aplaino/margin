@@ -375,24 +375,51 @@ struct SettingsView: View {
 
   private var placement: some View {
     @Bindable var prefs = model.prefs
+    // Screen edge, a corner (the top of the strip's side to start), or the menu bar.
+    let mode = Binding<String>(
+      get: { prefs.menuBar ? "menu" : prefs.corner == nil ? "edge" : "corner" },
+      set: { next in
+        prefs.menuBar = next == "menu"
+        if next == "edge" { prefs.setCorner(nil) }
+        if next == "corner", prefs.corner == nil { prefs.setCorner("top-\(prefs.edge)") }
+      })
     return VStack(alignment: .leading, spacing: 4) {
       SettingsGroup("Show Margin") {
-        Picker("Show Margin", selection: $prefs.menuBar) {
-          Text("Screen edge").tag(false)
-          Text("Menu bar").tag(true)
+        Picker("Show Margin", selection: mode) {
+          Text("Screen edge").tag("edge")
+          Text("Corner").tag("corner")
+          Text("Menu bar").tag("menu")
         }
         .pickerStyle(.segmented).labelsHidden()
         .padding(.vertical, 8)
-        .control("Show Margin", choice: $prefs.menuBar, from: [false, true])
+        .control("Show Margin", choice: mode, from: ["edge", "corner", "menu"])
       }
-      if prefs.menuBar {
+      if !prefs.menuBar, prefs.corner != nil {
+        SettingsGroup {
+          CornerPicker(corner: prefs.corner ?? "top-right") { prefs.setCorner($0) }
+            .padding(.vertical, 10)
+          Divider().overlay(theme.divider)
+          SettingsRow(label: "New messages", last: false) {
+            Picker("New messages", selection: $prefs.cornerPeek) {
+              Text("Peek out").tag(true)
+              Text("Stay in the corner").tag(false)
+            }
+            .labelsHidden().fixedSize()
+            .control("New messages", choice: $prefs.cornerPeek, from: [true, false])
+          }
+          switchRow("Fade when nobody’s online", $prefs.fadeWhenQuiet)
+          switchRow("Hide in full-screen apps", $prefs.hideInFullScreen, last: true)
+        }
+        note("Drag the strip to another corner, or pick one here. It keeps a little clear of the very corner, so a macOS Hot Corner there still works.")
+      } else if prefs.menuBar {
         note("Beside the notch, or at the right of the menu bar. ⌘-drag it to move it.")
         if model.menuBarHidden {
           note("The menu bar is full, so macOS has hidden it under the notch; the strip is at the screen edge until there’s room.")
         }
       } else {
         SettingsGroup {
-          switchRow("Fade when nobody’s online", $prefs.fadeWhenQuiet, last: !(prefs.position != nil || prefs.edge != "right"))
+          switchRow("Fade when nobody’s online", $prefs.fadeWhenQuiet)
+          switchRow("Hide in full-screen apps", $prefs.hideInFullScreen, last: !(prefs.position != nil || prefs.edge != "right"))
           if prefs.position != nil || prefs.edge != "right" {
             SettingsRow(label: "Position", last: true) {
               Button("Reset") { prefs.resetPosition() }.buttonStyle(.link)
@@ -453,6 +480,27 @@ struct SettingsView: View {
             ? "Previews leave Margin’s encrypted store: macOS can show them on the lock screen and keeps them in Notification Center."
             : "The first words show beside the strip, where anyone looking at your screen can see them.")
       }
+      SettingsGroup("Nudges") {
+        Picker("Nudges", selection: $prefs.nudges) {
+          Text("Shake").tag("shake")
+          Text("Quiet").tag("quiet")
+        }
+        .pickerStyle(.segmented).labelsHidden()
+        .padding(.vertical, 8)
+        .control("Nudges", choice: $prefs.nudges, from: ["shake", "quiet"])
+      }
+      note("A friend’s nudge shakes Margin at most once every few minutes; Quiet shows it only in the chat.")
+      SettingsGroup("Friends coming online") {
+        Picker("Friends coming online", selection: $prefs.friendsOnline) {
+          Text("Off").tag("off")
+          Text("Close friends").tag("close")
+          Text("Everyone").tag("everyone")
+        }
+        .pickerStyle(.segmented).labelsHidden()
+        .padding(.vertical, 8)
+        .control("Friends coming online", choice: $prefs.friendsOnline, from: ["off", "close", "everyone"])
+      }
+      note("A quiet note beside the strip, at most once an hour for each friend and never for a quick reconnect.")
     }
     .onAppear { model.notifier.refresh() }
   }

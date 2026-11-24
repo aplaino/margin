@@ -57,7 +57,10 @@ struct ChatMessage: Codable, Equatable, Identifiable {
   var state: String?
   var readAt: Double?
   var preview: LinkPreview?
+  // "nudge" for a nudge, whose text is empty.
+  var kind: String?
   var incoming: Bool { direction == "in" }
+  var nudge: Bool { kind == "nudge" }
   var unsent: Bool { state == "unsent" }
   // The server refused it: Not Delivered, with Try Again.
   var failed: Bool { state == "failed" }
