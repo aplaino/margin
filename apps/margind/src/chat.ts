@@ -5,6 +5,7 @@ import {
   Control,
   type Friend,
   type LinkPreview,
+  NUDGE,
   type Push,
   type ServerFrame,
 } from '@margin/protocol';
@@ -22,6 +23,9 @@ import type { OutboxKind, Store } from './store';
 const UNSEND_MS = 24 * 60 * 60_000;
 // A preview follows its message within seconds; one arriving much later is refused.
 const PREVIEW_MS = 10 * 60_000;
+// Nudges: how often you can send one to a friend, and keep one from them.
+const NUDGE_OUT_MS = 45_000;
+const NUDGE_IN_MS = 30_000;
 
 // What a refusal is logged as: never its text, handle or id.
 const REFUSED: Record<OutboxKind | 'unknown', string> = {
@@ -119,7 +123,8 @@ export function createChat({
     if (!store.friend(frame.from)) return ack();
     let text: string | null;
     try {
-      text = cleanChat(await signal.decrypt(frame.from, frame.ciphertext));
+      const plain = await signal.decrypt(frame.from, frame.ciphertext);
+      text = plain === NUDGE ? NUDGE : cleanChat(plain);
     } catch (e) {
       // From a new identity key: trusted if it's the key the server has for them now, then
       // the message is asked for again on a session with that key.
@@ -135,11 +140,16 @@ export function createChat({
       return ack();
     }
     if (!text) return ack();
+    // However often a modified Margin sends them.
+    if (text === NUDGE) {
+      if (Date.now() - (nudgedBy.get(frame.from) ?? 0) < NUDGE_IN_MS) return ack();
+      nudgedBy.set(frame.from, Date.now());
+    }
     const message: ChatMessage = {
       id: frame.id,
       peer: frame.from,
       direction: 'in',
-      text,
+      ...(text === NUDGE ? { text: '', kind: 'nudge' as const } : { text }),
       sentAt: frame.sentAt,
     };
     store.saveMessage(message);
@@ -354,13 +364,27 @@ export function createChat({
     return signal.encrypt(to, text, store.bundle(to));
   }
 
+  // A nudge is sent as a message whose text is NUDGE, at most one to each friend every 45
+  // seconds; the friend's Mac keeps at most one from you every 30.
+  const nudgedAt = new Map<string, number>();
+  const nudgedBy = new Map<string, number>();
+
+  async function nudge(to: string) {
+    if (Date.now() - (nudgedAt.get(to) ?? 0) < NUDGE_OUT_MS) {
+      throw new DaemonError('You can’t send a nudge that often');
+    }
+    const message = await send(to, NUDGE);
+    nudgedAt.set(to, Date.now());
+    return message;
+  }
+
   async function send(to: string, text: string) {
     const ciphertext = await encryptFor(to, text);
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       peer: to,
       direction: 'out',
-      text,
+      ...(text === NUDGE ? { text: '', kind: 'nudge' as const } : { text }),
       sentAt: Date.now(),
       state: 'queued',
     };
@@ -380,7 +404,10 @@ export function createChat({
     if (message?.direction !== 'out' || message.state !== 'failed') {
       throw new DaemonError('Only a message that wasn’t delivered can be sent again');
     }
-    const ciphertext = await encryptFor(message.peer, message.text);
+    const ciphertext = await encryptFor(
+      message.peer,
+      message.kind === 'nudge' ? NUDGE : message.text,
+    );
     const frame: ClientFrame = { t: 'send', id, to: message.peer, ciphertext };
     store.transaction(() => {
       store.setMessageState(id, 'queued');
@@ -399,6 +426,7 @@ export function createChat({
     onRejected,
     onReset,
     send,
+    nudge,
     retry,
     sendReceipt,
     attachPreview,

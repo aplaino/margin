@@ -93,6 +93,8 @@ export const Request = v.variant('op', [
   v.object({ op: v.literal('login') }),
   v.object({ op: v.literal('logout') }),
   v.object({ op: v.literal('send'), to: Handle, text: ChatText }),
+  // A nudge: at most one to each friend every 45 seconds.
+  v.object({ op: v.literal('nudge'), to: Handle }),
   // Delete a message from this Mac; Undo Send one of yours (within a day) for both of you;
   // delete a whole conversation from this Mac.
   v.object({ op: v.literal('delete'), id: MessageId }),
@@ -170,6 +172,8 @@ export const ChatMessage = v.object({
   state: v.optional(v.picklist(['queued', 'sent', 'delivered', 'read', 'unsent', 'failed'])),
   readAt: v.optional(Timestamp),
   preview: v.optional(LinkPreview),
+  // A nudge (its text is empty).
+  kind: v.optional(v.literal('nudge')),
 });
 export type ChatMessage = v.InferOutput<typeof ChatMessage>;
 

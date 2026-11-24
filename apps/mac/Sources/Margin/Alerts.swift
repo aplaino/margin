@@ -35,6 +35,15 @@ enum Alerts {
   // In a burst from one friend, Margin's own alerts show once in this long and macOS
   // notifications play one sound; every message still counts as unread.
   static let burst: TimeInterval = 30
+  // A friend's nudges shake Margin at most once in this long; the rest show only in the chat.
+  static let shakeEvery: TimeInterval = 3 * 60
+
+  // Whether a nudge shakes Margin: Settings → Notifications → Nudges on Shake, alerts not
+  // paused, and none from this friend shook it recently.
+  static func shakes(_ message: ChatMessage, setting: String, paused: Bool, lastShake: Date?, now: Date) -> Bool {
+    guard message.nudge, message.incoming, setting == "shake", !paused else { return false }
+    return lastShake.map { now.timeIntervalSince($0) >= shakeEvery } ?? true
+  }
 
   // `mode` is Settings → Notifications' choice ("margin" or "macos"), `content` what alerts
   // show ("preview", "name" or "glow"). macOS notifications that aren't allowed fall back to
@@ -46,9 +55,10 @@ enum Alerts {
     if paused || reading { return .quiet }
     let inBurst = lastAlert.map { now.timeIntervalSince($0) < burst } ?? false
     let name = friend?.displayName ?? message.peer
+    let text = message.nudge ? String(localized: "sent you a nudge") : message.text
     // Every message gets one, so the friend's thread holds the whole conversation.
     if mode == "macos", allowed {
-      let words = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+      let words = text.trimmingCharacters(in: .whitespacesAndNewlines)
       return .notify(
         NotificationContent(
           id: message.id, thread: message.peer, title: name, subtitle: friend.map { doing($0.presence) } ?? "",
@@ -57,7 +67,7 @@ enum Alerts {
     }
     if inBurst { return .quiet }
     if content == "glow" || expanded { return .pulse }
-    let line = message.text.split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
+    let line = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
     let words = line.trimmingCharacters(in: .whitespaces)
     return .peek(
       Peek(id: message.id, handle: message.peer, name: name, preview: content == "preview" && !words.isEmpty ? clip(words, 60) : nil))

@@ -198,3 +198,29 @@ import Testing
     #expect(!r14)
   }
 }
+
+@Suite struct NudgeTests {
+  let now = Date(timeIntervalSince1970: 1_800_000_000)
+  let nudge = ChatMessage(id: "n1", peer: "maya", direction: "in", text: "", sentAt: 0, kind: "nudge")
+
+  // Once every three minutes per friend, only on Shake, never while paused, never your own.
+  @Test func shakesSparingly() {
+    #expect(Alerts.shakes(nudge, setting: "shake", paused: false, lastShake: nil, now: now))
+    #expect(!Alerts.shakes(nudge, setting: "shake", paused: false, lastShake: now.addingTimeInterval(-120), now: now))
+    #expect(Alerts.shakes(nudge, setting: "shake", paused: false, lastShake: now.addingTimeInterval(-180), now: now))
+    #expect(!Alerts.shakes(nudge, setting: "quiet", paused: false, lastShake: nil, now: now))
+    #expect(!Alerts.shakes(nudge, setting: "shake", paused: true, lastShake: nil, now: now))
+    var mine = nudge
+    mine.direction = "out"
+    #expect(!Alerts.shakes(mine, setting: "shake", paused: false, lastShake: nil, now: now))
+    let text = ChatMessage(id: "m1", peer: "maya", direction: "in", text: "hi", sentAt: 0)
+    #expect(!Alerts.shakes(text, setting: "shake", paused: false, lastShake: nil, now: now))
+  }
+
+  @Test func peekSaysWhatItIs() {
+    let alert = Alerts.decide(
+      nudge, from: nil, mode: "margin", content: "preview", allowed: true, paused: false, reading: false,
+      expanded: false, lastAlert: nil, now: now)
+    #expect(alert == .peek(Peek(id: "n1", handle: "maya", name: "maya", preview: "sent you a nudge")))
+  }
+}

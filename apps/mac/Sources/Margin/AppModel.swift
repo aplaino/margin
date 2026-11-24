@@ -37,6 +37,9 @@ final class AppModel {
   var results: [String: (ok: Bool, message: String?)] = [:]
   // Bumped on each new incoming message; the strip pulses once.
   var pulse = 0
+  // Bumped when a friend's nudge should shake Margin.
+  var shake = 0
+  @ObservationIgnored private var lastShake: [String: Date] = [:]
   // The message tab beside the strip, while it's out.
   var peek: Peek?
   @ObservationIgnored private var lastAlert: [String: Date] = [:]
@@ -326,6 +329,11 @@ final class AppModel {
       allowed: notificationAccess == .allowed, paused: prefs.alertsPaused,
       reading: expanded && chatWith == message.peer, expanded: expanded, lastAlert: lastAlert[message.peer], now: now)
     if alert.loud { lastAlert[message.peer] = now }
+    // A nudge shakes Margin, even with their chat open.
+    if Alerts.shakes(message, setting: prefs.nudges, paused: prefs.alertsPaused, lastShake: lastShake[message.peer], now: now) {
+      lastShake[message.peer] = now
+      shake += 1
+    }
     switch alert {
     case .quiet: break
     case .pulse: pulse += 1
@@ -338,6 +346,11 @@ final class AppModel {
 
   // The chat field's send: the link preview is fetched here, on the sender's Mac, and follows
   // the message.
+  // At most one to each friend every 45 seconds; margind says so in results["nudge"].
+  func nudge(_ handle: String) {
+    request("nudge", ["to": handle])
+  }
+
   func send(_ text: String, to handle: String) {
     request("send", ["to": handle, "text": text])
     guard settings?.linkPreviews ?? true, let url = LinkPreviews.firstLink(in: text) else { return }

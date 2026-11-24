@@ -454,6 +454,16 @@ struct SettingsView: View {
             ? "Previews leave Margin’s encrypted store: macOS can show them on the lock screen and keeps them in Notification Center."
             : "The first words show beside the strip, where anyone looking at your screen can see them.")
       }
+      SettingsGroup("Nudges") {
+        Picker("Nudges", selection: $prefs.nudges) {
+          Text("Shake").tag("shake")
+          Text("Quiet").tag("quiet")
+        }
+        .pickerStyle(.segmented).labelsHidden()
+        .padding(.vertical, 8)
+        .control("Nudges", choice: $prefs.nudges, from: ["shake", "quiet"])
+      }
+      note("A friend’s nudge shakes Margin at most once every few minutes; Quiet shows it only in the chat.")
       SettingsGroup("Friends coming online") {
         Picker("Friends coming online", selection: $prefs.friendsOnline) {
           Text("Off").tag("off")

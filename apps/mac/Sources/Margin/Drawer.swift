@@ -79,6 +79,7 @@ final class DrawerController {
     observePeek()
     observeMenuBar()
     observePulse()
+    observeShake()
 
     let center = NotificationCenter.default
     // Clicking anywhere in the drawer gives it the keyboard (not just a text field), so the
@@ -334,6 +335,49 @@ final class DrawerController {
     guard height != stripSize.height else { return }
     stripSize = CGSize(width: 8, height: height)
     place()
+  }
+
+  // MARK: nudges
+
+  func observeShake() {
+    withObservationTracking {
+      _ = model.shake
+    } onChange: { [weak self] in
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          self?.shakeForNudge()
+          self?.observeShake()
+        }
+      }
+    }
+  }
+
+  // The open drawer shakes side to side, the strip along its edge; in the menu bar, with Reduce
+  // Motion, or with the strip hidden over a full-screen app, it glows instead (or nothing).
+  func shakeForNudge() {
+    if model.expanded, !reduceMotion {
+      shake(panel, vertical: false)
+    } else if strip.isVisible, !reduceMotion {
+      shake(strip, vertical: true)
+    } else if !hiddenForFullScreen {
+      model.pulse += 1
+    }
+  }
+
+  func shake(_ window: NSWindow, vertical: Bool) {
+    let origin = window.frame.origin
+    let path = CGMutablePath()
+    path.move(to: origin)
+    for (i, distance) in [7.0, 6, 5, 4, 2].enumerated() {
+      let offset = i.isMultiple(of: 2) ? distance : -distance
+      path.addLine(to: vertical ? CGPoint(x: origin.x, y: origin.y + offset) : CGPoint(x: origin.x + offset, y: origin.y))
+    }
+    path.addLine(to: origin)
+    let animation = CAKeyframeAnimation()
+    animation.path = path
+    animation.duration = 0.45
+    window.animations = ["frameOrigin": animation]
+    window.animator().setFrameOrigin(origin)
   }
 
   // MARK: the message peek

@@ -422,6 +422,8 @@ export async function startDaemon(options: DaemonOptions) {
         return undefined;
       case 'send':
         return chat.send(request.to, request.text);
+      case 'nudge':
+        return chat.nudge(request.to);
       case 'history': {
         const messages = request.around
           ? store.historyAround(request.with, request.around)

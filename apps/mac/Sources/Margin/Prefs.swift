@@ -48,6 +48,8 @@ final class Prefs {
   var reportsAnsweredAt: Date? { didSet { defaults.set(reportsAnsweredAt, forKey: "reportsAnsweredAt") } }
   // Thin the strip to a faint hairline while nobody's online and nothing is unread.
   var fadeWhenQuiet: Bool { didSet { defaults.set(fadeWhenQuiet, forKey: "fadeWhenQuiet") } }
+  // Whether a friend's nudge shakes Margin ("shake") or only shows in the chat ("quiet").
+  var nudges: String { didSet { defaults.set(nudges, forKey: "nudges") } }
   // A note beside the strip when a friend comes online: "off", "close" friends, or "everyone".
   var friendsOnline: String { didSet { defaults.set(friendsOnline, forKey: "friendsOnline") } }
   // Take the strip away while its display shows a full-screen app (Screen edge only).
@@ -96,6 +98,7 @@ final class Prefs {
     fadeWhenQuiet = defaults.bool(forKey: "fadeWhenQuiet")
     hideInFullScreen = defaults.bool(forKey: "hideInFullScreen")
     friendsOnline = defaults.string(forKey: "friendsOnline") ?? "off"
+    nudges = defaults.string(forKey: "nudges") ?? "shake"
     tokenUnit = TokenUnit(rawValue: defaults.string(forKey: "tokenUnit") ?? "") ?? .m
     scientificTokens = defaults.bool(forKey: "scientificTokens")
     // Only Margin's own choice, not the Mac's languages; System Settings may store "es-ES" for "es".

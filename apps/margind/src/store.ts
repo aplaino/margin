@@ -6,6 +6,7 @@ import {
   DEFAULT_SETTINGS,
   Handle,
   type LinkPreview,
+  NUDGE,
   type PeerBundle,
   Settings,
 } from '@margin/protocol';
@@ -279,7 +280,7 @@ export class Store {
         message.id,
         message.peer,
         message.direction,
-        this.seal(message.text),
+        this.seal(message.kind === 'nudge' ? NUDGE : message.text),
         message.sentAt,
         message.state ?? null,
       );
@@ -394,7 +395,8 @@ export class Store {
         "SELECT * FROM messages WHERE state IS NOT 'unsent' ORDER BY sent_at DESC",
       )
       .iterate()) {
-      if (!this.open(row.body).toString().toLocaleLowerCase().includes(needle)) continue;
+      const text = this.open(row.body).toString();
+      if (text === NUDGE || !text.toLocaleLowerCase().includes(needle)) continue;
       found.push(this.toMessage(row));
       if (found.length === limit) break;
     }
@@ -417,11 +419,12 @@ export class Store {
   }
 
   private toMessage(r: MessageRow): ChatMessage {
+    const text = this.open(r.body).toString();
     return {
       id: r.id,
       peer: r.peer,
       direction: r.direction,
-      text: this.open(r.body).toString(),
+      ...(text === NUDGE ? { text: '', kind: 'nudge' as const } : { text }),
       sentAt: r.sent_at,
       ...(r.state ? { state: r.state } : {}),
       ...(r.read_at ? { readAt: r.read_at } : {}),

@@ -114,21 +114,36 @@ struct ChatView: View {
       }
 
       Divider().overlay(theme.divider)
-      TextField("Message \(friend?.displayName ?? handle)", text: $draft, axis: .vertical)
-        .textFieldStyle(.plain)
-        .lineLimit(1...5)
-        .focused($focused)
-        .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: theme.nested(10)).fill(theme.surface))
-        .overlay(RoundedRectangle(cornerRadius: theme.nested(10)).strokeBorder(theme.border, lineWidth: theme.borderWidth))
-        .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
-        .onSubmit(send)
-        .onAppear { focused = model.drawerFocused }
+      HStack(alignment: .bottom, spacing: 6) {
+        TextField("Message \(friend?.displayName ?? handle)", text: $draft, axis: .vertical)
+          .textFieldStyle(.plain)
+          .lineLimit(1...5)
+          .focused($focused)
+          .padding(.horizontal, 10).padding(.vertical, 8)
+          .background(RoundedRectangle(cornerRadius: theme.nested(10)).fill(theme.surface))
+          .overlay(RoundedRectangle(cornerRadius: theme.nested(10)).strokeBorder(theme.border, lineWidth: theme.borderWidth))
+          .onSubmit(send)
+          .onAppear { focused = model.drawerFocused }
+        Button {
+          model.nudge(handle)
+        } label: {
+          Image(systemName: "hand.wave").font(theme.font(14)).foregroundStyle(theme.secondary)
+            .frame(width: 24, height: 32).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Nudge \(friend?.displayName ?? handle) (or type /nudge)")
+        .accessibilityLabel("Nudge \(friend?.displayName ?? handle)")
+      }
+      .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 6)
       if let error = model.results["unsend"], !error.ok {
         (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t unsend")).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
       }
       if let error = model.results["retry"], !error.ok {
+        (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
+          .padding(.bottom, 4)
+      }
+      if let error = model.results["nudge"], !error.ok {
         (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
       }
@@ -235,16 +250,34 @@ struct ChatView: View {
   private func send() {
     let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else { return }
-    model.send(text, to: handle)
+    if text.lowercased() == "/nudge" { model.nudge(handle) } else { model.send(text, to: handle) }
     draft = ""
     focused = true
   }
 
-  // An unsent message leaves a quiet line where it was, as in Messages.
+  // An unsent message leaves a quiet line where it was, as in Messages; a nudge is one too.
   @ViewBuilder private func bubble(_ message: ChatMessage) -> some View {
     if message.unsent {
       let name = model.friend(handle)?.displayName ?? handle
       Text(message.incoming ? "\(name) unsent a message" : "You unsent a message")
+        .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity)
+        .overlay {
+          RoundedRectangle(cornerRadius: theme.controlRadius + 3)
+            .strokeBorder(model.keyboardNav && model.cursor == message.id || found == message.id ? theme.accent : .clear, lineWidth: 1.5)
+        }
+        .contextMenu {
+          Button("Delete…") { model.delete(message) }
+        }
+    } else if message.nudge {
+      // A nudge is a line in the chat, as in MSN; one the server refused says so.
+      let name = model.friend(handle)?.displayName ?? handle
+      HStack(spacing: 4) {
+        Image(systemName: "hand.wave").font(theme.font(10))
+        Text(message.incoming ? "\(name) sent you a nudge" : "You sent a nudge")
+        if message.failed { Text("Not Delivered").foregroundStyle(theme.danger) }
+      }
         .font(theme.font(10.5)).foregroundStyle(theme.tertiary)
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity)
