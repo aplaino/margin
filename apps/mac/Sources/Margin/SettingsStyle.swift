@@ -39,14 +39,79 @@ struct SettingsRow<Control: View>: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      HStack(spacing: 8) {
+      // Always two subviews, however many views (or none) the control is.
+      RowLayout {
         Text(label)
-        Spacer(minLength: 6)
-        control()
+        HStack(spacing: 8) { control() }
       }
       .padding(.vertical, 6)
       if !last { Divider().overlay(theme.divider) }
     }
+  }
+}
+
+// The label on the left and its control on the right. A control too wide to leave the label
+// room for whole words (a long choice, or a long translation) goes under the label instead,
+// so the label never breaks inside a word; a switch or a short menu stays beside it.
+private struct RowLayout: Layout {
+  let spacing: CGFloat = 16
+
+  private func sideBySide(_ width: CGFloat, _ label: CGSize, _ control: CGSize) -> Bool {
+    label.width + spacing + control.width <= width || control.width <= width * 0.4
+  }
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let label = subviews[0].sizeThatFits(.unspecified)
+    let control = subviews[1].sizeThatFits(.unspecified)
+    guard let width = proposal.width, width.isFinite else {
+      return CGSize(width: label.width + spacing + control.width, height: max(label.height, control.height))
+    }
+    if sideBySide(width, label, control) {
+      let wrapped = subviews[0].sizeThatFits(ProposedViewSize(width: max(width - control.width - spacing, 0), height: nil))
+      return CGSize(width: width, height: max(wrapped.height, control.height))
+    }
+    let wrapped = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
+    return CGSize(width: width, height: wrapped.height + 6 + control.height)
+  }
+
+  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    let label = subviews[0].sizeThatFits(.unspecified)
+    let control = subviews[1].sizeThatFits(.unspecified)
+    if sideBySide(bounds.width, label, control) {
+      let labelWidth = max(bounds.width - control.width - spacing, 0)
+      subviews[0].place(
+        at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
+        proposal: ProposedViewSize(width: labelWidth, height: nil))
+      subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing, proposal: .unspecified)
+    } else {
+      let wrapped = subviews[0].sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
+      subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: nil))
+      subviews[1].place(
+        at: CGPoint(x: bounds.minX, y: bounds.minY + wrapped.height + 6),
+        proposal: ProposedViewSize(width: min(control.width, bounds.width), height: nil))
+    }
+  }
+}
+
+// A choice of a few: side by side when they fit across the drawer, one per line when they
+// don't (three of them, or a long translation).
+struct Choices<Value: Hashable, Options: View>: View {
+  var title: LocalizedStringResource
+  @Binding var selection: Value
+  var options: Options
+
+  init(_ title: LocalizedStringResource, selection: Binding<Value>, @ViewBuilder options: () -> Options) {
+    self.title = title
+    _selection = selection
+    self.options = options()
+  }
+
+  var body: some View {
+    ViewThatFits(in: .horizontal) {
+      Picker(selection: $selection) { options } label: { Text(title) }.pickerStyle(.segmented)
+      Picker(selection: $selection) { options } label: { Text(title) }.pickerStyle(.radioGroup)
+    }
+    .labelsHidden()
   }
 }
 

@@ -35,6 +35,11 @@ final class AppModel {
   var signingIn = false
   // Last result per operation, for showing errors and notes where they happened.
   var results: [String: (ok: Bool, message: String?)] = [:]
+  // Why the last nudge didn't go, in the chat it was sent from, for a few seconds.
+  var nudgeRefused: (handle: String, message: String)?
+  // Who each nudge still waiting for margind's answer was for, oldest first.
+  @ObservationIgnored private var nudging: [String] = []
+  @ObservationIgnored private var nudgeRefusedTimer: Task<Void, Never>?
   // Bumped on each new incoming message; the strip pulses once.
   var pulse = 0
   // Bumped when a friend's nudge should shake Margin.
@@ -190,6 +195,7 @@ final class AppModel {
         for reply in waiting { self.reply(reply.text, to: reply.handle) }
       } else {
         me = nil
+        nudging = []
         onDaemonLost?()
       }
     }
@@ -277,6 +283,7 @@ final class AppModel {
       latest = Dictionary(list.map { ($0.peer, $0) }, uniquingKeysWith: { first, _ in first })
     case .result(let op, let ok, let data, let error):
       results[op] = (ok, ok ? data?.note : error)
+      if op == "nudge" { nudgeAnswered(ok: ok, error: error) }
       if op == "send", let to = replyingTo {
         replyingTo = nil
         if !ok { notifier.replyFailed(to: to, name: friend(to)?.displayName ?? to, error: error) }
@@ -346,9 +353,27 @@ final class AppModel {
 
   // The chat field's send: the link preview is fetched here, on the sender's Mac, and follows
   // the message.
-  // At most one to each friend every 45 seconds; margind says so in results["nudge"].
+  // At most one to each friend every 45 seconds; margind says why when it won't send one.
   func nudge(_ handle: String) {
+    nudging.append(handle)
     request("nudge", ["to": handle])
+  }
+
+  // The reason shows in that friend's chat only, and goes after a few seconds rather than
+  // staying until the next nudge; pressing again while it shows starts the few seconds over.
+  private func nudgeAnswered(ok: Bool, error: String?) {
+    let handle = nudging.isEmpty ? nil : nudging.removeFirst()
+    nudgeRefusedTimer?.cancel()
+    guard !ok, let handle else {
+      nudgeRefused = nil
+      return
+    }
+    nudgeRefused = (handle, error ?? String(localized: "Couldn’t send"))
+    nudgeRefusedTimer = Task { [weak self] in
+      try? await Task.sleep(for: .seconds(4))
+      guard !Task.isCancelled else { return }
+      self?.nudgeRefused = nil
+    }
   }
 
   func send(_ text: String, to handle: String) {
