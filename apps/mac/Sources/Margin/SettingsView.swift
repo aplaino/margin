@@ -272,7 +272,7 @@ struct SettingsView: View {
                 .tag(String?.some(code))
             }
           }
-          .labelsHidden().fixedSize()
+          .labelsHidden()
           .control("Language", choice: $prefs.language, from: [nil] + Prefs.languages.map { $0 })
         }
       }
@@ -293,7 +293,7 @@ struct SettingsView: View {
           Picker("Unit", selection: $prefs.tokenUnit) {
             ForEach(TokenUnit.allCases, id: \.self) { Text($0.title).tag($0) }
           }
-          .labelsHidden().fixedSize()
+          .labelsHidden()
           .disabled(prefs.scientificTokens)
           .control("Token unit", choice: $prefs.tokenUnit, from: TokenUnit.allCases)
         }
@@ -319,7 +319,7 @@ struct SettingsView: View {
             Text("Always").tag("always")
             Text("Never").tag("never")
           }
-          .labelsHidden().fixedSize()
+          .labelsHidden()
           .control("Crash reports", choice: $prefs.crashReports, from: ["ask", "always", "never"])
         }
         if model.reports.count > 0 {
@@ -385,12 +385,11 @@ struct SettingsView: View {
       })
     return VStack(alignment: .leading, spacing: 4) {
       SettingsGroup("Show Margin") {
-        Picker("Show Margin", selection: mode) {
+        Choices("Show Margin", selection: mode) {
           Text("Screen edge").tag("edge")
           Text("Corner").tag("corner")
           Text("Menu bar").tag("menu")
         }
-        .pickerStyle(.segmented).labelsHidden()
         .padding(.vertical, 8)
         .control("Show Margin", choice: mode, from: ["edge", "corner", "menu"])
       }
@@ -404,7 +403,7 @@ struct SettingsView: View {
               Text("Peek out").tag(true)
               Text("Stay in the corner").tag(false)
             }
-            .labelsHidden().fixedSize()
+            .labelsHidden()
             .control("New messages", choice: $prefs.cornerPeek, from: [true, false])
           }
           switchRow("Fade when nobody’s online", $prefs.fadeWhenQuiet)
@@ -449,11 +448,10 @@ struct SettingsView: View {
     let contents = macos ? ["preview", "name"] : ["preview", "name", "glow"]
     return VStack(alignment: .leading, spacing: 4) {
       SettingsGroup("New messages") {
-        Picker("Alerts", selection: mode) {
+        Choices("Alerts", selection: mode) {
           Text("Margin").tag("margin")
           Text("macOS").tag("macos")
         }
-        .pickerStyle(.segmented).labelsHidden()
         .padding(.vertical, 8)
         .control("Alerts", choice: mode, from: ["margin", "macos"])
       }
@@ -464,7 +462,7 @@ struct SettingsView: View {
             Text("Name only").tag("name")
             if !macos { Text("Glow only").tag("glow") }
           }
-          .labelsHidden().fixedSize()
+          .labelsHidden()
           .control("Show", choice: $prefs.alert, from: contents)
         }
         pauseRow
@@ -481,22 +479,20 @@ struct SettingsView: View {
             : "The first words show beside the strip, where anyone looking at your screen can see them.")
       }
       SettingsGroup("Nudges") {
-        Picker("Nudges", selection: $prefs.nudges) {
+        Choices("Nudges", selection: $prefs.nudges) {
           Text("Shake").tag("shake")
           Text("Quiet").tag("quiet")
         }
-        .pickerStyle(.segmented).labelsHidden()
         .padding(.vertical, 8)
         .control("Nudges", choice: $prefs.nudges, from: ["shake", "quiet"])
       }
       note("A friend’s nudge shakes Margin at most once every few minutes; Quiet shows it only in the chat.")
       SettingsGroup("Friends coming online") {
-        Picker("Friends coming online", selection: $prefs.friendsOnline) {
+        Choices("Friends coming online", selection: $prefs.friendsOnline) {
           Text("Off").tag("off")
           Text("Close friends").tag("close")
           Text("Everyone").tag("everyone")
         }
-        .pickerStyle(.segmented).labelsHidden()
         .padding(.vertical, 8)
         .control("Friends coming online", choice: $prefs.friendsOnline, from: ["off", "close", "everyone"])
       }
@@ -533,7 +529,7 @@ struct SettingsView: View {
             Text("For 1 hour").tag("hour")
             Text("Until tomorrow morning").tag("tomorrow")
           }
-          .labelsHidden().fixedSize()
+          .labelsHidden()
         }
       }
       .control("Pause alerts") {

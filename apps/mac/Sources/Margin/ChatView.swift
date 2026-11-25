@@ -143,8 +143,8 @@ struct ChatView: View {
         (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
       }
-      if let error = model.results["nudge"], !error.ok {
-        (error.message.map { Text(verbatim: $0) } ?? Text("Couldn’t send")).font(theme.caption).foregroundStyle(theme.danger)
+      if let refused = model.nudgeRefused, refused.handle == handle {
+        Text(verbatim: refused.message).font(theme.caption).foregroundStyle(theme.danger)
           .padding(.bottom, 4)
       }
       if let error = model.results["send"], !error.ok {
